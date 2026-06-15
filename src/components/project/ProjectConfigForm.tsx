@@ -149,7 +149,7 @@ export default function ProjectConfigForm({ project, catalog, checksConfig, cust
 
   const [sections, setSections] = useState<ProjectSections>({
     ...DEFAULT_SECTIONS,
-    ...(initialSections ?? (project.sections as ProjectSections ?? {})),
+    ...((initialSections ?? project.sections ?? {}) as Partial<ProjectSections>),
   })
 
   const optChecks = catalog.filter(c => c.level === 'optional')
