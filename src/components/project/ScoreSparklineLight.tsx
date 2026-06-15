@@ -20,7 +20,7 @@ export default function ScoreSparklineLight({ data, alertThreshold }: { data: Sc
             borderRadius: 8, fontSize: 12,
             color: 'var(--color-text-primary)',
           }}
-          formatter={(value: number) => [`${Math.round(value)}`, 'Score']}
+          formatter={(value) => [`${Math.round(Number(value ?? 0))}`, 'Score']}
           labelFormatter={(label) => new Date(label).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
         />
         <Line

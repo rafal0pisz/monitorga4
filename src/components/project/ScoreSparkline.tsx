@@ -14,7 +14,7 @@ export default function ScoreSparkline({ data }: { data: ScoreHistory[] }) {
         <ReferenceLine y={70} stroke="#2e3940" strokeDasharray="3 3" />
         <Tooltip
           contentStyle={{ background: '#232b31', border: '1px solid #2e3940', borderRadius: 8, fontSize: 12 }}
-          formatter={(value: number) => [`${Math.round(value)}`, 'Score']}
+          formatter={(value) => [`${Math.round(Number(value ?? 0))}`, 'Score']}
           labelFormatter={(label) => new Date(label).toLocaleDateString('pl-PL')}
         />
         <Line
