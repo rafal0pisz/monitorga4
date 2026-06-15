@@ -546,6 +546,15 @@ export async function POST(request: NextRequest) {
     if (!run) continue
 
     try {
+      // Check if we already have a better score today — skip if so
+      const { data: existingRun } = await supabase
+        .from('dqs_runs')
+        .select('id, score_total')
+        .eq('project_id', project.id)
+        .eq('run_date', runDate)
+        .eq('status', 'completed')
+        .single()
+
       // Fetch ecommerce + custom events via RPC (bypasses schema cache)
       const [{ data: ecomRaw }, { data: customRaw }] = await Promise.all([
         supabase.rpc('get_ecommerce_config', { p_project_id: project.id }),
@@ -559,9 +568,16 @@ export async function POST(request: NextRequest) {
       const results = await runAllChecks(project, accessToken, ecomEvents, customEventChecks)
       const scoreTotal = +results.reduce((s, r) => s + r.score, 0).toFixed(2)
 
-      await supabase.from('dqs_results').delete().eq('run_id', run.id)
-      await supabase.from('dqs_results').insert(results.map(r => ({ ...r, run_id: run.id })))
-      await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
+      // Keep best score of the day
+      const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
+      if (isBetter) {
+        await supabase.from('dqs_results').delete().eq('run_id', run.id)
+        await supabase.from('dqs_results').insert(results.map(r => ({ ...r, run_id: run.id })))
+        await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
+      } else {
+        // Score not better — mark run as completed but keep old results
+        await supabase.from('dqs_runs').update({ status: 'completed', score_total: existingRun!.score_total }).eq('id', run.id)
+      }
 
       processed.push(project.id)
 
