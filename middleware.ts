@@ -13,9 +13,7 @@ export async function middleware(request: NextRequest) {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          )
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -30,7 +28,6 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p))
 
-  // Dev bypass
   if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
     return supabaseResponse
   }
@@ -48,4 +45,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|ico|css|js)$).*)'],
+  runtime: 'nodejs',
 }
