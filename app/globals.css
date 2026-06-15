@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Score colors */
+.score-excellent { color: #16a34a; }
+.score-good      { color: #ca8a04; }
+.score-warning   { color: #ea580c; }
+.score-critical  { color: #dc2626; }
