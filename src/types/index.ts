@@ -37,6 +37,7 @@ export interface Project {
   alert_email: string | null
   share_token: string
   status: ProjectStatus
+  sections?: Record<string, boolean> | null
   created_at: string
   updated_at: string
 }
