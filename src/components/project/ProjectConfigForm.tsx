@@ -137,6 +137,7 @@ export default function ProjectConfigForm({ project, catalog, checksConfig, cust
     name: project.name, ga4_property_id: project.ga4_property_id,
     own_domain: project.own_domain ?? '', alert_threshold: project.alert_threshold,
     alert_email: project.alert_email ?? '', status: project.status,
+    alerts_enabled: !!(project.alert_email),
   })
   const [events, setEvents] = useState<string[]>(project.expected_events)
   const [eventInput, setEventInput] = useState('')
@@ -149,7 +150,7 @@ export default function ProjectConfigForm({ project, catalog, checksConfig, cust
 
   const [sections, setSections] = useState<ProjectSections>({
     ...DEFAULT_SECTIONS,
-    ...((initialSections ?? project.sections ?? {}) as Partial<ProjectSections>),
+    ...(initialSections ?? (project.sections as unknown as ProjectSections ?? {})),
   })
 
   const optChecks = catalog.filter(c => c.level === 'optional')
@@ -205,7 +206,8 @@ export default function ProjectConfigForm({ project, catalog, checksConfig, cust
       const { error: err } = await supabase.from('projects').update({
         name: form.name, ga4_property_id: propertyId,
         own_domain: form.own_domain || null, expected_events: events,
-        alert_threshold: form.alert_threshold, alert_email: form.alert_email || null,
+        alert_threshold: form.alert_threshold,
+        alert_email: form.alerts_enabled ? (form.alert_email || null) : null,
         status: form.status,
       }).eq('id', pid)
       if (err) throw new Error(`Project update failed: ${err.message}`)
@@ -426,15 +428,31 @@ export default function ProjectConfigForm({ project, catalog, checksConfig, cust
 
       {/* Alerts */}
       <Card title="Email alerts">
-        <Field label="Score threshold" hint="Alert sent when score drops below this value">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <input type="range" min="0" max="100" step="5" value={form.alert_threshold} onChange={e => setField('alert_threshold', parseInt(e.target.value))} style={{ flex: 1, accentColor: thresholdColor }} />
-            <span style={{ fontSize: 20, fontWeight: 500, color: thresholdColor, minWidth: 36, textAlign: 'right' as const }}>{form.alert_threshold}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.alerts_enabled ? 16 : 0 }}>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: C.text, margin: '0 0 2px' }}>Enable email notifications</p>
+            <p style={{ fontSize: 11, color: C.textMuted, margin: 0 }}>
+              {form.alerts_enabled ? 'Sent when score drops below threshold' : 'Off — no emails will be sent'}
+            </p>
           </div>
-        </Field>
-        <Field label="Email address">
-          <input type="email" value={form.alert_email} onChange={e => setField('alert_email', e.target.value)} placeholder="rafal@bettersteps.pl" style={inp} />
-        </Field>
+          <Toggle enabled={form.alerts_enabled} onToggle={() => setField('alerts_enabled' as any, !form.alerts_enabled)} />
+        </div>
+        {form.alerts_enabled && (
+          <>
+            <Field label="Score threshold" hint="Alert sent when score drops below this value">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input type="range" min="0" max="100" step="5" value={form.alert_threshold} onChange={e => setField('alert_threshold', parseInt(e.target.value))} style={{ flex: 1, accentColor: thresholdColor }} />
+                <span style={{ fontSize: 20, fontWeight: 500, color: thresholdColor, minWidth: 36, textAlign: 'right' as const }}>{form.alert_threshold}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.textMuted, marginTop: 4 }}>
+                <span>0 — Critical only</span><span>100 — Always alert</span>
+              </div>
+            </Field>
+            <Field label="Email address" hint="Notifications will be sent to this address">
+              <input type="email" value={form.alert_email} onChange={e => setField('alert_email', e.target.value)} placeholder="rafal@bettersteps.pl" style={inp} />
+            </Field>
+          </>
+        )}
       </Card>
 
       {error && <div style={{ fontSize: 12, color: C.red, background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
