@@ -1,19 +1,65 @@
 'use client'
+
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-const PERIODS = [{ days: 7, label: '7d' }, { days: 14, label: '14d' }, { days: 30, label: '30d' }]
+
+const PERIODS = [
+  { days: 1,  label: '1d'  },
+  { days: 7,  label: '7d'  },
+  { days: 14, label: '14d' },
+  { days: 30, label: '30d' },
+]
+
+const LABELS: Record<number, string> = {
+  1:  'Yesterday vs same day last week',
+  7:  'Last 7 days vs prev 7 days',
+  14: 'Last 14 days vs prev 14 days',
+  30: 'Last 30 days vs prev 30 days',
+}
+
 export default function PeriodSelector({ current }: { current: number }) {
-  const router = useRouter(); const pathname = usePathname(); const searchParams = useSearchParams()
-  function setPeriod(days: number) { const p = new URLSearchParams(searchParams.toString()); p.set('period', String(days)); router.push(`${pathname}?${p.toString()}`) }
+  const router       = useRouter()
+  const pathname     = usePathname()
+  const searchParams = useSearchParams()
+
+  function setPeriod(days: number) {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('period', String(days))
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Period:</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 11, color: '#6B7280' }}>Period:</span>
+
       <div style={{ display: 'flex', gap: 3 }}>
-        {PERIODS.map(p => (
-          <button key={p.days} onClick={() => setPeriod(p.days)} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 6, cursor: 'pointer', border: `0.5px solid ${current === p.days ? '#bbf7d0' : 'var(--color-border-tertiary)'}`, background: current === p.days ? '#f0fdf4' : 'var(--color-background-secondary)', color: current === p.days ? '#16a34a' : 'var(--color-text-secondary)', fontWeight: current === p.days ? 500 : 400 }}>
-            {p.label}
-          </button>
-        ))}
+        {PERIODS.map(p => {
+          const active = current === p.days
+          return (
+            <button
+              key={p.days}
+              onClick={() => setPeriod(p.days)}
+              title={LABELS[p.days]}
+              style={{
+                fontSize: 11,
+                padding: '3px 10px',
+                borderRadius: 6,
+                cursor: 'pointer',
+                border: `1px solid ${active ? '#4ade80' : '#2e3940'}`,
+                background: active ? '#14532d' : 'transparent',
+                color: active ? '#4ade80' : '#6B7280',
+                fontWeight: active ? 700 : 400,
+                transition: 'all 0.15s',
+              }}
+            >
+              {p.label}
+            </button>
+          )
+        })}
       </div>
+
+      <span style={{ fontSize: 10, color: '#4B5563', marginLeft: 4 }}>
+        {LABELS[current] ?? ''}
+      </span>
     </div>
   )
 }
