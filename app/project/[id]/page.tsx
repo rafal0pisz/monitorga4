@@ -6,24 +6,7 @@ import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 
-// ─── PALETTE — matches original design ───────────────────────────────────────
-const C = {
-  bg:        '#161B22',
-  card:      '#1D2328',
-  border:    '#2e3940',
-  text:      '#e5e7eb',
-  textMuted: '#6B7280',
-  textSub:   '#9ca3af',
-  accent:    '#84cc16',   // lime green — brand colour
-  green:     '#4ade80',
-  amber:     '#fbbf24',
-  red:       '#f87171',
-  orange:    '#f97316',
-  purple:    '#8b5cf6',
-}
-
-// ─── STORED CHECK SECTIONS (Ecommerce / Custom Events / Parameters) ──────────
-
+// Stored check sections (Ecommerce / Custom Events / Parameters)
 const CHECK_SECTION: Record<string, 'ecommerce' | 'custom_events' | 'parameters'> = {
   purchase_duplicates: 'ecommerce',
   ecommerce_events:    'ecommerce',
@@ -32,17 +15,20 @@ const CHECK_SECTION: Record<string, 'ecommerce' | 'custom_events' | 'parameters'
 }
 
 const SECTION_META = {
-  ecommerce:     { label: 'Ecommerce',     accent: C.orange  },
-  custom_events: { label: 'Custom Events', accent: C.amber   },
-  parameters:    { label: 'Parameters',    accent: C.purple  },
+  ecommerce:     { label: 'Ecommerce',     accent: '#f97316' },
+  custom_events: { label: 'Custom Events', accent: '#ca8a04' },
+  parameters:    { label: 'Parameters',    accent: '#8b5cf6' },
 } as const
 
-type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip'
-const STATUS_COLOR: Record<CheckStatus, string> = {
-  pass: C.green, warn: C.amber, fail: C.red, skip: C.textMuted,
+// Status display
+type CheckStatus = 'pass' | 'warn' | 'check' | 'fail' | 'skip'
+const STATUS_STYLE: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  pass:  { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Pass'  },
+  warn:  { color: '#ca8a04', bg: '#fefce8', border: '#fef08a', label: 'Warn'  },
+  check: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
+  fail:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' }, // legacy
+  skip:  { color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb', label: 'Skip'  },
 }
-
-// ─── PAGE ────────────────────────────────────────────────────────────────────
 
 export default async function ProjectPage({
   params,
@@ -92,40 +78,53 @@ export default async function ProjectPage({
 
   const expectedEvents: string[] = project.expected_events ?? []
 
-  const scoreColor = (s: number) => s >= 80 ? C.green : s >= 60 ? C.amber : C.red
+  const scoreColor = (s: number) =>
+    s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626'
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.text, fontFamily: 'inherit' }}>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--color-background-tertiary)',
+      color: 'var(--color-text-primary)',
+    }}>
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
       <nav style={{
-        backgroundColor: C.card,
-        borderBottom: `1px solid ${C.border}`,
+        backgroundColor: 'var(--color-background-secondary)',
+        borderBottom: '1px solid var(--color-border-tertiary)',
         position: 'sticky', top: 0, zIndex: 50,
       }}>
         <div style={{
           maxWidth: 1100, margin: '0 auto', padding: '0 20px',
           height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          {/* Left: breadcrumb */}
+          {/* Breadcrumb */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link href="/dashboard" style={{ fontSize: 12, color: C.textMuted, textDecoration: 'none' }}>
+            <Link href="/dashboard" style={{
+              fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none',
+            }}>
               ← Dashboard
             </Link>
-            <span style={{ color: C.border }}>·</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{project.name}</span>
+            <span style={{ color: 'var(--color-border-tertiary)' }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+              {project.name}
+            </span>
           </div>
 
-          {/* Right: period + settings + run */}
+          {/* Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <PeriodSelector current={periodDays} />
 
             <Link
-              href={`/project/${id}/settings`}
+              href={`/project/${id}/config`}
               style={{
-                fontSize: 12, color: C.textMuted, textDecoration: 'none',
-                padding: '4px 10px', borderRadius: 6,
-                border: `1px solid ${C.border}`,
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                textDecoration: 'none',
+                padding: '4px 12px',
+                borderRadius: 6,
+                border: '1px solid var(--color-border-tertiary)',
+                backgroundColor: 'var(--color-background-primary)',
               }}
             >
               ⚙ Settings
@@ -136,71 +135,79 @@ export default async function ProjectPage({
         </div>
       </nav>
 
-      {/* ── CONTENT ──────────────────────────────────────────────────────────── */}
+      {/* ── BODY ─────────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* Score + property header */}
+        {/* Score + property info */}
         <div style={{
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
           marginBottom: 28,
+          padding: '16px 20px',
+          backgroundColor: 'var(--color-background-primary)',
+          border: '1px solid var(--color-border-tertiary)',
+          borderRadius: 12,
         }}>
           <div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
               GA4 Property:&nbsp;
-              <span style={{ color: C.textSub, fontFamily: 'monospace' }}>
+              <span style={{ fontFamily: 'monospace', color: 'var(--color-text-primary)' }}>
                 {project.ga4_property_id || '—'}
               </span>
             </div>
             {latestRun && (
-              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>
                 Last run: {latestRun.run_date}
                 {latestRun.status === 'failed' && (
-                  <span style={{ color: C.red, marginLeft: 8 }}>· Run failed</span>
+                  <span style={{ color: '#dc2626', marginLeft: 8 }}>· Run failed</span>
                 )}
+              </div>
+            )}
+            {!latestRun && (
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 4 }}>
+                No runs yet — click <strong>Run now</strong> to start.
               </div>
             )}
           </div>
 
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <div style={{
+                fontSize: 10, color: 'var(--color-text-secondary)',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4,
+              }}>
                 Overall Score
               </div>
               <div style={{
-                fontSize: 40, fontWeight: 800, lineHeight: 1,
+                fontSize: 38, fontWeight: 800, lineHeight: 1,
                 color: scoreColor(latestRun.score_total),
               }}>
                 {Math.round(latestRun.score_total)}
               </div>
-              <div style={{ fontSize: 11, color: C.textMuted }}>/ 100</div>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>/ 100</div>
             </div>
           )}
         </div>
 
-        {/* ── LIVE: Traffic · Engagement · Users ─────────────────────────── */}
+        {/* ── LIVE: Traffic · Engagement · Users ──────────────────────────── */}
         {project.ga4_property_id ? (
-          <LiveChecksPanel
-            propertyId={project.ga4_property_id}
-            period={periodDays}
-          />
+          <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
         ) : (
           <div style={{
-            padding: 16, borderRadius: 10, marginBottom: 24,
-            backgroundColor: '#78350f22', border: `1px solid #78350f`,
-            fontSize: 13, color: C.amber,
+            padding: '14px 16px', borderRadius: 10, marginBottom: 24,
+            backgroundColor: '#fefce8', border: '1px solid #fef08a',
+            fontSize: 13, color: '#92400e',
           }}>
             No GA4 property configured.{' '}
-            <Link href={`/project/${id}/settings`} style={{ color: C.accent }}>
-              Open Settings
-            </Link>{' '}
-            to add a property ID.
+            <Link href={`/project/${id}/config`} style={{ color: '#16a34a', fontWeight: 500 }}>
+              Open Settings →
+            </Link>
           </div>
         )}
 
         {/* ── STORED: Ecommerce · Custom Events · Parameters ──────────────── */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
-          const meta   = SECTION_META[sectionId]
-          const checks = storedBySection[sectionId]
+          const meta    = SECTION_META[sectionId]
+          const checks  = storedBySection[sectionId]
           const isEmpty = checks.length === 0
 
           const emptyMsg = {
@@ -214,14 +221,17 @@ export default async function ProjectPage({
               {/* Section header */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${C.border}`,
+                marginBottom: 12, paddingBottom: 8,
+                borderBottom: '1px solid var(--color-border-tertiary)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{meta.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                    {meta.label}
+                  </span>
                 </div>
                 {!isEmpty && (
-                  <span style={{ fontSize: 11, color: C.textMuted }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
                     {checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed
                   </span>
                 )}
@@ -230,8 +240,9 @@ export default async function ProjectPage({
               {isEmpty ? (
                 <div style={{
                   padding: '14px 16px', borderRadius: 8, textAlign: 'center',
-                  backgroundColor: '#ffffff05', border: `1px dashed ${C.border}`,
-                  fontSize: 12, color: C.textMuted,
+                  backgroundColor: 'var(--color-background-primary)',
+                  border: '1px dashed var(--color-border-tertiary)',
+                  fontSize: 12, color: 'var(--color-text-secondary)',
                 }}>
                   {emptyMsg}
                 </div>
@@ -247,8 +258,9 @@ export default async function ProjectPage({
                 </div>
               )}
 
+              {/* Charts only for Custom Events */}
               {sectionId === 'custom_events' && expectedEvents.length > 0 && (
-                <div style={{ marginTop: 12 }}>
+                <div style={{ marginTop: 14 }}>
                   <EventsDetailPanel
                     propertyId={project.ga4_property_id}
                     expectedEvents={expectedEvents}
@@ -267,33 +279,34 @@ export default async function ProjectPage({
 // ─── STORED CHECK CARD ───────────────────────────────────────────────────────
 
 function StoredCheckCard({ check }: { check: any }) {
-  const status: CheckStatus = check.status ?? 'skip'
-  const col = STATUS_COLOR[status]
+  const st = STATUS_STYLE[check.status ?? 'skip'] ?? STATUS_STYLE.skip
 
   return (
     <div style={{
-      backgroundColor: C.card,
-      border: `1px solid ${C.border}`,
+      backgroundColor: 'var(--color-background-primary)',
+      border: '1px solid var(--color-border-tertiary)',
       borderRadius: 10,
       padding: '12px 14px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{check.check_id}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+          {check.check_id}
+        </div>
         <div style={{
           fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-          padding: '2px 7px', borderRadius: 20, flexShrink: 0,
-          color: col, backgroundColor: col + '22',
+          padding: '2px 8px', borderRadius: 20, flexShrink: 0,
+          color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}`,
         }}>
-          {status.toUpperCase()}
+          {st.label}
         </div>
       </div>
       {check.value != null && (
-        <div style={{ fontSize: 20, fontWeight: 700, color: col, marginTop: 6, lineHeight: 1 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6, lineHeight: 1 }}>
           {typeof check.value === 'number' ? check.value.toFixed(1) : check.value}
         </div>
       )}
       {check.message && (
-        <div style={{ fontSize: 11, color: C.textMuted, marginTop: 5, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.4 }}>
           {check.message}
         </div>
       )}

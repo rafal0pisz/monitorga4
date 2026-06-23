@@ -2,9 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-
-type Status = 'pass' | 'warn' | 'fail'
+type Status = 'pass' | 'warn' | 'check'
 
 interface CheckResult {
   id: string
@@ -16,254 +14,135 @@ interface CheckResult {
   prevLabel: string
   deltaLabel: string
   detail?: string
-  chart: { labels: string[]; current: number[]; prev: number[] }
 }
 
-// ─── COLOR PALETTE (hardcoded hex — no CSS vars) ──────────────────────────────
+// ─── STATUS CONFIG ────────────────────────────────────────────────────────────
 
-const C = {
-  bg:          '#1D2328',
-  bgCard:      '#20272E',
-  bgSection:   '#161B22',
-  border:      '#2e3940',
-  borderLight: '#374955',
-  text:        '#e5e7eb',
-  textMuted:   '#6B7280',
-  textSub:     '#9ca3af',
-  green:       '#4ade80',
-  greenDim:    '#22543d',
-  amber:       '#fbbf24',
-  amberDim:    '#78350f',
-  red:         '#f87171',
-  redDim:      '#7f1d1d',
-  barCurrent:  '#4ade80',
-  barPrev:     '#374151',
-  barBot:      '#f87171',
+const STATUS: Record<Status, { label: string; color: string; bg: string; border: string }> = {
+  pass:  { label: 'Pass',  color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
+  warn:  { label: 'Warn',  color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
+  check: { label: 'Check', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
 }
 
-const STATUS_COLOR: Record<Status, string> = {
-  pass: C.green,
-  warn: C.amber,
-  fail: C.red,
-}
-const STATUS_BG: Record<Status, string> = {
-  pass: C.greenDim,
-  warn: C.amberDim,
-  fail: C.redDim,
-}
-const STATUS_LABEL: Record<Status, string> = {
-  pass: 'Pass',
-  warn: 'Warn',
-  fail: 'Fail',
-}
+// ─── SECTION CONFIG ───────────────────────────────────────────────────────────
 
-// ─── SECTION METADATA ────────────────────────────────────────────────────────
-
-const SECTION_META: Record<string, { label: string; accent: string }> = {
+const SECTION: Record<string, { label: string; accent: string }> = {
   traffic:    { label: 'Traffic Source',  accent: '#3b82f6' },
   engagement: { label: 'Engagement',      accent: '#8b5cf6' },
-  users:      { label: 'Users',           accent: '#06b6d4' },
-}
-
-// ─── MINI BAR CHART ───────────────────────────────────────────────────────────
-
-function MiniBarChart({ chart, isBotIndex }: {
-  chart: { labels: string[]; current: number[]; prev: number[] }
-  isBotIndex?: boolean
-}) {
-  const { labels, current, prev } = chart
-  const hasPrev = prev.length > 0
-
-  if (labels.length === 0) return null
-
-  const allVals  = [...current, ...(hasPrev ? prev : [])]
-  const maxVal   = Math.max(...allVals, 0.01)
-
-  // For bot index: show signal indicators instead of bars
-  if (isBotIndex) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {labels.map((label, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-              backgroundColor: current[i] ? C.red : C.green,
-            }} />
-            <span style={{ fontSize: 10, color: current[i] ? C.red : C.textMuted }}>{label}</span>
-          </div>
-        ))}
-      </div>
-    )
-  }
-
-  const H  = 44           // chart height in px
-  const BW = labels.length > 10 ? 4 : labels.length > 5 ? 6 : 8   // bar width
-  const PG = 2            // gap between pair bars
-  const PairW = hasPrev ? BW * 2 + PG : BW
-  const GapBetween = labels.length > 10 ? 1 : 2
-  const totalW = labels.length * PairW + (labels.length - 1) * GapBetween
-
-  return (
-    <svg
-      viewBox={`0 0 ${totalW} ${H}`}
-      width="100%" height={H}
-      style={{ overflow: 'visible', display: 'block' }}
-    >
-      {labels.map((label, i) => {
-        const x       = i * (PairW + GapBetween)
-        const currH   = Math.max((current[i] / maxVal) * H, current[i] > 0 ? 1 : 0)
-        const prevH   = hasPrev ? Math.max((prev[i] / maxVal) * H, prev[i] > 0 ? 1 : 0) : 0
-
-        return (
-          <g key={i}>
-            {hasPrev && (
-              <rect
-                x={x} y={H - prevH} width={BW} height={prevH}
-                fill={C.barPrev} rx={1.5}
-              />
-            )}
-            <rect
-              x={hasPrev ? x + BW + PG : x}
-              y={H - currH} width={BW} height={currH}
-              fill={C.barCurrent} rx={1.5}
-            />
-          </g>
-        )
-      })}
-    </svg>
-  )
+  users:      { label: 'Users',           accent: '#0891b2' },
 }
 
 // ─── CHECK CARD ───────────────────────────────────────────────────────────────
 
 function CheckCard({ check }: { check: CheckResult }) {
-  const col    = STATUS_COLOR[check.status]
-  const bgCol  = STATUS_BG[check.status]
-  const isBotIndex = check.id === 'bot_suspicion'
+  const st = STATUS[check.status]
 
-  // Delta direction color
-  const deltaPositive = check.deltaLabel.startsWith('+')
-  // For (not set) and engagement floor, positive delta is bad
-  const invertedChecks = ['not_set_share', 'unknown_country', 'bounce_rate']
-  const deltaColor = check.deltaLabel === '—' || !check.deltaLabel.startsWith('+') && !check.deltaLabel.startsWith('-')
-    ? C.textMuted
-    : invertedChecks.includes(check.id)
-      ? (deltaPositive ? C.red : C.green)
-      : (deltaPositive ? C.green : C.red)
+  // Delta colour — for (not set)/unknown/bounce: positive change is bad
+  const invertIds = ['not_set_share', 'unknown_country', 'bounce_rate']
+  const isPositive = check.deltaLabel.startsWith('+')
+  const deltaColor = !check.deltaLabel || check.deltaLabel === '—'
+    ? 'var(--color-text-secondary)'
+    : invertIds.includes(check.id)
+      ? (isPositive ? '#dc2626' : '#16a34a')
+      : (isPositive ? '#16a34a' : '#dc2626')
 
   return (
     <div style={{
-      backgroundColor: C.bgCard,
-      border: `1px solid ${C.border}`,
+      backgroundColor: 'var(--color-background-primary)',
+      border: '1px solid var(--color-border-tertiary)',
       borderRadius: 10,
       padding: '14px 16px',
       display: 'flex',
       flexDirection: 'column',
       gap: 10,
     }}>
-      {/* Header */}
+      {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: 3 }}>
             {check.label}
           </div>
-          <div style={{ fontSize: 11, color: C.textMuted, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', lineHeight: 1.55 }}>
             {check.description}
           </div>
         </div>
+
         {/* Status badge */}
         <div style={{
           flexShrink: 0,
           fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
-          padding: '2px 8px', borderRadius: 20,
-          backgroundColor: bgCol, color: col,
+          padding: '3px 9px', borderRadius: 20,
+          color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}`,
         }}>
-          {STATUS_LABEL[check.status]}
+          {st.label}
         </div>
       </div>
 
       {/* Values row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {/* Current value */}
         <div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: col, lineHeight: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: st.color, lineHeight: 1 }}>
             {check.valueLabel}
           </div>
           {check.prevLabel && (
-            <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginTop: 2 }}>
               prev: {check.prevLabel}
             </div>
           )}
         </div>
-        {check.deltaLabel && (
+
+        {/* Delta */}
+        {check.deltaLabel && check.deltaLabel !== '—' && (
           <div style={{
-            fontSize: 12, fontWeight: 600, color: deltaColor,
-            padding: '2px 6px', borderRadius: 6,
-            backgroundColor: '#ffffff0a',
+            fontSize: 11, fontWeight: 600, color: deltaColor,
+            padding: '2px 7px', borderRadius: 6,
+            backgroundColor: deltaColor + '18',
+            border: `1px solid ${deltaColor}30`,
           }}>
             {check.deltaLabel}
           </div>
         )}
+
+        {/* Detail */}
         {check.detail && (
-          <div style={{ fontSize: 10, color: C.textSub, flex: 1, textAlign: 'right' }}>
+          <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', flex: 1, textAlign: 'right' }}>
             {check.detail}
           </div>
         )}
       </div>
-
-      {/* Mini chart */}
-      {check.chart.labels.length > 0 && (
-        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            {!isBotIndex && (
-              <>
-                {check.chart.prev.length > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: C.barPrev }} />
-                    <span style={{ fontSize: 9, color: C.textMuted }}>Previous</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: C.barCurrent }} />
-                  <span style={{ fontSize: 9, color: C.textMuted }}>Current</span>
-                </div>
-              </>
-            )}
-          </div>
-          <MiniBarChart chart={check.chart} isBotIndex={isBotIndex} />
-        </div>
-      )}
     </div>
   )
 }
 
-// ─── SECTION WRAPPER ─────────────────────────────────────────────────────────
+// ─── SECTION BLOCK ────────────────────────────────────────────────────────────
 
-function Section({ sectionId, checks }: { sectionId: string; checks: CheckResult[] }) {
-  const meta   = SECTION_META[sectionId]
-  const passes = checks.filter(c => c.status === 'pass').length
-  const total  = checks.length
-
-  const scoreColor = passes === total ? C.green : passes > total / 2 ? C.amber : C.red
+function SectionBlock({ id, checks }: { id: string; checks: CheckResult[] }) {
+  const meta    = SECTION[id]
+  const passes  = checks.filter(c => c.status === 'pass').length
+  const total   = checks.length
+  const scoreColor = passes === total ? '#16a34a' : passes > total / 2 ? '#ca8a04' : '#dc2626'
 
   return (
-    <div style={{ marginBottom: 24 }}>
+    <div style={{ marginBottom: 28 }}>
       {/* Section header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 12,
-        paddingBottom: 8,
-        borderBottom: `1px solid ${C.border}`,
+        marginBottom: 12, paddingBottom: 8,
+        borderBottom: '1px solid var(--color-border-tertiary)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{meta.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+            {meta.label}
+          </span>
         </div>
-        <span style={{ fontSize: 11, color: scoreColor, fontWeight: 600 }}>
-          {passes}/{total} checks passed
+        <span style={{ fontSize: 11, fontWeight: 500, color: scoreColor }}>
+          {passes}/{total} passed
         </span>
       </div>
 
-      {/* Check cards grid */}
+      {/* Cards */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -275,54 +154,50 @@ function Section({ sectionId, checks }: { sectionId: string; checks: CheckResult
   )
 }
 
-// ─── LOADING / ERROR STATES ───────────────────────────────────────────────────
+// ─── LOADING / ERROR ──────────────────────────────────────────────────────────
 
-function LoadingState() {
+function Loading() {
   return (
     <div style={{ padding: '32px 0', textAlign: 'center' }}>
       <div style={{
         display: 'inline-block', width: 18, height: 18, borderRadius: '50%',
-        border: `2px solid ${C.border}`, borderTopColor: C.green,
-        animation: 'ga4spin 0.8s linear infinite',
+        border: '2px solid var(--color-border-tertiary)', borderTopColor: '#16a34a',
+        animation: 'lcSpin 0.8s linear infinite',
       }} />
-      <style>{`@keyframes ga4spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ fontSize: 12, color: C.textMuted, marginTop: 10 }}>
+      <style>{`@keyframes lcSpin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 10 }}>
         Fetching data from GA4…
       </div>
     </div>
   )
 }
 
-function ErrorState({ message }: { message: string }) {
+function ErrorBlock({ message }: { message: string }) {
   return (
     <div style={{
-      padding: '16px', borderRadius: 10, marginBottom: 16,
-      backgroundColor: '#7f1d1d22', border: '1px solid #7f1d1d',
+      padding: '14px 16px', borderRadius: 10, marginBottom: 24,
+      backgroundColor: '#fef2f2', border: '1px solid #fecaca',
     }}>
-      <div style={{ fontSize: 12, color: C.red, fontWeight: 600 }}>GA4 connection error</div>
-      <div style={{ fontSize: 11, color: C.textMuted, marginTop: 4 }}>{message}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#dc2626' }}>GA4 connection error</div>
+      <div style={{ fontSize: 11, color: '#7f1d1d', marginTop: 4 }}>{message}</div>
     </div>
   )
 }
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
 
-interface LiveChecksPanelProps {
-  propertyId: string
-  period: number
-}
+interface Props { propertyId: string; period: number }
 
-const SECTIONS: Array<'traffic' | 'engagement' | 'users'> = ['traffic', 'engagement', 'users']
+const SECTIONS = ['traffic', 'engagement', 'users'] as const
 
-export default function LiveChecksPanel({ propertyId, period }: LiveChecksPanelProps) {
-  const [checks, setChecks]       = useState<CheckResult[] | null>(null)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
+export default function LiveChecksPanel({ propertyId, period }: Props) {
+  const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
 
     fetch('/api/ga4/checks', {
       method: 'POST',
@@ -341,16 +216,16 @@ export default function LiveChecksPanel({ propertyId, period }: LiveChecksPanelP
     return () => { cancelled = true }
   }, [propertyId, period])
 
-  if (loading) return <LoadingState />
-  if (error)   return <ErrorState message={error} />
+  if (loading) return <Loading />
+  if (error)   return <ErrorBlock message={error} />
   if (!checks) return null
 
   return (
     <div>
       {SECTIONS.map(s => (
-        <Section
+        <SectionBlock
           key={s}
-          sectionId={s}
+          id={s}
           checks={checks.filter(c => c.section === s)}
         />
       ))}
