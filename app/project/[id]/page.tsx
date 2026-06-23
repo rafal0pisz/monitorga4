@@ -1,9 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import PeriodSelector from '@/src/components/project/PeriodSelector'
-import RunNowButton   from '@/src/components/project/RunNowButton'
-import LiveChecksPanel from '@/src/components/project/LiveChecksPanel'
-import EventsDetailPanel from '@/src/components/project/EventsDetailPanel'
+import PeriodSelector from '@/components/project/PeriodSelector'
+import RunNowButton   from '@/components/project/RunNowButton'
+import LiveChecksPanel from '@/components/project/LiveChecksPanel'
+import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
