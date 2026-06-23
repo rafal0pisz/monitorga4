@@ -29,10 +29,14 @@ interface Props {
     alert_email?: string | null
     status?: string | null
   }
-  // Legacy props from config/page.tsx — accepted but ignored (data loaded via RPC)
+  // All legacy props from config/page.tsx — accepted but ignored (data loaded via RPC)
   catalog?: unknown
   checksConfig?: unknown
   customEvents?: unknown
+  ecommerceConfig?: unknown
+  parameterChecks?: unknown
+  ecommerceCatalog?: unknown
+  initialSections?: unknown
 }
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
