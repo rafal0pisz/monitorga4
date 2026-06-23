@@ -1,13 +1,12 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
-import PeriodSelector from '@/components/project/PeriodSelector'
-import RunNowButton   from '@/components/project/RunNowButton'
-import LiveChecksPanel from '@/components/project/LiveChecksPanel'
+import PeriodSelector    from '@/components/project/PeriodSelector'
+import RunNowButton      from '@/components/project/RunNowButton'
+import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 
-// ─── PALETTE ─────────────────────────────────────────────────────────────────
-
+// ─── PALETTE — matches original design ───────────────────────────────────────
 const C = {
   bg:        '#161B22',
   card:      '#1D2328',
@@ -15,34 +14,30 @@ const C = {
   text:      '#e5e7eb',
   textMuted: '#6B7280',
   textSub:   '#9ca3af',
+  accent:    '#84cc16',   // lime green — brand colour
   green:     '#4ade80',
   amber:     '#fbbf24',
   red:       '#f87171',
-  blue:      '#3b82f6',
-  purple:    '#8b5cf6',
-  cyan:      '#06b6d4',
   orange:    '#f97316',
+  purple:    '#8b5cf6',
 }
 
-// ─── CHECK SECTION MAPPING ───────────────────────────────────────────────────
+// ─── STORED CHECK SECTIONS (Ecommerce / Custom Events / Parameters) ──────────
 
-const CHECK_SECTION: Record<string, string> = {
-  // New live checks (Traffic / Engagement / Users) are rendered by LiveChecksPanel
-  // Stored worker checks below:
-  purchase_duplicates:  'ecommerce',
-  ecommerce_events:     'ecommerce',
-  custom_events:        'custom_events',
-  parameter_checks:     'parameters',
+const CHECK_SECTION: Record<string, 'ecommerce' | 'custom_events' | 'parameters'> = {
+  purchase_duplicates: 'ecommerce',
+  ecommerce_events:    'ecommerce',
+  custom_events:       'custom_events',
+  parameter_checks:    'parameters',
 }
 
-const SECTION_META: Record<string, { label: string; accent: string }> = {
-  ecommerce:    { label: 'Ecommerce',     accent: C.orange },
-  custom_events:{ label: 'Custom Events', accent: C.amber  },
-  parameters:   { label: 'Parameters',    accent: C.purple },
-}
+const SECTION_META = {
+  ecommerce:     { label: 'Ecommerce',     accent: C.orange  },
+  custom_events: { label: 'Custom Events', accent: C.amber   },
+  parameters:    { label: 'Parameters',    accent: C.purple  },
+} as const
 
 type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip'
-
 const STATUS_COLOR: Record<CheckStatus, string> = {
   pass: C.green, warn: C.amber, fail: C.red, skip: C.textMuted,
 }
@@ -53,7 +48,7 @@ export default async function ProjectPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>
+  params:       Promise<{ id: string }>
   searchParams: Promise<{ period?: string }>
 }) {
   const { id }     = await params
@@ -67,7 +62,6 @@ export default async function ProjectPage({
 
   const admin = createAdminClient()
 
-  // Fetch project
   const { data: project } = await admin
     .from('projects')
     .select('*')
@@ -76,7 +70,6 @@ export default async function ProjectPage({
 
   if (!project) notFound()
 
-  // Fetch latest run
   const { data: latestRun } = await admin
     .from('dqs_runs')
     .select('*')
@@ -85,72 +78,84 @@ export default async function ProjectPage({
     .limit(1)
     .maybeSingle()
 
-  // Fetch stored check results (for Ecommerce / Custom Events / Parameters)
   const { data: storedResults } = latestRun
-    ? await admin
-        .from('dqs_results')
-        .select('*')
-        .eq('run_id', latestRun.id)
+    ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
     : { data: [] }
 
-  // Group stored results by section (only non-live sections)
   const storedBySection: Record<string, any[]> = {
     ecommerce: [], custom_events: [], parameters: [],
   }
   for (const r of storedResults ?? []) {
     const sec = CHECK_SECTION[r.check_id]
-    if (sec && storedBySection[sec]) storedBySection[sec].push(r)
+    if (sec) storedBySection[sec].push(r)
   }
 
-  // Ecommerce expected events for EventsDetailPanel
   const expectedEvents: string[] = project.expected_events ?? []
 
   const scoreColor = (s: number) => s >= 80 ? C.green : s >= 60 ? C.amber : C.red
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.text }}>
+    <div style={{ minHeight: '100vh', backgroundColor: C.bg, color: C.text, fontFamily: 'inherit' }}>
 
-      {/* ── TOP NAV ─────────────────────────────────────────────────────────── */}
+      {/* ── NAV ─────────────────────────────────────────────────────────────── */}
       <nav style={{
-        backgroundColor: C.card, borderBottom: `1px solid ${C.border}`,
+        backgroundColor: C.card,
+        borderBottom: `1px solid ${C.border}`,
         position: 'sticky', top: 0, zIndex: 50,
       }}>
         <div style={{
           maxWidth: 1100, margin: '0 auto', padding: '0 20px',
           height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Left: breadcrumb */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Link href="/dashboard" style={{ fontSize: 12, color: C.textMuted, textDecoration: 'none' }}>
               ← Dashboard
             </Link>
             <span style={{ color: C.border }}>·</span>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{project.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{project.name}</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Right: period + settings + run */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <PeriodSelector current={periodDays} />
+
+            <Link
+              href={`/project/${id}/settings`}
+              style={{
+                fontSize: 12, color: C.textMuted, textDecoration: 'none',
+                padding: '4px 10px', borderRadius: 6,
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              ⚙ Settings
+            </Link>
+
             <RunNowButton projectId={id} />
           </div>
         </div>
       </nav>
 
-      {/* ── CONTENT ─────────────────────────────────────────────────────────── */}
+      {/* ── CONTENT ──────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* Score header */}
+        {/* Score + property header */}
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
           marginBottom: 28,
         }}>
           <div>
-            <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 4 }}>
-              GA4 Property: <span style={{ color: C.textSub }}>{project.ga4_property_id}</span>
+            <div style={{ fontSize: 12, color: C.textMuted }}>
+              GA4 Property:&nbsp;
+              <span style={{ color: C.textSub, fontFamily: 'monospace' }}>
+                {project.ga4_property_id || '—'}
+              </span>
             </div>
             {latestRun && (
-              <div style={{ fontSize: 11, color: C.textMuted }}>
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 3 }}>
                 Last run: {latestRun.run_date}
                 {latestRun.status === 'failed' && (
-                  <span style={{ color: C.red, marginLeft: 6 }}>· Failed</span>
+                  <span style={{ color: C.red, marginLeft: 8 }}>· Run failed</span>
                 )}
               </div>
             )}
@@ -158,16 +163,21 @@ export default async function ProjectPage({
 
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 2 }}>Overall Score</div>
-              <div style={{ fontSize: 36, fontWeight: 800, color: scoreColor(latestRun.score_total), lineHeight: 1 }}>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Overall Score
+              </div>
+              <div style={{
+                fontSize: 40, fontWeight: 800, lineHeight: 1,
+                color: scoreColor(latestRun.score_total),
+              }}>
                 {Math.round(latestRun.score_total)}
               </div>
-              <div style={{ fontSize: 10, color: C.textMuted }}>/ 100</div>
+              <div style={{ fontSize: 11, color: C.textMuted }}>/ 100</div>
             </div>
           )}
         </div>
 
-        {/* ── LIVE CHECKS: Traffic · Engagement · Users ───────────────────── */}
+        {/* ── LIVE: Traffic · Engagement · Users ─────────────────────────── */}
         {project.ga4_property_id ? (
           <LiveChecksPanel
             propertyId={project.ga4_property_id}
@@ -175,22 +185,32 @@ export default async function ProjectPage({
           />
         ) : (
           <div style={{
-            padding: 20, borderRadius: 10, marginBottom: 24,
+            padding: 16, borderRadius: 10, marginBottom: 24,
             backgroundColor: '#78350f22', border: `1px solid #78350f`,
             fontSize: 13, color: C.amber,
           }}>
-            No GA4 property configured. Edit project settings to add a property ID.
+            No GA4 property configured.{' '}
+            <Link href={`/project/${id}/settings`} style={{ color: C.accent }}>
+              Open Settings
+            </Link>{' '}
+            to add a property ID.
           </div>
         )}
 
-        {/* ── STORED SECTIONS: Ecommerce · Custom Events · Parameters ─────── */}
+        {/* ── STORED: Ecommerce · Custom Events · Parameters ──────────────── */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
           const meta   = SECTION_META[sectionId]
           const checks = storedBySection[sectionId]
           const isEmpty = checks.length === 0
 
+          const emptyMsg = {
+            ecommerce:     'No ecommerce checks — configure in project settings.',
+            custom_events: 'No custom events configured — add expected events in settings.',
+            parameters:    'No parameter checks configured — set up in project settings.',
+          }[sectionId]
+
           return (
-            <div key={sectionId} style={{ marginBottom: 24 }}>
+            <div key={sectionId} style={{ marginBottom: 28 }}>
               {/* Section header */}
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -198,28 +218,22 @@ export default async function ProjectPage({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{meta.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{meta.label}</span>
                 </div>
                 {!isEmpty && (
-                  <span style={{
-                    fontSize: 11, color: C.textMuted,
-                  }}>
-                    {checks.filter((c: any) => c.status === 'pass').length}/{checks.length} checks passed
+                  <span style={{ fontSize: 11, color: C.textMuted }}>
+                    {checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed
                   </span>
                 )}
               </div>
 
               {isEmpty ? (
                 <div style={{
-                  padding: '16px', borderRadius: 8, textAlign: 'center',
+                  padding: '14px 16px', borderRadius: 8, textAlign: 'center',
                   backgroundColor: '#ffffff05', border: `1px dashed ${C.border}`,
                   fontSize: 12, color: C.textMuted,
                 }}>
-                  {sectionId === 'ecommerce'
-                    ? 'No ecommerce checks — configure in project settings.'
-                    : sectionId === 'custom_events'
-                    ? 'No custom events configured — add expected events in settings.'
-                    : 'No parameter checks configured — set up in project settings.'}
+                  {emptyMsg}
                 </div>
               ) : (
                 <div style={{
@@ -233,7 +247,6 @@ export default async function ProjectPage({
                 </div>
               )}
 
-              {/* Events chart panel (custom events only) */}
               {sectionId === 'custom_events' && expectedEvents.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <EventsDetailPanel
@@ -251,7 +264,7 @@ export default async function ProjectPage({
   )
 }
 
-// ─── STORED CHECK CARD (Ecommerce / Custom Events / Parameters) ──────────────
+// ─── STORED CHECK CARD ───────────────────────────────────────────────────────
 
 function StoredCheckCard({ check }: { check: any }) {
   const status: CheckStatus = check.status ?? 'skip'
