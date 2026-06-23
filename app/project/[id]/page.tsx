@@ -6,6 +6,15 @@ import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 
+// ─── TYPES ───────────────────────────────────────────────────────────────────
+
+type RunRow = {
+  id: string
+  run_date: string
+  score_total: number | null
+  status: string
+}
+
 // ─── OLD WORKER CHECK IDs → skip (now handled live by LiveChecksPanel) ────────
 const SKIP_IDS = new Set([
   'expected_events', 'self_referral', 'direct_traffic_spike',
@@ -17,10 +26,8 @@ const SKIP_IDS = new Set([
 function storedSection(checkId: string): 'ecommerce' | 'custom_events' | 'parameters' | null {
   if (SKIP_IDS.has(checkId)) return null
   if (['purchase_duplicates', 'ecommerce_events', 'ecommerce_presence'].includes(checkId)) return 'ecommerce'
-  // Treat event-named checks (e.g. evt_purchase, event_add_to_cart) as custom events
   if (checkId.startsWith('evt_') || checkId.startsWith('event_') ||
       checkId.startsWith('custom_event') || checkId.includes('_presence')) return 'custom_events'
-  // Everything else (param_*, parameter_*, unknown) → parameters
   return 'parameters'
 }
 
@@ -30,7 +37,6 @@ const SECTION_META = {
   parameters:    { label: 'Parameters',    accent: '#8b5cf6' },
 } as const
 
-// ─── STATUS ──────────────────────────────────────────────────────────────────
 type ST = { color: string; bg: string; border: string; label: string }
 const STATUS: Record<string, ST> = {
   pass:  { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Pass'  },
@@ -66,22 +72,20 @@ export default async function ProjectPage({
     .from('projects').select('*').eq('id', id).single()
   if (!project) notFound()
 
-  // Fetch last 10 runs for the score history table
-  const { data: runs } = await admin
+  const { data: runsRaw } = await admin
     .from('dqs_runs')
     .select('id, run_date, score_total, status')
     .eq('project_id', id)
     .order('run_date', { ascending: false })
     .limit(10)
 
-  const latestRun = runs?.[0] ?? null
+  const runs = (runsRaw ?? []) as RunRow[]
+  const latestRun = runs[0] ?? null
 
-  // Fetch stored check results for the latest run
   const { data: storedResults } = latestRun
     ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
     : { data: [] }
 
-  // Bucket stored results into sections
   const storedBySection: Record<string, any[]> = {
     ecommerce: [], custom_events: [], parameters: [],
   }
@@ -95,7 +99,7 @@ export default async function ProjectPage({
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
 
-      {/* ── NAV ──────────────────────────────────────────────────────────────── */}
+      {/* NAV */}
       <nav style={{
         backgroundColor: 'var(--color-background-secondary)',
         borderBottom: '1px solid var(--color-border-tertiary)',
@@ -127,31 +131,25 @@ export default async function ProjectPage({
         </div>
       </nav>
 
-      {/* ── CONTENT ──────────────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* ── SCORE HEADER ──────────────────────────────────────────────────── */}
+        {/* SCORE HEADER */}
         <div style={{
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
           padding: '16px 20px', marginBottom: 28,
           backgroundColor: 'var(--color-background-primary)',
           border: '1px solid var(--color-border-tertiary)',
-          borderRadius: 12,
-          gap: 20,
+          borderRadius: 12, gap: 20,
         }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
-              GA4 Property
-            </div>
-            <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--color-text-primary)', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>GA4 Property</div>
+            <div style={{ fontSize: 12, fontFamily: 'monospace', marginBottom: 8 }}>
               {project.ga4_property_id || '—'}
             </div>
             {latestRun ? (
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
                 Last run: {latestRun.run_date}
-                {latestRun.status === 'failed' && (
-                  <span style={{ color: '#dc2626', marginLeft: 8 }}>· Run failed</span>
-                )}
+                {latestRun.status === 'failed' && <span style={{ color: '#dc2626', marginLeft: 8 }}>· Run failed</span>}
               </div>
             ) : (
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
@@ -159,12 +157,9 @@ export default async function ProjectPage({
               </div>
             )}
           </div>
-
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-                Overall Score
-              </div>
+              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Overall Score</div>
               <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1, color: scoreColor(latestRun.score_total) }}>
                 {Math.round(latestRun.score_total)}
               </div>
@@ -173,69 +168,44 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* ── SCORE HISTORY TABLE ───────────────────────────────────────────── */}
-        {runs && runs.length > 1 && (
+        {/* SCORE HISTORY */}
+        {runs.length > 1 && (
           <div style={{ marginBottom: 28 }}>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              marginBottom: 10, paddingBottom: 8,
-              borderBottom: '1px solid var(--color-border-tertiary)',
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
               <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#6366f1' }} />
               <span style={{ fontSize: 13, fontWeight: 700 }}>Score History</span>
             </div>
-            <div style={{
-              backgroundColor: 'var(--color-background-primary)',
-              border: '1px solid var(--color-border-tertiary)',
-              borderRadius: 10,
-              overflow: 'hidden',
-            }}>
+            <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
-                    <th style={{ padding: '8px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>Date</th>
-                    <th style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>Score</th>
-                    <th style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>Status</th>
-                    <th style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>vs prev</th>
+                    {['Date','Score','Status','vs prev'].map((h, i) => (
+                      <th key={h} style={{ padding: '8px 16px', textAlign: i === 0 ? 'left' : 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {runs.map((run, i) => {
-                    const prevRun = runs[i + 1]
+                  {runs.map((run: RunRow, i: number) => {
+                    const prevRun: RunRow | undefined = runs[i + 1]
                     const delta = prevRun?.score_total != null && run.score_total != null
-                      ? Math.round(run.score_total - prevRun.score_total)
-                      : null
+                      ? Math.round(run.score_total - prevRun.score_total) : null
                     const col = run.score_total != null ? scoreColor(run.score_total) : '#9ca3af'
                     return (
-                      <tr
-                        key={run.id}
-                        style={{
-                          borderBottom: i < runs.length - 1 ? '1px solid var(--color-border-tertiary)' : 'none',
-                          backgroundColor: i === 0 ? 'var(--color-background-tertiary)' : undefined,
-                        }}
-                      >
-                        <td style={{ padding: '8px 16px', color: 'var(--color-text-primary)' }}>
+                      <tr key={run.id} style={{ borderBottom: i < runs.length - 1 ? '1px solid var(--color-border-tertiary)' : 'none' }}>
+                        <td style={{ padding: '8px 16px' }}>
                           {run.run_date}
-                          {i === 0 && (
-                            <span style={{ marginLeft: 6, fontSize: 9, color: '#16a34a', fontWeight: 600 }}>LATEST</span>
-                          )}
+                          {i === 0 && <span style={{ marginLeft: 6, fontSize: 9, color: '#16a34a', fontWeight: 700 }}>LATEST</span>}
                         </td>
                         <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: col }}>
                           {run.score_total != null ? Math.round(run.score_total) : '—'}
                         </td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right' }}>
-                          {run.status === 'failed' ? (
-                            <span style={{ color: '#dc2626', fontSize: 11 }}>Failed</span>
-                          ) : (
-                            <span style={{ color: '#16a34a', fontSize: 11 }}>OK</span>
-                          )}
+                        <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11, color: run.status === 'failed' ? '#dc2626' : '#16a34a' }}>
+                          {run.status === 'failed' ? 'Failed' : 'OK'}
                         </td>
                         <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11 }}>
-                          {delta != null ? (
-                            <span style={{ color: delta >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>
-                              {delta >= 0 ? '+' : ''}{delta}
-                            </span>
-                          ) : '—'}
+                          {delta != null
+                            ? <span style={{ color: delta >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{delta >= 0 ? '+' : ''}{delta}</span>
+                            : '—'}
                         </td>
                       </tr>
                     )
@@ -246,28 +216,21 @@ export default async function ProjectPage({
           </div>
         )}
 
-        {/* ── LIVE CHECKS: Traffic · Engagement · Users ─────────────────────── */}
+        {/* LIVE CHECKS */}
         {project.ga4_property_id ? (
           <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
         ) : (
-          <div style={{
-            padding: '12px 16px', borderRadius: 10, marginBottom: 24,
-            backgroundColor: '#fefce8', border: '1px solid #fde68a',
-            fontSize: 13, color: '#92400e',
-          }}>
+          <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
             No GA4 property configured.{' '}
-            <Link href={`/project/${id}/config`} style={{ color: '#16a34a', fontWeight: 500 }}>
-              Open Settings →
-            </Link>
+            <Link href={`/project/${id}/config`} style={{ color: '#16a34a', fontWeight: 500 }}>Open Settings →</Link>
           </div>
         )}
 
-        {/* ── STORED CHECKS: Ecommerce · Custom Events · Parameters ───────────── */}
+        {/* STORED CHECKS */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
           const meta   = SECTION_META[sectionId]
           const checks = storedBySection[sectionId]
           const isEmpty = checks.length === 0
-
           const emptyMsg = {
             ecommerce:     'No ecommerce checks — configure in project settings.',
             custom_events: 'No custom events configured — add expected events in settings.',
@@ -276,11 +239,7 @@ export default async function ProjectPage({
 
           return (
             <div key={sectionId} style={{ marginBottom: 28 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                marginBottom: 12, paddingBottom: 8,
-                borderBottom: '1px solid var(--color-border-tertiary)',
-              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>{meta.label}</span>
@@ -291,32 +250,18 @@ export default async function ProjectPage({
                   </span>
                 )}
               </div>
-
               {isEmpty ? (
-                <div style={{
-                  padding: '14px', borderRadius: 8, textAlign: 'center',
-                  backgroundColor: 'var(--color-background-primary)',
-                  border: '1px dashed var(--color-border-tertiary)',
-                  fontSize: 12, color: 'var(--color-text-secondary)',
-                }}>
+                <div style={{ padding: '14px', borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
                   {emptyMsg}
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-                  {checks.map((check: any) => (
-                    <StoredCheckCard key={check.check_id} check={check} />
-                  ))}
+                  {checks.map((check: any) => <StoredCheckCard key={check.check_id} check={check} />)}
                 </div>
               )}
-
-              {/* Charts — Custom Events only */}
               {sectionId === 'custom_events' && expectedEvents.length > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel
-                    propertyId={project.ga4_property_id}
-                    expectedEvents={expectedEvents}
-                    periodDays={periodDays}
-                  />
+                  <EventsDetailPanel propertyId={project.ga4_property_id} expectedEvents={expectedEvents} periodDays={periodDays} />
                 </div>
               )}
             </div>
@@ -327,37 +272,20 @@ export default async function ProjectPage({
   )
 }
 
-// ─── STORED CHECK CARD ───────────────────────────────────────────────────────
-
 function StoredCheckCard({ check }: { check: any }) {
   const st = STATUS[check.status ?? 'skip'] ?? STATUS.skip
-
   return (
-    <div style={{
-      backgroundColor: 'var(--color-background-primary)',
-      border: '1px solid var(--color-border-tertiary)',
-      borderRadius: 10, padding: '12px 14px',
-    }}>
+    <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 600 }}>{check.check_id}</span>
-        <span style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-          padding: '2px 8px', borderRadius: 20, flexShrink: 0,
-          color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}`,
-        }}>
-          {st.label}
-        </span>
+        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
       </div>
       {check.value != null && (
         <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6, lineHeight: 1 }}>
           {typeof check.value === 'number' ? check.value.toFixed(1) : check.value}
         </div>
       )}
-      {check.message && (
-        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.4 }}>
-          {check.message}
-        </div>
-      )}
+      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.4 }}>{check.message}</div>}
     </div>
   )
 }

@@ -1,474 +1,471 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Project, ChecksCatalog, ChecksConfig, ProjectSections, CustomEventCheck, EcommerceConfig, ParameterCheck } from '@/types'
-import { SECTION_META, DEFAULT_SECTIONS } from '@/types'
 
-const ECOMMERCE_EVENTS = [
-  { event_name: 'purchase',          label: 'Purchase',           desc: 'Order completed' },
-  { event_name: 'begin_checkout',    label: 'Begin checkout',     desc: 'Checkout started' },
-  { event_name: 'add_to_cart',       label: 'Add to cart',        desc: 'Product added to cart' },
-  { event_name: 'remove_from_cart',  label: 'Remove from cart',   desc: 'Product removed' },
-  { event_name: 'view_cart',         label: 'View cart',          desc: 'Cart viewed' },
-  { event_name: 'view_item',         label: 'View item',          desc: 'Product page viewed' },
-  { event_name: 'view_item_list',    label: 'View item list',     desc: 'Product list viewed' },
-  { event_name: 'select_item',       label: 'Select item',        desc: 'Product clicked' },
-  { event_name: 'add_to_wishlist',   label: 'Add to wishlist',    desc: 'Added to wishlist' },
-  { event_name: 'add_payment_info',  label: 'Add payment info',   desc: 'Payment details entered' },
-  { event_name: 'add_shipping_info', label: 'Add shipping info',  desc: 'Shipping address entered' },
-  { event_name: 'select_promotion',  label: 'Select promotion',   desc: 'Promotion clicked' },
-  { event_name: 'view_promotion',    label: 'View promotion',     desc: 'Promotion viewed' },
-  { event_name: 'refund',            label: 'Refund',             desc: 'Purchase refunded' },
+// ─── ECOMMERCE EVENT LIST ─────────────────────────────────────────────────────
+
+const ECOM_EVENTS = [
+  'purchase', 'add_to_cart', 'remove_from_cart', 'view_item',
+  'view_item_list', 'begin_checkout', 'add_payment_info',
+  'add_shipping_info', 'view_cart', 'refund', 'select_item',
+  'select_promotion', 'view_promotion', 'generate_lead',
 ]
 
-// ── Hardcoded colour palette (no CSS variables) ───────────────
-const C = {
-  bg:         '#ffffff',
-  bgSurface:  '#f9fafb',
-  bgMuted:    '#f3f4f6',
-  text:       '#111827',
-  textMuted:  '#6b7280',
-  border:     '#e5e7eb',
-  borderMid:  '#9ca3af',
-  green:      '#16a34a',
-  greenBg:    '#f0fdf4',
-  greenBorder:'#bbf7d0',
-  amber:      '#ca8a04',
-  amberBg:    '#fefce8',
-  amberBorder:'#fef08a',
-  orange:     '#ea580c',
-  orangeBg:   '#fff7ed',
-  orangeBorder:'#fed7aa',
-  purple:     '#7c3aed',
-  purpleBg:   '#faf5ff',
-  purpleBorder:'#ddd6fe',
-  red:        '#dc2626',
-  redBg:      '#fef2f2',
-  redBorder:  '#fecaca',
-}
+// ─── TYPES ────────────────────────────────────────────────────────────────────
 
-const inp: React.CSSProperties = {
-  fontSize: 13, padding: '8px 11px',
-  background: C.bg, border: `1px solid ${C.border}`,
-  borderRadius: 7, color: C.text,
-  outline: 'none', boxSizing: 'border-box', width: '100%',
-}
-
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
-      <div style={{ padding: '11px 18px', borderBottom: `1px solid ${C.border}` }}>
-        <p style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: C.textMuted, margin: 0 }}>{title}</p>
-      </div>
-      <div style={{ padding: '16px 18px' }}>{children}</div>
-    </div>
-  )
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{label}</label>
-      {hint && <p style={{ fontSize: 11, color: C.textMuted, margin: '0 0 5px' }}>{hint}</p>}
-      {children}
-    </div>
-  )
-}
-
-function Toggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
-  return (
-    <button type="button" onClick={onToggle} style={{ position: 'relative', width: 40, height: 22, borderRadius: 11, background: enabled ? C.green : C.borderMid, border: 'none', cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s', padding: 0 }}>
-      <span style={{ position: 'absolute', top: 3, left: enabled ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.15s', display: 'block', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
-    </button>
-  )
-}
-
-function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'monospace', padding: '2px 8px', borderRadius: 4, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBorder}` }}>
-      {label}
-      <button type="button" onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.green, fontSize: 14, lineHeight: 1, padding: 0, opacity: 0.6 }}>×</button>
-    </span>
-  )
-}
-
-interface SectionRowProps {
-  icon: string; title: string; desc: string; enabled: boolean; color: string; bg: string; border: string;
-  onToggle: () => void; children?: React.ReactNode;
-}
-
-function SectionRow({ icon, title, desc, enabled, color, bg, border, onToggle, children }: SectionRowProps) {
-  return (
-    <div style={{ marginBottom: 8, border: `1.5px solid ${enabled ? border : C.border}`, borderRadius: 10, overflow: 'hidden', transition: 'border-color 0.15s' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', background: enabled ? bg : C.bgMuted }}>
-        <i className={`ti ${icon}`} style={{ fontSize: 15, color: enabled ? color : C.borderMid }} aria-hidden="true" />
-        <div style={{ flex: 1 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: C.text }}>{title}</p>
-          <p style={{ fontSize: 11, margin: 0, color: C.textMuted }}>{desc}</p>
-        </div>
-        <Toggle enabled={enabled} onToggle={onToggle} />
-      </div>
-      {enabled && children && (
-        <div style={{ padding: '14px 16px', borderTop: `1px solid ${border}`, background: C.bg }}>
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
+interface CustomEvent { event_name: string; check_type: string; is_enabled: boolean }
+interface ParamCheck  { event_name: string; parameter_name: string }
 
 interface Props {
-  project: Project; catalog: ChecksCatalog[]; checksConfig: ChecksConfig[];
-  customEvents: CustomEventCheck[]; ecommerceConfig: EcommerceConfig[];
-  parameterChecks: ParameterCheck[]; ecommerceCatalog: any[];
-  initialSections?: ProjectSections;
+  project: {
+    id: string
+    name: string
+    ga4_property_id: string
+    own_domain?: string
+    expected_events?: string[]
+    alert_threshold?: number
+    alert_email?: string
+    status?: string
+  }
 }
 
-export default function ProjectConfigForm({ project, catalog, checksConfig, customEvents, ecommerceConfig, parameterChecks, initialSections }: Props) {
-  const router = useRouter()
-  const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
 
-  const [form, setForm] = useState({
-    name: project.name, ga4_property_id: project.ga4_property_id,
-    own_domain: project.own_domain ?? '', alert_threshold: project.alert_threshold,
-    alert_email: project.alert_email ?? '', status: project.status,
-    alerts_enabled: !!(project.alert_email),
-  })
-  const [events, setEvents] = useState<string[]>(project.expected_events)
-  const [eventInput, setEventInput] = useState('')
+export default function ProjectConfigForm({ project }: Props) {
+  const router  = useRouter()
+  const supabase = createClient()
 
-  function addEvent() {
-    const val = eventInput.trim().replace(/,/g, '')
-    if (val && !events.includes(val)) setEvents(p => [...p, val])
-    setEventInput('')
-  }
+  // Basic fields
+  const [name,         setName]         = useState(project.name)
+  const [propertyId,   setPropertyId]   = useState(project.ga4_property_id ?? '')
+  const [ownDomain,    setOwnDomain]    = useState(project.own_domain ?? '')
+  const [alertEmail,   setAlertEmail]   = useState(project.alert_email ?? '')
+  const [alertThresh,  setAlertThresh]  = useState(String(project.alert_threshold ?? 70))
+  const [status,       setStatus]       = useState(project.status ?? 'active')
 
-  const [sections, setSections] = useState<ProjectSections>({
-    ...DEFAULT_SECTIONS,
-    ...(initialSections ?? (project.sections as unknown as ProjectSections ?? {})),
-  })
+  // Custom events
+  const [customEvents, setCustomEvents] = useState<CustomEvent[]>([])
+  const [newEvent,     setNewEvent]     = useState('')
 
-  const optChecks = catalog.filter(c => c.level === 'optional')
-  const coreChecks = catalog.filter(c => c.level === 'core')
-  const [optEnabled, setOptEnabled] = useState<Record<string, boolean>>(() => {
-    const map: Record<string, boolean> = {}
-    for (const c of optChecks) {
-      const cfg = checksConfig.find(cc => cc.check_key === c.check_key)
-      map[c.check_key] = cfg ? cfg.is_enabled : true
-    }
-    return map
-  })
+  // Ecommerce
+  const [ecomEnabled,  setEcomEnabled]  = useState<Set<string>>(new Set())
 
-  const [customEventList, setCustomEventList] = useState<CustomEventCheck[]>(customEvents)
-  const [newCustomEvent, setNewCustomEvent] = useState('')
-  const [newCustomType, setNewCustomType] = useState<'presence' | 'volume' | 'anomaly'>('presence')
-
-  function addCustomEvent() {
-    const name = newCustomEvent.trim()
-    if (!name || customEventList.find(e => e.event_name === name)) return
-    setCustomEventList(prev => [...prev, { id: `new_${Date.now()}`, project_id: project.id, event_name: name, check_type: newCustomType, min_expected_count: null, is_enabled: true, sort_order: prev.length, created_at: new Date().toISOString() }])
-    setNewCustomEvent('')
-  }
-
-  const [ecomEnabled, setEcomEnabled] = useState<Set<string>>(() =>
-    new Set(ecommerceConfig.filter(e => e.is_enabled).map(e => e.event_name))
-  )
-
-  const [paramList, setParamList] = useState<ParameterCheck[]>(parameterChecks)
-  const [newParamEvent, setNewParamEvent] = useState('')
+  // Parameters
+  const [params,       setParams]       = useState<ParamCheck[]>([])
+  const [newEvtName,   setNewEvtName]   = useState('')
   const [newParamName, setNewParamName] = useState('')
 
-  function addParam() {
-    const ev = newParamEvent.trim(); const pn = newParamName.trim()
-    if (!ev || !pn || paramList.find(p => p.event_name === ev && p.parameter_name === pn)) return
-    setParamList(prev => [...prev, { id: `new_${Date.now()}`, project_id: project.id, event_name: ev, parameter_name: pn, check_type: 'not_null', expected_value: null, is_required: true, sort_order: prev.length, created_at: new Date().toISOString() }])
-    setNewParamName('')
-  }
+  // UI state
+  const [saving,   setSaving]   = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error,    setError]    = useState<string | null>(null)
+  const [success,  setSuccess]  = useState(false)
+  const [loading,  setLoading]  = useState(true)
 
-  function setField<K extends keyof typeof form>(k: K, v: typeof form[K]) {
-    setForm(p => ({ ...p, [k]: v })); setSuccess(false)
-  }
+  // ─── LOAD CONFIG ───────────────────────────────────────────────────────────
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true); setError(null); setSuccess(false)
+  const loadConfig = useCallback(async () => {
+    setLoading(true)
     try {
-      const supabase = createClient()
-      const pid = project.id
-      const propertyId = form.ga4_property_id.startsWith('properties/') ? form.ga4_property_id : `properties/${form.ga4_property_id}`
+      const [ceRes, ecRes, pcRes] = await Promise.all([
+        supabase.rpc('get_custom_event_checks', { p_project_id: project.id }),
+        supabase.rpc('get_ecommerce_config',    { p_project_id: project.id }),
+        supabase.rpc('get_parameter_checks',    { p_project_id: project.id }),
+      ])
 
-      // 1. Core project fields
-      const { error: err } = await supabase.from('projects').update({
-        name: form.name, ga4_property_id: propertyId,
-        own_domain: form.own_domain || null, expected_events: events,
-        alert_threshold: form.alert_threshold,
-        alert_email: form.alerts_enabled ? (form.alert_email || null) : null,
-        status: form.status,
-      }).eq('id', pid)
-      if (err) throw new Error(`Project update failed: ${err.message}`)
-
-      // 2. Sections via RPC
-      await supabase.rpc('update_project_sections', { p_project_id: pid, p_sections: sections })
-
-      // 3. Optional checks config
-      for (const [check_key, is_enabled] of Object.entries(optEnabled)) {
-        await supabase.from('checks_config').upsert({ project_id: pid, check_key, is_enabled }, { onConflict: 'project_id,check_key' })
+      if (ceRes.data) {
+        const raw = Array.isArray(ceRes.data) ? ceRes.data : (typeof ceRes.data === 'string' ? JSON.parse(ceRes.data) : [])
+        setCustomEvents(raw.map((e: any) => ({ event_name: e.event_name, check_type: e.check_type ?? 'presence', is_enabled: e.is_enabled !== false })))
       }
 
-      // 4. Custom events via RPC (bypasses PostgREST schema cache)
+      if (ecRes.data) {
+        const raw = Array.isArray(ecRes.data) ? ecRes.data : (typeof ecRes.data === 'string' ? JSON.parse(ecRes.data) : [])
+        setEcomEnabled(new Set(raw.filter((e: any) => e.is_enabled !== false).map((e: any) => e.event_name as string)))
+      }
+
+      if (pcRes.data) {
+        const raw = Array.isArray(pcRes.data) ? pcRes.data : (typeof pcRes.data === 'string' ? JSON.parse(pcRes.data) : [])
+        setParams(raw.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name })))
+      }
+    } catch (e: any) {
+      console.error('Config load error:', e)
+    } finally {
+      setLoading(false)
+    }
+  }, [project.id])
+
+  useEffect(() => { loadConfig() }, [loadConfig])
+
+  // ─── CUSTOM EVENTS ─────────────────────────────────────────────────────────
+
+  function addCustomEvent() {
+    const name = newEvent.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!name || customEvents.some(e => e.event_name === name)) return
+    setCustomEvents(prev => [...prev, { event_name: name, check_type: 'presence', is_enabled: true }])
+    setNewEvent('')
+  }
+
+  function removeCustomEvent(idx: number) {
+    setCustomEvents(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  // ─── ECOMMERCE ─────────────────────────────────────────────────────────────
+
+  function toggleEcom(ev: string) {
+    setEcomEnabled(prev => {
+      const next = new Set(prev)
+      next.has(ev) ? next.delete(ev) : next.add(ev)
+      return next
+    })
+  }
+
+  // ─── PARAMETERS ────────────────────────────────────────────────────────────
+
+  function addParam() {
+    const evt   = newEvtName.trim().toLowerCase().replace(/\s+/g, '_')
+    const param = newParamName.trim().toLowerCase().replace(/\s+/g, '_')
+    if (!evt || !param) return
+    if (params.some(p => p.event_name === evt && p.parameter_name === param)) return
+    setParams(prev => [...prev, { event_name: evt, parameter_name: param }])
+    setNewEvtName(''); setNewParamName('')
+  }
+
+  function removeParam(idx: number) {
+    setParams(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  // ─── SAVE ──────────────────────────────────────────────────────────────────
+
+  async function handleSave() {
+    setSaving(true); setError(null); setSuccess(false)
+    try {
+      const pid = project.id
+
+      // 1. Basic project info
+      const pid_clean = propertyId.startsWith('properties/')
+        ? propertyId : `properties/${propertyId.replace(/\D/g, '')}`
+
+      const { error: projErr } = await supabase
+        .from('projects')
+        .update({
+          name:                name.trim(),
+          ga4_property_id:     pid_clean,
+          own_domain:          ownDomain.trim() || null,
+          alert_email:         alertEmail.trim() || null,
+          alert_threshold:     Number(alertThresh) || 70,
+          status,
+          expected_events:     customEvents.filter(e => e.is_enabled).map(e => e.event_name),
+        })
+        .eq('id', pid)
+
+      if (projErr) throw new Error(`Project update failed: ${projErr.message}`)
+
+      // 2. Custom events via RPC
       const { error: ceErr } = await supabase.rpc('save_custom_event_checks', {
         p_project_id: pid,
-        p_events: customEventList.map((e, i) => ({
-          event_name: e.event_name, check_type: e.check_type,
-          is_enabled: e.is_enabled, sort_order: i,
+        p_events: customEvents.map((e, i) => ({
+          event_name: e.event_name,
+          check_type: e.check_type,
+          is_enabled: e.is_enabled,
+          sort_order: i,
         })),
       })
       if (ceErr) throw new Error(`Custom events save failed: ${ceErr.message}`)
 
-      // 5. Ecommerce config via RPC
+      // 3. Ecommerce config via RPC
       const { error: ecErr } = await supabase.rpc('save_ecommerce_config', {
         p_project_id: pid,
         p_events: [...ecomEnabled].map(event_name => ({ event_name })),
       })
       if (ecErr) throw new Error(`Ecommerce config save failed: ${ecErr.message}`)
 
-      // 6. Parameter checks via RPC
+      // 4. Parameter checks via RPC
       const { error: pcErr } = await supabase.rpc('save_parameter_checks', {
         p_project_id: pid,
-        p_params: paramList.map((p, i) => ({
-          event_name: p.event_name, parameter_name: p.parameter_name, sort_order: i,
+        p_params: params.map((p, i) => ({
+          event_name:     p.event_name,
+          parameter_name: p.parameter_name,
+          sort_order:     i,
         })),
       })
       if (pcErr) throw new Error(`Parameter checks save failed: ${pcErr.message}`)
 
-      setSuccess(true); router.refresh()
-    } catch (err: any) { setError(err.message) } finally { setSaving(false) }
+      setSuccess(true)
+      router.refresh()
+    } catch (e: any) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
   }
+
+  // ─── DELETE ────────────────────────────────────────────────────────────────
 
   async function handleDelete() {
-    if (!confirm(`Delete project "${project.name}"? This cannot be undone.`)) return
+    if (!confirm('Delete this project? This cannot be undone.')) return
     setDeleting(true)
-    try { await createClient().from('projects').delete().eq('id', project.id); router.push('/dashboard') }
-    catch (err: any) { setError(err.message); setDeleting(false) }
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', project.id)
+      if (error) throw error
+      router.push('/dashboard')
+    } catch (e: any) {
+      setError(e.message)
+      setDeleting(false)
+    }
   }
 
-  const thresholdColor = form.alert_threshold >= 90 ? C.green : form.alert_threshold >= 70 ? C.amber : form.alert_threshold >= 50 ? C.orange : C.red
+  // ─── RENDER ────────────────────────────────────────────────────────────────
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 7, fontSize: 13,
+    border: '1px solid var(--color-border-tertiary)',
+    backgroundColor: 'var(--color-background-primary)',
+    color: 'var(--color-text-primary)',
+    outline: 'none',
+  }
+  const labelStyle: React.CSSProperties = {
+    fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)',
+    display: 'block', marginBottom: 4,
+  }
+  const sectionStyle: React.CSSProperties = {
+    backgroundColor: 'var(--color-background-primary)',
+    border: '1px solid var(--color-border-tertiary)',
+    borderRadius: 10, padding: '16px 18px', marginBottom: 16,
+  }
+  const sectionTitle: React.CSSProperties = {
+    fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)',
+    marginBottom: 14,
+  }
+  const tagStyle = (active: boolean): React.CSSProperties => ({
+    padding: '5px 11px', borderRadius: 6, fontSize: 12, cursor: 'pointer',
+    border: `1px solid ${active ? '#bbf7d0' : 'var(--color-border-tertiary)'}`,
+    backgroundColor: active ? '#f0fdf4' : 'var(--color-background-secondary)',
+    color: active ? '#16a34a' : 'var(--color-text-secondary)',
+    fontWeight: active ? 600 : 400,
+    transition: 'all 0.15s',
+  })
+
+  if (loading) {
+    return (
+      <div style={{ padding: '32px 0', textAlign: 'center', fontSize: 13, color: 'var(--color-text-secondary)' }}>
+        Loading configuration…
+      </div>
+    )
+  }
 
   return (
-    <form onSubmit={handleSave}>
+    <div>
+      {/* ── BASIC ─────────────────────────────────────────────────────────── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitle}>Basic settings</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Project name</label>
+            <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>GA4 Property ID</label>
+            <input value={propertyId} onChange={e => setPropertyId(e.target.value)} placeholder="properties/123456789 or 123456789" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Own domain (for self-referral check)</label>
+            <input value={ownDomain} onChange={e => setOwnDomain(e.target.value)} placeholder="example.com" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Status</label>
+            <select value={status} onChange={e => setStatus(e.target.value)} style={inputStyle}>
+              <option value="active">● Active</option>
+              <option value="paused">○ Paused</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-      {/* Basic */}
-      <Card title="Basic settings">
-        <Field label="Project name">
-          <input required value={form.name} onChange={e => setField('name', e.target.value)} placeholder="Client — property" style={inp} />
-        </Field>
-        <Field label="GA4 Property ID" hint="GA4 Admin → Property Settings → Property ID">
-          <input required value={form.ga4_property_id} onChange={e => setField('ga4_property_id', e.target.value)} placeholder="properties/123456789" style={inp} />
-        </Field>
-        <Field label="Status">
-          <div style={{ display: 'flex', gap: 8 }}>
-            {(['active', 'paused'] as const).map(s => (
-              <button key={s} type="button" onClick={() => setField('status', s)} style={{ flex: 1, padding: '7px 12px', borderRadius: 7, fontSize: 13, cursor: 'pointer', border: `1.5px solid ${form.status === s ? (s === 'active' ? C.greenBorder : C.borderMid) : C.border}`, background: form.status === s ? (s === 'active' ? C.greenBg : C.bgMuted) : C.bgSurface, color: form.status === s ? (s === 'active' ? C.green : C.text) : C.textMuted, fontWeight: form.status === s ? 500 : 400 }}>
-                {s === 'active' ? '● Active' : '○ Paused'}
-              </button>
+      {/* ── CUSTOM EVENTS ─────────────────────────────────────────────────── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitle}>Custom Events</div>
+        <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+          Events the worker will check for presence and volume changes.
+        </p>
+
+        {/* Existing events */}
+        {customEvents.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {customEvents.map((e, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '4px 8px', borderRadius: 6,
+                backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0',
+                fontSize: 12,
+              }}>
+                <span style={{ color: '#16a34a', fontWeight: 500 }}>{e.event_name}</span>
+                <button
+                  onClick={() => removeCustomEvent(i)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 14, lineHeight: 1, padding: '0 2px' }}
+                >×</button>
+              </div>
             ))}
           </div>
-        </Field>
-      </Card>
-
-      {/* Expected events */}
-      <Card title="Expected events">
-        <Field label="Events that should be present in GA4" hint="Type and press Enter or comma">
-          <div style={{ minHeight: 40, display: 'flex', flexWrap: 'wrap' as const, gap: 6, padding: '7px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8 }}>
-            {events.map(ev => <Tag key={ev} label={ev} onRemove={() => setEvents(p => p.filter(e => e !== ev))} />)}
-            <input value={eventInput} onChange={e => setEventInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addEvent() } if (e.key === 'Backspace' && !eventInput && events.length) setEvents(p => p.slice(0, -1)) }}
-              onBlur={addEvent}
-              placeholder={events.length === 0 ? 'page_view, purchase...' : ''}
-              style={{ flex: 1, minWidth: 120, background: 'transparent', border: 'none', outline: 'none', fontSize: 13, color: C.text }} />
-          </div>
-          {events.length > 0 && <p style={{ fontSize: 11, color: C.textMuted, margin: '4px 0 0' }}>{events.length} events configured</p>}
-        </Field>
-        <Field label="Own domain" hint="Used for self-referral check, e.g. orange.pl">
-          <input value={form.own_domain} onChange={e => setField('own_domain', e.target.value)} placeholder="example.pl" style={inp} />
-        </Field>
-      </Card>
-
-      {/* Report sections */}
-      <Card title="Report sections">
-        {/* Fixed */}
-        {(['traffic', 'engagement', 'users'] as const).map(key => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 6, borderRadius: 8, background: C.bgMuted, border: `1px solid ${C.border}` }}>
-            <i className={`ti ${SECTION_META[key].icon}`} style={{ fontSize: 14, color: C.green }} aria-hidden="true" />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: C.text }}>{SECTION_META[key].label}</p>
-              <p style={{ fontSize: 11, margin: 0, color: C.textMuted }}>{SECTION_META[key].description}</p>
-            </div>
-            <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBorder}` }}>always on</span>
-          </div>
-        ))}
-        <div style={{ borderTop: `1px solid ${C.border}`, margin: '10px 0 8px' }} />
-        <p style={{ fontSize: 11, color: C.textMuted, margin: '0 0 10px' }}>Toggle additional sections. Configuration expands inline.</p>
-
-        {/* Custom events */}
-        <SectionRow icon="ti-bolt" title="Custom events" desc="Monitor specific custom events — presence, volume, anomaly"
-          enabled={sections.custom_events} color={C.amber} bg={C.amberBg} border={C.amberBorder}
-          onToggle={() => setSections(p => ({ ...p, custom_events: !p.custom_events }))}>
-          {customEventList.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5, marginBottom: 10 }}>
-              {customEventList.map(ev => (
-                <div key={ev.event_name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 7, background: C.bgMuted, border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 12, fontFamily: 'monospace', flex: 1, color: C.text }}>{ev.event_name}</span>
-                  <select value={ev.check_type} onChange={e => setCustomEventList(p => p.map(x => x.event_name === ev.event_name ? { ...x, check_type: e.target.value as any } : x))} style={{ ...inp, width: 'auto', fontSize: 11, padding: '3px 7px' }}>
-                    <option value="presence">Presence</option>
-                    <option value="volume">Volume WoW</option>
-                    <option value="anomaly">Anomaly</option>
-                  </select>
-                  <button type="button" onClick={() => setCustomEventList(p => p.filter(x => x.event_name !== ev.event_name))} style={{ fontSize: 14, color: C.red, background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={newCustomEvent} onChange={e => setNewCustomEvent(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomEvent())} placeholder="event_name" style={{ ...inp, flex: 1 }} />
-            <select value={newCustomType} onChange={e => setNewCustomType(e.target.value as any)} style={{ ...inp, width: 'auto', flexShrink: 0 }}>
-              <option value="presence">Presence</option>
-              <option value="volume">Volume WoW</option>
-              <option value="anomaly">Anomaly</option>
-            </select>
-            <button type="button" onClick={addCustomEvent} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 7, background: C.green, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 500, flexShrink: 0 }}>+ Add</button>
-          </div>
-          {customEventList.length === 0 && <p style={{ fontSize: 11, color: C.textMuted, margin: '8px 0 0' }}>No custom events yet. Add event names above.</p>}
-        </SectionRow>
-
-        {/* Ecommerce */}
-        <SectionRow icon="ti-shopping-cart" title="Ecommerce" desc="Track standard GA4 ecommerce events"
-          enabled={sections.ecommerce} color={C.orange} bg={C.orangeBg} border={C.orangeBorder}
-          onToggle={() => setSections(p => ({ ...p, ecommerce: !p.ecommerce }))}>
-          <p style={{ fontSize: 12, color: C.textMuted, margin: '0 0 10px' }}>Select events to monitor:</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            {ECOMMERCE_EVENTS.map(ev => {
-              const isOn = ecomEnabled.has(ev.event_name)
-              return (
-                <div key={ev.event_name} onClick={() => setEcomEnabled(prev => { const n = new Set(prev); if (n.has(ev.event_name)) n.delete(ev.event_name); else n.add(ev.event_name); return n })}
-                  style={{ padding: '9px 12px', borderRadius: 7, cursor: 'pointer', border: `1.5px solid ${isOn ? C.orange : C.borderMid}`, background: isOn ? C.orangeBg : C.bgSurface, userSelect: 'none' as const }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, fontWeight: isOn ? 500 : 400, color: isOn ? C.orange : C.text }}>{ev.label}</span>
-                    {isOn && <span style={{ fontSize: 12, color: C.orange, fontWeight: 700 }}>✓</span>}
-                  </div>
-                  <p style={{ fontSize: 10, fontFamily: 'monospace', color: C.textMuted, margin: '2px 0 0' }}>{ev.event_name}</p>
-                </div>
-              )
-            })}
-          </div>
-          <p style={{ fontSize: 11, color: C.textMuted, margin: '8px 0 0' }}>{ecomEnabled.size} event{ecomEnabled.size !== 1 ? 's' : ''} selected</p>
-        </SectionRow>
-
-        {/* Parameters */}
-        <SectionRow icon="ti-code" title="Parameters" desc="Verify event parameters — coverage and WoW change"
-          enabled={sections.parameters} color={C.purple} bg={C.purpleBg} border={C.purpleBorder}
-          onToggle={() => setSections(p => ({ ...p, parameters: !p.parameters }))}>
-          <p style={{ fontSize: 11, color: C.textMuted, margin: '0 0 8px' }}>
-            Report will show: <strong>coverage %</strong> (events with non-empty value) and <strong>WoW change</strong>.
-            Parameter must be registered as a custom dimension in GA4 Admin → Custom definitions.
-          </p>
-          {paramList.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5, marginBottom: 10 }}>
-              {paramList.map(p => (
-                <div key={`${p.event_name}_${p.parameter_name}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 7, background: C.bgMuted, border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 11, fontFamily: 'monospace', color: C.textMuted, minWidth: 90 }}>{p.event_name}</span>
-                  <span style={{ fontSize: 12, fontFamily: 'monospace', flex: 1, color: C.text }}>{p.parameter_name}</span>
-                  <button type="button" onClick={() => setParamList(prev => prev.filter(x => !(x.event_name === p.event_name && x.parameter_name === p.parameter_name)))} style={{ fontSize: 14, color: C.red, background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
-            <div style={{ flex: '0 0 140px' }}>
-              <p style={{ fontSize: 10, color: C.textMuted, margin: '0 0 3px' }}>Event name</p>
-              <input value={newParamEvent} onChange={e => setNewParamEvent(e.target.value)} placeholder="e.g. purchase" style={inp} />
-            </div>
-            <div style={{ flex: '1 1 140px' }}>
-              <p style={{ fontSize: 10, color: C.textMuted, margin: '0 0 3px' }}>Parameter name</p>
-              <input value={newParamName} onChange={e => setNewParamName(e.target.value)} onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addParam())} placeholder="e.g. transaction_id" style={inp} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', flexShrink: 0 }}>
-              <button type="button" onClick={addParam} style={{ fontSize: 13, padding: '8px 14px', borderRadius: 7, background: C.purple, color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 500 }}>+ Add</button>
-            </div>
-          </div>
-          {paramList.length === 0 && <p style={{ fontSize: 11, color: C.textMuted, margin: '8px 0 0' }}>No parameters configured yet.</p>}
-        </SectionRow>
-      </Card>
-
-      {/* Core checks */}
-      <Card title="Core checks">
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
-          {coreChecks.map(c => (
-            <div key={c.check_key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 7, background: C.bgMuted, border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 12, color: C.text }}>{c.label}</span>
-              <span style={{ fontSize: 10, color: C.green, padding: '1px 6px', borderRadius: 3, background: C.greenBg, border: `1px solid ${C.greenBorder}` }}>CORE</span>
-            </div>
-          ))}
-          {optChecks.map(c => (
-            <div key={c.check_key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 7, background: C.bgMuted, border: `1px solid ${C.border}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: C.text }}>{c.label}</span>
-                <span style={{ fontSize: 10, color: C.amber, padding: '1px 6px', borderRadius: 3, background: C.amberBg, border: `1px solid ${C.amberBorder}` }}>OPT</span>
-              </div>
-              <Toggle enabled={optEnabled[c.check_key] ?? true} onToggle={() => setOptEnabled(p => ({ ...p, [c.check_key]: !p[c.check_key] }))} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Alerts */}
-      <Card title="Email alerts">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: form.alerts_enabled ? 16 : 0 }}>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: C.text, margin: '0 0 2px' }}>Enable email notifications</p>
-            <p style={{ fontSize: 11, color: C.textMuted, margin: 0 }}>
-              {form.alerts_enabled ? 'Sent when score drops below threshold' : 'Off — no emails will be sent'}
-            </p>
-          </div>
-          <Toggle enabled={form.alerts_enabled} onToggle={() => setField('alerts_enabled' as any, !form.alerts_enabled)} />
-        </div>
-        {form.alerts_enabled && (
-          <>
-            <Field label="Score threshold" hint="Alert sent when score drops below this value">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input type="range" min="0" max="100" step="5" value={form.alert_threshold} onChange={e => setField('alert_threshold', parseInt(e.target.value))} style={{ flex: 1, accentColor: thresholdColor }} />
-                <span style={{ fontSize: 20, fontWeight: 500, color: thresholdColor, minWidth: 36, textAlign: 'right' as const }}>{form.alert_threshold}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.textMuted, marginTop: 4 }}>
-                <span>0 — Critical only</span><span>100 — Always alert</span>
-              </div>
-            </Field>
-            <Field label="Email address" hint="Notifications will be sent to this address">
-              <input type="email" value={form.alert_email} onChange={e => setField('alert_email', e.target.value)} placeholder="rafal@bettersteps.pl" style={inp} />
-            </Field>
-          </>
         )}
-      </Card>
 
-      {error && <div style={{ fontSize: 12, color: C.red, background: C.redBg, border: `1px solid ${C.redBorder}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ fontSize: 12, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBorder}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>✓ Changes saved</div>}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button type="button" onClick={handleDelete} disabled={deleting} style={{ fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>
-          {deleting ? 'Deleting...' : 'Delete project'}
-        </button>
+        {/* Add new */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={() => router.back()} style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: `1px solid ${C.border}`, background: C.bgMuted, color: C.textMuted, cursor: 'pointer' }}>Cancel</button>
-          <button type="submit" disabled={saving} style={{ fontSize: 13, padding: '8px 20px', borderRadius: 8, background: saving ? '#86efac' : C.green, color: '#fff', fontWeight: 500, border: 'none', cursor: saving ? 'wait' : 'pointer' }}>
-            {saving ? 'Saving...' : 'Save changes'}
+          <input
+            value={newEvent}
+            onChange={e => setNewEvent(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addCustomEvent()}
+            placeholder="event_name"
+            style={{ ...inputStyle, width: 'auto', flex: 1 }}
+          />
+          <button
+            onClick={addCustomEvent}
+            style={{ padding: '8px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: '#16a34a', color: '#fff', border: 'none' }}
+          >
+            Add
           </button>
         </div>
       </div>
-    </form>
+
+      {/* ── ECOMMERCE ─────────────────────────────────────────────────────── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitle}>Ecommerce Events</div>
+        <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+          Select GA4 standard ecommerce events to monitor.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {ECOM_EVENTS.map(ev => (
+            <button key={ev} onClick={() => toggleEcom(ev)} style={tagStyle(ecomEnabled.has(ev))}>
+              {ev}
+            </button>
+          ))}
+        </div>
+        {ecomEnabled.size > 0 && (
+          <div style={{ fontSize: 11, color: '#16a34a', marginTop: 10 }}>
+            {ecomEnabled.size} event{ecomEnabled.size !== 1 ? 's' : ''} selected
+          </div>
+        )}
+      </div>
+
+      {/* ── PARAMETERS ────────────────────────────────────────────────────── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitle}>Parameter Checks</div>
+        <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+          For each event + parameter pair the worker checks: coverage rate (% of events with non-empty value) and week-over-week delta.
+        </p>
+
+        {/* Existing params */}
+        {params.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                  <th style={{ textAlign: 'left', padding: '4px 0', fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 600 }}>Event</th>
+                  <th style={{ textAlign: 'left', padding: '4px 0', fontSize: 11, color: 'var(--color-text-secondary)', fontWeight: 600 }}>Parameter</th>
+                  <th style={{ width: 40 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {params.map((p, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                    <td style={{ padding: '7px 0', fontFamily: 'monospace', fontSize: 12 }}>{p.event_name}</td>
+                    <td style={{ padding: '7px 0', fontFamily: 'monospace', fontSize: 12 }}>{p.parameter_name}</td>
+                    <td style={{ padding: '7px 0', textAlign: 'right' }}>
+                      <button
+                        onClick={() => removeParam(i)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16 }}
+                      >×</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Add new param */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Event name</label>
+            <input
+              value={newEvtName}
+              onChange={e => setNewEvtName(e.target.value)}
+              placeholder="purchase"
+              style={inputStyle}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Parameter name</label>
+            <input
+              value={newParamName}
+              onChange={e => setNewParamName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && addParam()}
+              placeholder="transaction_id"
+              style={inputStyle}
+            />
+          </div>
+          <button
+            onClick={addParam}
+            style={{ padding: '8px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: '#16a34a', color: '#fff', border: 'none', flexShrink: 0 }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* ── ALERTS ────────────────────────────────────────────────────────── */}
+      <div style={sectionStyle}>
+        <div style={sectionTitle}>Email Alerts</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={labelStyle}>Alert email</label>
+            <input value={alertEmail} onChange={e => setAlertEmail(e.target.value)} placeholder="you@company.com" type="email" style={inputStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Alert threshold (score below this triggers alert)</label>
+            <input value={alertThresh} onChange={e => setAlertThresh(e.target.value)} type="number" min="0" max="100" style={inputStyle} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── FEEDBACK ──────────────────────────────────────────────────────── */}
+      {error && (
+        <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, backgroundColor: '#fef2f2', border: '1px solid #fecaca', fontSize: 12, color: '#dc2626' }}>
+          {error}
+        </div>
+      )}
+      {success && (
+        <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 12, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 12, color: '#16a34a' }}>
+          Settings saved successfully.
+        </div>
+      )}
+
+      {/* ── ACTIONS ───────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          style={{ fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #fecaca', borderRadius: 7, padding: '8px 14px', cursor: 'pointer' }}
+        >
+          {deleting ? 'Deleting…' : 'Delete project'}
+        </button>
+
+        {/* Save button — ALWAYS enabled (no isDirty gate) */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            fontSize: 13, fontWeight: 600, padding: '9px 24px', borderRadius: 8,
+            backgroundColor: saving ? '#86efac' : '#16a34a',
+            color: '#fff', border: 'none',
+            cursor: saving ? 'wait' : 'pointer',
+            opacity: 1,
+          }}
+        >
+          {saving ? 'Saving…' : 'Save settings'}
+        </button>
+      </div>
+    </div>
   )
 }
