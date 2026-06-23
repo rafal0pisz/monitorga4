@@ -1,5 +1,6 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
+import { Suspense } from 'react'
 import PeriodSelector    from '@/components/project/PeriodSelector'
 import RunNowButton      from '@/components/project/RunNowButton'
 import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
@@ -117,7 +118,9 @@ export default async function ProjectPage({
             <span style={{ fontSize: 13, fontWeight: 600 }}>{project.name}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <PeriodSelector current={periodDays} />
+            <Suspense fallback={<div style={{ width: 160, height: 24 }} />}>
+              <PeriodSelector current={periodDays} />
+            </Suspense>
             <Link href={`/project/${id}/config`} style={{
               fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none',
               padding: '4px 12px', borderRadius: 6,
