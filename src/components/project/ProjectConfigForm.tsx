@@ -22,13 +22,17 @@ interface Props {
   project: {
     id: string
     name: string
-    ga4_property_id: string
-    own_domain?: string
-    expected_events?: string[]
-    alert_threshold?: number
-    alert_email?: string
-    status?: string
+    ga4_property_id: string | null
+    own_domain?: string | null
+    expected_events?: string[] | null
+    alert_threshold?: number | null
+    alert_email?: string | null
+    status?: string | null
   }
+  // Legacy props from config/page.tsx — accepted but ignored (data loaded via RPC)
+  catalog?: unknown
+  checksConfig?: unknown
+  customEvents?: unknown
 }
 
 // ─── COMPONENT ────────────────────────────────────────────────────────────────
@@ -38,7 +42,7 @@ export default function ProjectConfigForm({ project }: Props) {
   const supabase = createClient()
 
   // Basic fields
-  const [name,         setName]         = useState(project.name)
+  const [name,         setName]         = useState(project.name ?? '')
   const [propertyId,   setPropertyId]   = useState(project.ga4_property_id ?? '')
   const [ownDomain,    setOwnDomain]    = useState(project.own_domain ?? '')
   const [alertEmail,   setAlertEmail]   = useState(project.alert_email ?? '')
