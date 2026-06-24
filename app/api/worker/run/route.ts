@@ -90,6 +90,29 @@ function getWoWRanges() {
 // ============================================================
 // Parameter coverage check
 // ============================================================
+
+// Standard GA4 parameter → Data API dimension name mapping
+// These are auto-collected by GA4 and don't need custom dimension registration
+const GA4_STANDARD_PARAMS: Record<string, string> = {
+  transaction_id: 'transactionId',
+  currency:       'currencyCode',
+  item_id:        'itemId',
+  item_name:      'itemName',
+  item_brand:     'itemBrand',
+  item_category:  'itemCategory',
+  item_variant:   'itemVariant',
+  affiliation:    'orderCoupon',
+  coupon:         'orderCoupon',
+}
+// Standard GA4 metrics (not dimensions)
+const GA4_STANDARD_METRICS: Record<string, string> = {
+  value:    'purchaseRevenue',
+  price:    'itemRevenue',
+  quantity: 'itemsAddedToCart',
+  shipping: 'shippingAmount',
+  tax:      'taxAmount',
+}
+
 async function checkParameters(
   project: { ga4_property_id: string },
   token: string,
@@ -108,9 +131,25 @@ async function checkParameters(
     const checkKey = `param_${event_name}_${parameter_name}`
     try {
       const getCoverage = async (dateRange: object): Promise<number> => {
+        // Resolve correct GA4 API name: custom dim, standard dim, or standard metric
+        const stdDim    = GA4_STANDARD_PARAMS[parameter_name]
+        const stdMetric = GA4_STANDARD_METRICS[parameter_name]
+        const dimName   = stdDim ?? `customEvent:${parameter_name}`
+
+        if (stdMetric) {
+          // For value/price etc — check if metric > 0 (presence, not coverage)
+          const data = await ga4Report(project.ga4_property_id, token, {
+            dateRanges: [dateRange],
+            metrics:    [{ name: stdMetric }],
+            dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
+          })
+          const val = parseFloat(data.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+          return val > 0 ? 100 : 0
+        }
+
         const data = await ga4Report(project.ga4_property_id, token, {
           dateRanges: [dateRange],
-          dimensions: [{ name: `customEvent:${parameter_name}` }],
+          dimensions: [{ name: dimName }],
           metrics:    [{ name: 'eventCount' }],
           dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
           limit: 100,
