@@ -24,6 +24,7 @@ interface Props {
     alert_threshold?: number | null
     alert_email?: string | null
     status?: string | null
+    auto_run?: boolean | null
   }
   catalog?: unknown
   checksConfig?: unknown
@@ -44,6 +45,7 @@ export default function ProjectConfigForm({ project }: Props) {
   const [alertEmail,  setAlertEmail]  = useState(project.alert_email ?? '')
   const [alertThresh, setAlertThresh] = useState(String(project.alert_threshold ?? 70))
   const [status,      setStatus]      = useState(project.status ?? 'active')
+  const [autoRun,     setAutoRun]     = useState(project.auto_run ?? false)
 
   const [customEvents,  setCustomEvents]  = useState<CustomEvent[]>([])
   const [ecomEnabled,   setEcomEnabled]   = useState<Set<string>>(new Set())
@@ -127,6 +129,7 @@ export default function ProjectConfigForm({ project }: Props) {
         alert_email: alertEmail.trim() || null,
         alert_threshold: Number(alertThresh) || 70,
         status,
+        auto_run: autoRun,
         expected_events: customEvents.filter(e => e.is_enabled).map(e => e.event_name),
       }).eq('id', pid)
       if (projErr) throw new Error(`Project: ${projErr.message}`)
@@ -244,6 +247,38 @@ export default function ProjectConfigForm({ project }: Props) {
               <option value="active">● Active</option>
               <option value="paused">○ Paused</option>
             </select>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={lbl}>Automated daily check</label>
+            <button
+              type="button"
+              onClick={() => setAutoRun(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 14px', borderRadius: 8, cursor: 'pointer',
+                border: `1px solid ${autoRun ? '#bbf7d0' : 'var(--color-border-tertiary)'}`,
+                backgroundColor: autoRun ? '#f0fdf4' : 'var(--color-background-secondary)',
+                width: '100%', textAlign: 'left',
+              }}
+            >
+              <div style={{
+                width: 36, height: 20, borderRadius: 10, flexShrink: 0,
+                backgroundColor: autoRun ? '#16a34a' : '#d1d5db',
+                position: 'relative', transition: 'background 0.2s',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 2,
+                  left: autoRun ? 18 : 2,
+                  width: 16, height: 16, borderRadius: '50%',
+                  backgroundColor: 'white',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+              <span style={{ fontSize: 13, color: autoRun ? '#16a34a' : 'var(--color-text-secondary)', fontWeight: autoRun ? 600 : 400 }}>
+                {autoRun ? 'Enabled — worker runs daily at 6:00 AM UTC' : 'Disabled — use Run now to check manually'}
+              </span>
+            </button>
           </div>
         </div>
       </div>

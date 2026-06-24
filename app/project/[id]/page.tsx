@@ -6,6 +6,7 @@ import RunNowButton      from '@/components/project/RunNowButton'
 import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
+import PDFExportButton from '@/components/project/PDFExportButton'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
 
@@ -120,6 +121,7 @@ export default async function ProjectPage({
             <Suspense fallback={<div style={{ width: 200, height: 24 }} />}>
               <PeriodSelector current={periodDays} />
             </Suspense>
+            <PDFExportButton projectName={project.name} />
             <Link href={`/project/${id}/config`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)' }}>
               ⚙ Settings
             </Link>
@@ -201,67 +203,86 @@ export default async function ProjectPage({
 
 
 function ScoreSparkline({ runs }: { runs: RunRow[] }) {
-  const pts = runs
-    .filter(r => r.score_total != null)
-    .map(r => r.score_total!)
-    .reverse()                    // oldest → newest
+  const filtered = runs.filter(r => r.score_total != null).reverse() // oldest → newest
+  const pts   = filtered.map(r => r.score_total!)
+  const dates = filtered.map(r => {
+    const d = new Date(r.run_date)
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  })
 
   if (pts.length < 2) return null
 
-  const W = 200, H = 48, pad = 6
-  const min = 0, max = 100
+  const W = 260, H = 52, pad = 6, dateH = 14
   const toX = (i: number) => pad + (i / (pts.length - 1)) * (W - pad * 2)
-  const toY = (v: number) => H - pad - ((v - min) / (max - min)) * (H - pad * 2)
+  const toY = (v: number) => H - pad - (v / 100) * (H - pad * 2)
 
   const polyline = pts.map((v, i) => `${toX(i)},${toY(v)}`).join(' ')
   const latestScore = pts[pts.length - 1]
   const col = latestScore >= 80 ? '#16a34a' : latestScore >= 60 ? '#ca8a04' : '#dc2626'
-
-  // Filled area path
   const areaPath = [
     `M ${toX(0)},${H - pad}`,
     ...pts.map((v, i) => `L ${toX(i)},${toY(v)}`),
-    `L ${toX(pts.length - 1)},${H - pad}`,
-    'Z',
+    `L ${toX(pts.length - 1)},${H - pad}`, 'Z',
   ].join(' ')
+
+  const latestRun = runs[0]
+  const delta = runs.length > 1 && runs[0].score_total != null && runs[1].score_total != null
+    ? Math.round(runs[0].score_total - runs[1].score_total) : null
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 20,
-      padding: '12px 20px', marginBottom: 20,
+      padding: '14px 20px 10px', marginBottom: 20,
       backgroundColor: 'var(--color-background-primary)',
       border: '1px solid var(--color-border-tertiary)',
       borderRadius: 10,
     }}>
-      <div>
-        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 2 }}>Score trend</div>
-        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{pts.length} runs</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          Score trend · {pts.length} runs
+        </div>
+        {delta != null && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
+            {delta >= 0 ? '+' : ''}{delta} vs prev
+          </div>
+        )}
       </div>
-      <svg width={W} height={H} style={{ display: 'block', flex: 1 }}>
-        {/* Filled area */}
-        <path d={areaPath} fill={col} fillOpacity={0.12} />
+
+      {/* Chart */}
+      <svg width="100%" viewBox={`0 0 ${W} ${H + dateH}`} style={{ display: 'block', overflow: 'visible' }}>
+        {/* Area fill */}
+        <path d={areaPath} fill={col} fillOpacity={0.1} />
         {/* Line */}
         <polyline points={polyline} fill="none" stroke={col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        {/* Dots for each run */}
+        {/* Dots + score labels */}
         {pts.map((v, i) => (
-          <circle key={i} cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 4 : 2.5} fill={col} />
+          <g key={i}>
+            <circle cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 4 : 2.5} fill={col} />
+            {(i === 0 || i === pts.length - 1) && (
+              <text
+                x={toX(i)} y={toY(v) - 7}
+                fontSize={9} fill={col} textAnchor="middle"
+                fontWeight={i === pts.length - 1 ? '700' : '400'}
+              >{Math.round(v)}</text>
+            )}
+          </g>
         ))}
-        {/* Score labels for first and last */}
-        <text x={toX(0)}            y={toY(pts[0]) - 6}          fontSize={9} fill={col} textAnchor="middle">{Math.round(pts[0])}</text>
-        <text x={toX(pts.length-1)} y={toY(pts[pts.length-1]) - 6} fontSize={9} fill={col} textAnchor="middle" fontWeight="700">{Math.round(pts[pts.length-1])}</text>
+        {/* Date labels on x-axis */}
+        {pts.map((_, i) => {
+          // Show all dates if ≤7 runs, otherwise only first and last
+          const showLabel = pts.length <= 7 || i === 0 || i === pts.length - 1
+          if (!showLabel) return null
+          return (
+            <text
+              key={`d${i}`}
+              x={toX(i)} y={H + dateH - 2}
+              fontSize={8} fill="var(--color-text-secondary)"
+              textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
+            >{dates[i]}</text>
+          )
+        })}
+        {/* Baseline */}
+        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="var(--color-border-tertiary)" strokeWidth={0.5} />
       </svg>
-      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-        {runs[0]?.run_date && <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{runs[0].run_date}</div>}
-        {(() => {
-          const delta = runs.length > 1 && runs[0].score_total != null && runs[1].score_total != null
-            ? Math.round(runs[0].score_total - runs[1].score_total) : null
-          return delta != null ? (
-            <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
-              {delta >= 0 ? '+' : ''}{delta}
-            </div>
-          ) : null
-        })()}
-      </div>
     </div>
   )
 }
