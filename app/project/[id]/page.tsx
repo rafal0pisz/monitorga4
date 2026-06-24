@@ -1,17 +1,11 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import dynamic from 'next/dynamic'
 import PeriodSelector    from '@/components/project/PeriodSelector'
 import RunNowButton      from '@/components/project/RunNowButton'
 import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
+import EventsWrapper     from '@/components/project/EventsWrapper'
 import Link from 'next/link'
-
-// EventsDetailPanel uses recharts — must be loaded client-side only
-const EventsDetailPanel = dynamic(
-  () => import('@/components/project/EventsDetailPanel'),
-  { ssr: false, loading: () => <div style={{ padding: 16, fontSize: 12, color: 'var(--color-text-secondary)' }}>Loading chart…</div> }
-)
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
 
@@ -20,10 +14,10 @@ const SKIP_IDS = new Set([
   'bounce_rate_anomaly','conversion_rate','page_title_null','session_no_events',
   'geo_anomaly','bot_traffic_night',
 ])
-function storedSection(checkId: string): 'ecommerce'|'custom_events'|'parameters'|null {
-  if (SKIP_IDS.has(checkId)) return null
-  if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkId)) return 'ecommerce'
-  if (checkId.startsWith('evt_')||checkId.startsWith('event_')||checkId.startsWith('custom_event')||checkId.includes('_presence')) return 'custom_events'
+function storedSection(id: string): 'ecommerce'|'custom_events'|'parameters'|null {
+  if (SKIP_IDS.has(id)) return null
+  if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(id)) return 'ecommerce'
+  if (id.startsWith('evt_')||id.startsWith('event_')||id.startsWith('custom_event')||id.includes('_presence')) return 'custom_events'
   return 'parameters'
 }
 const SECTION_META = {
@@ -39,7 +33,7 @@ const STATUS: Record<string, ST> = {
   fail:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
   skip:  { color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb', label: 'Skip'  },
 }
-function scoreColor(s: number) { return s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626' }
+const scoreColor = (s: number) => s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626'
 
 export default async function ProjectPage({
   params, searchParams,
@@ -58,33 +52,24 @@ export default async function ProjectPage({
 
   const admin = createAdminClient()
 
-  const { data: project, error: projectErr } = await admin
-    .from('projects').select('*').eq('id', id).single()
-  if (projectErr) console.error('[project page] project error:', projectErr.message)
+  const { data: project } = await admin.from('projects').select('*').eq('id', id).single()
   if (!project) return notFound()
 
-  const { data: runsRaw, error: runsErr } = await admin
-    .from('dqs_runs')
-    .select('id, run_date, score_total, status')
-    .eq('project_id', id)
-    .order('run_date', { ascending: false })
-    .limit(10)
-  if (runsErr) console.error('[project page] runs error:', runsErr.message)
-
+  const { data: runsRaw } = await admin
+    .from('dqs_runs').select('id, run_date, score_total, status')
+    .eq('project_id', id).order('run_date', { ascending: false }).limit(10)
   const runs = (runsRaw ?? []) as RunRow[]
   const latestRun = runs[0] ?? null
 
-  const { data: storedResults, error: resultsErr } = latestRun
+  const { data: storedResults } = latestRun
     ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
-    : { data: [], error: null }
-  if (resultsErr) console.error('[project page] results error:', resultsErr.message)
+    : { data: [] }
 
-  const storedBySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
+  const bySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
-    const sec = storedSection(r.check_id)
-    if (sec) storedBySection[sec].push(r)
+    const s = storedSection(r.check_id)
+    if (s) bySection[s].push(r)
   }
-
   const expectedEvents: string[] = project.expected_events ?? []
 
   return (
@@ -110,19 +95,14 @@ export default async function ProjectPage({
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* SCORE HEADER */}
+        {/* Score header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>GA4 Property</div>
             <div style={{ fontSize: 12, fontFamily: 'monospace', marginBottom: 8 }}>{project.ga4_property_id || '—'}</div>
-            {latestRun ? (
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                Last run: {latestRun.run_date}
-                {latestRun.status === 'failed' && <span style={{ color: '#dc2626', marginLeft: 8 }}>· Run failed</span>}
-              </div>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>No runs yet — click <strong>Run now</strong> to start.</div>
-            )}
+            {latestRun
+              ? <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Last run: {latestRun.run_date}{latestRun.status === 'failed' && <span style={{ color: '#dc2626', marginLeft: 8 }}>· Failed</span>}</div>
+              : <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>No runs yet — click <strong>Run now</strong> to start.</div>}
           </div>
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -133,7 +113,7 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* SCORE HISTORY */}
+        {/* Score history */}
         {runs.length > 1 && (
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
@@ -151,8 +131,8 @@ export default async function ProjectPage({
                 </thead>
                 <tbody>
                   {runs.map((run: RunRow, i: number) => {
-                    const prevRun: RunRow | undefined = runs[i + 1]
-                    const delta = prevRun?.score_total != null && run.score_total != null ? Math.round(run.score_total - prevRun.score_total) : null
+                    const prev: RunRow | undefined = runs[i + 1]
+                    const delta = prev?.score_total != null && run.score_total != null ? Math.round(run.score_total - prev.score_total) : null
                     const col = run.score_total != null ? scoreColor(run.score_total) : '#9ca3af'
                     return (
                       <tr key={run.id} style={{ borderBottom: i < runs.length - 1 ? '1px solid var(--color-border-tertiary)' : 'none' }}>
@@ -171,24 +151,20 @@ export default async function ProjectPage({
           </div>
         )}
 
-        {/* LIVE CHECKS */}
+        {/* Live checks: Traffic / Engagement / Users */}
         {project.ga4_property_id ? (
           <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
         ) : (
           <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>
-            No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a', fontWeight: 500 }}>Open Settings →</Link>
+            No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link>
           </div>
         )}
 
-        {/* STORED CHECKS */}
+        {/* Stored checks: Ecommerce / Custom Events / Parameters */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
           const meta   = SECTION_META[sectionId]
-          const checks = storedBySection[sectionId]
-          const emptyMsg = {
-            ecommerce:     'No ecommerce checks — configure in project settings.',
-            custom_events: 'No custom events configured — add expected events in settings.',
-            parameters:    'No parameter checks configured — set up in project settings.',
-          }[sectionId]
+          const checks = bySection[sectionId]
+          const emptyMsg = { ecommerce: 'No ecommerce checks — configure in project settings.', custom_events: 'No custom events configured — add expected events in settings.', parameters: 'No parameter checks configured — set up in project settings.' }[sectionId]
           return (
             <div key={sectionId} style={{ marginBottom: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
@@ -198,16 +174,13 @@ export default async function ProjectPage({
                 </div>
                 {checks.length > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed</span>}
               </div>
-              {checks.length === 0 ? (
-                <div style={{ padding: '14px', borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
-                  {checks.map((check: any) => <StoredCheckCard key={check.check_id} check={check} />)}
-                </div>
-              )}
+              {checks.length === 0
+                ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
+                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>{checks.map((c: any) => <StoredCheckCard key={c.check_id} check={c} />)}</div>
+              }
               {sectionId === 'custom_events' && expectedEvents.length > 0 && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel propertyId={project.ga4_property_id ?? ''} expectedEvents={expectedEvents} periodDays={periodDays} />
+                  <EventsWrapper propertyId={project.ga4_property_id ?? ''} expectedEvents={expectedEvents} periodDays={periodDays} />
                 </div>
               )}
             </div>
@@ -224,10 +197,10 @@ function StoredCheckCard({ check }: { check: any }) {
     <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 600 }}>{check.check_id}</span>
-        <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
       </div>
-      {check.value != null && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6, lineHeight: 1 }}>{typeof check.value === 'number' ? check.value.toFixed(1) : check.value}</div>}
-      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5, lineHeight: 1.4 }}>{check.message}</div>}
+      {check.value != null && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6 }}>{typeof check.value === 'number' ? check.value.toFixed(1) : check.value}</div>}
+      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5 }}>{check.message}</div>}
     </div>
   )
 }
