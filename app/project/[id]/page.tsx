@@ -15,7 +15,9 @@ const SKIP_IDS = new Set([
   'geo_anomaly','bot_traffic_night',
 ])
 
-function storedSection(checkId: string): 'ecommerce'|'custom_events'|'parameters'|null {
+// null-safe: check_id może być null w bazie
+function storedSection(checkId: string | null | undefined): 'ecommerce'|'custom_events'|'parameters'|null {
+  if (!checkId) return null
   if (SKIP_IDS.has(checkId)) return null
   if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkId)) return 'ecommerce'
   if (checkId.startsWith('evt_')||checkId.startsWith('event_')||checkId.startsWith('custom_event')||checkId.includes('_presence')) return 'custom_events'
@@ -71,16 +73,16 @@ export default async function ProjectPage({
 
   const bySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
-    const s = storedSection(r.check_id)
-    if (s) bySection[s].push(r)
+    try {
+      const s = storedSection(r.check_id)
+      if (s) bySection[s].push(r)
+    } catch { /* skip malformed rows */ }
   }
 
-  const expectedEvents: string[] = project.expected_events ?? []
+  const expectedEvents: string[] = Array.isArray(project.expected_events) ? project.expected_events : []
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
-
-      {/* NAV */}
       <nav style={{ backgroundColor: 'var(--color-background-secondary)', borderBottom: '1px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
