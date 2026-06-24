@@ -1,8 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import PeriodSelector from '@/components/project/PeriodSelector'
-import RunNowButton   from '@/components/project/RunNowButton'
+import PeriodSelector  from '@/components/project/PeriodSelector'
+import RunNowButton    from '@/components/project/RunNowButton'
+import LiveChecksPanel from '@/components/project/LiveChecksPanel'
 
 export default async function ProjectPage({
   params,
@@ -24,14 +25,17 @@ export default async function ProjectPage({
   const { data: project } = await admin
     .from('projects').select('*').eq('id', id).single()
 
+  if (!project) return <div>Project not found</div>
+
   return (
     <div style={{ padding: 40, fontFamily: 'sans-serif' }}>
-      <p>Step 1: PeriodSelector + RunNowButton</p>
+      <p>Step 2: + LiveChecksPanel</p>
       <Suspense fallback={<span>loading...</span>}>
         <PeriodSelector current={periodDays} />
       </Suspense>
       <RunNowButton projectId={id} />
-      <p>Project: {project?.name}</p>
+      <p>Property: {project.ga4_property_id}</p>
+      <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
     </div>
   )
 }
