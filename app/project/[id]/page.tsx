@@ -212,7 +212,7 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
 
   if (pts.length < 2) return null
 
-  const W = 260, H = 52, pad = 6, dateH = 14
+  const W = 160, H = 36, pad = 4, dateH = 12
   const toX = (i: number) => pad + (i / (pts.length - 1)) * (W - pad * 2)
   const toY = (v: number) => H - pad - (v / 100) * (H - pad * 2)
 
@@ -231,7 +231,7 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
 
   return (
     <div style={{
-      padding: '14px 20px 10px', marginBottom: 20,
+      padding: '10px 16px 8px', marginBottom: 16,
       backgroundColor: 'var(--color-background-primary)',
       border: '1px solid var(--color-border-tertiary)',
       borderRadius: 10,
@@ -256,11 +256,11 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
         {/* Dots + score labels */}
         {pts.map((v, i) => (
           <g key={i}>
-            <circle cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 4 : 2.5} fill={col} />
+            <circle cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 3 : 2} fill={col} />
             {(i === 0 || i === pts.length - 1) && (
               <text
-                x={toX(i)} y={toY(v) - 7}
-                fontSize={9} fill={col} textAnchor="middle"
+                x={toX(i)} y={toY(v) - 5}
+                fontSize={8} fill={col} textAnchor="middle"
                 fontWeight={i === pts.length - 1 ? '700' : '400'}
               >{Math.round(v)}</text>
             )}
@@ -275,7 +275,7 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
             <text
               key={`d${i}`}
               x={toX(i)} y={H + dateH - 2}
-              fontSize={8} fill="var(--color-text-secondary)"
+              fontSize={7} fill="var(--color-text-secondary)"
               textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
             >{dates[i]}</text>
           )
