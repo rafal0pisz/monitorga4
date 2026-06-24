@@ -93,20 +93,15 @@ function getWoWRanges() {
 async function checkParameters(
   project: { ga4_property_id: string },
   token: string,
-  paramChecks: { event_name: string; parameter_name: string }[]
+  paramChecks: { event_name: string; parameter_name: string }[],
+  ranges: { current: { startDate: string; endDate: string }; prev: { startDate: string; endDate: string } }
 ): Promise<CheckResult[]> {
   if (!paramChecks.length) return []
   const w = WEIGHTS['parameter_checks'] ?? 8
   const results: CheckResult[] = []
 
-  const today   = new Date()
-  const fmt     = (d: Date) => d.toISOString().split('T')[0]
-  const endC    = new Date(today);  endC.setDate(today.getDate() - 1)
-  const startC  = new Date(endC);   startC.setDate(endC.getDate() - 6)
-  const endP    = new Date(startC); endP.setDate(startC.getDate() - 1)
-  const startP  = new Date(endP);   startP.setDate(endP.getDate() - 6)
-  const rangeC  = { startDate: fmt(startC), endDate: fmt(endC) }
-  const rangeP  = { startDate: fmt(startP), endDate: fmt(endP) }
+  const rangeC = ranges.current
+  const rangeP = ranges.prev
 
   for (const pc of paramChecks) {
     const { event_name, parameter_name } = pc
@@ -638,7 +633,7 @@ export async function POST(request: NextRequest) {
 
       const [results, paramResults] = await Promise.all([
         runAllChecks(project, accessToken, ecomEvents, customEventChecks),
-        checkParameters(project, accessToken, paramChecks),
+        checkParameters(project, accessToken, paramChecks, { current: ranges.current, prev: ranges.prev }),
       ])
       const allResults = [...results, ...paramResults]
       const scoreTotal = +allResults.reduce((s, r) => s + r.score, 0).toFixed(2)
