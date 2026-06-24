@@ -86,6 +86,68 @@ function getWoWRanges() {
 // ============================================================
 // 8 CORE CHECKÓW
 // ============================================================
+
+// ============================================================
+// Parameter coverage check
+// ============================================================
+async function checkParameters(
+  project: { ga4_property_id: string },
+  token: string,
+  paramChecks: { event_name: string; parameter_name: string }[]
+): Promise<CheckResult[]> {
+  if (!paramChecks.length) return []
+  const w = WEIGHTS['parameter_checks'] ?? 8
+  const results: CheckResult[] = []
+
+  const today   = new Date()
+  const fmt     = (d: Date) => d.toISOString().split('T')[0]
+  const endC    = new Date(today);  endC.setDate(today.getDate() - 1)
+  const startC  = new Date(endC);   startC.setDate(endC.getDate() - 6)
+  const endP    = new Date(startC); endP.setDate(startC.getDate() - 1)
+  const startP  = new Date(endP);   startP.setDate(endP.getDate() - 6)
+  const rangeC  = { startDate: fmt(startC), endDate: fmt(endC) }
+  const rangeP  = { startDate: fmt(startP), endDate: fmt(endP) }
+
+  for (const pc of paramChecks) {
+    const { event_name, parameter_name } = pc
+    const checkKey = `param_${event_name}_${parameter_name}`
+    try {
+      const getCoverage = async (dateRange: object): Promise<number> => {
+        const data = await ga4Report(project.ga4_property_id, token, {
+          dateRanges: [dateRange],
+          dimensions: [{ name: `customEvent:${parameter_name}` }],
+          metrics:    [{ name: 'eventCount' }],
+          dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
+          limit: 100,
+        })
+        const rows = data.rows ?? []
+        const total     = rows.reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+        const withParam = rows
+          .filter((r: any) => r.dimensionValues?.[0]?.value !== '(not set)' && r.dimensionValues?.[0]?.value !== '')
+          .reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+        return total > 0 ? (withParam / total) * 100 : 0
+      }
+
+      const [covC, covP] = await Promise.all([getCoverage(rangeC), getCoverage(rangeP)])
+      const delta  = +(covC - covP).toFixed(1)
+      const status = covC >= 90 ? 'pass' : covC >= 70 ? 'warn' : 'fail'
+      const score  = status === 'pass' ? w : status === 'warn' ? Math.round(w * 0.5) : 0
+
+      results.push({
+        check_key: checkKey, check_level: 'optional', status, score, weight: w,
+        value:   { coverage_current: +covC.toFixed(1), coverage_prev: +covP.toFixed(1), delta },
+        message: `${event_name}.${parameter_name}: ${covC.toFixed(1)}% coverage (${delta >= 0 ? '+' : ''}${delta}pp WoW)`,
+      })
+    } catch (e: any) {
+      results.push({
+        check_key: checkKey, check_level: 'optional', status: 'fail', score: 0, weight: w,
+        value: { error: e.message }, message: `${event_name}.${parameter_name}: check error`,
+      })
+    }
+  }
+  return results
+}
+
 async function runAllChecks(project: Project, token: string, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
   const results: CheckResult[] = []
   const ranges = getWoWRanges()
