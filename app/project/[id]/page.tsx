@@ -210,7 +210,7 @@ function StoredCheckCard({ check }: { check: any }) {
         <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
       </div>
-      {check.value != null && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6 }}>{typeof check.value === "number" ? check.value.toFixed(1) : typeof check.value === "object" && check.value !== null ? JSON.stringify(check.value) : String(check.value ?? "")}</div>}
+      {typeof check.value === "number" && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6 }}>{check.value.toFixed(1)}</div>}
       {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5 }}>{check.message}</div>}
     </div>
   )
