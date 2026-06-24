@@ -1,8 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import PeriodSelector from '@/components/project/PeriodSelector'
-import RunNowButton   from '@/components/project/RunNowButton'
+import PeriodSelector  from '@/components/project/PeriodSelector'
+import RunNowButton    from '@/components/project/RunNowButton'
+import LiveChecksPanel from '@/components/project/LiveChecksPanel'
 import Link from 'next/link'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
@@ -53,63 +54,19 @@ export default async function ProjectPage({
           </div>
         </div>
       </nav>
-
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>GA4 Property</div>
-            <div style={{ fontSize: 12, fontFamily: 'monospace', marginBottom: 8 }}>{project.ga4_property_id || '—'}</div>
-            {latestRun
-              ? <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Last run: {latestRun.run_date}</div>
-              : <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>No runs yet — click <strong>Run now</strong> to start.</div>}
-          </div>
+        <div style={{ padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>GA4 Property: {project.ga4_property_id || '—'}</div>
           {latestRun?.score_total != null && (
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Overall Score</div>
-              <div style={{ fontSize: 42, fontWeight: 800, lineHeight: 1, color: scoreColor(latestRun.score_total) }}>{Math.round(latestRun.score_total)}</div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>/100</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: scoreColor(latestRun.score_total), marginTop: 8 }}>
+              Score: {Math.round(latestRun.score_total)}
             </div>
           )}
         </div>
-
-        {runs.length > 1 && (
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-              <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#6366f1' }} />
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Score History</span>
-            </div>
-            <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
-                    {['Date','Score','Status','vs prev'].map((h, i) => (
-                      <th key={h} style={{ padding: '8px 16px', textAlign: i === 0 ? 'left' : 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run: RunRow, i: number) => {
-                    const prev: RunRow | undefined = runs[i + 1]
-                    const delta = prev?.score_total != null && run.score_total != null ? Math.round(run.score_total - prev.score_total) : null
-                    const col = run.score_total != null ? scoreColor(run.score_total) : '#9ca3af'
-                    return (
-                      <tr key={run.id} style={{ borderBottom: i < runs.length - 1 ? '1px solid var(--color-border-tertiary)' : 'none' }}>
-                        <td style={{ padding: '8px 16px' }}>{run.run_date}{i === 0 && <span style={{ marginLeft: 6, fontSize: 9, color: '#16a34a', fontWeight: 700 }}>LATEST</span>}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: col }}>{run.score_total != null ? Math.round(run.score_total) : '—'}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11, color: run.status === 'failed' ? '#dc2626' : '#16a34a' }}>{run.status === 'failed' ? 'Failed' : 'OK'}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11 }}>{delta != null ? <span style={{ color: delta >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{delta >= 0 ? '+' : ''}{delta}</span> : '—'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 16 }}>Testing LiveChecksPanel…</p>
+        {project.ga4_property_id && (
+          <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
         )}
-
-        <div style={{ padding: 20, borderRadius: 10, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          Checks temporarily disabled — restoring…
-        </div>
       </div>
     </div>
   )
