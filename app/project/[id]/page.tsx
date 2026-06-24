@@ -248,7 +248,7 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
       </div>
 
       {/* Chart */}
-      <svg width="100%" viewBox={`0 0 ${W} ${H + dateH}`} style={{ display: 'block', overflow: 'visible' }}>
+      <svg width={W} height={H + dateH} viewBox={`0 0 ${W} ${H + dateH}`} style={{ display: 'block', overflow: 'visible' }}>
         {/* Area fill */}
         <path d={areaPath} fill={col} fillOpacity={0.1} />
         {/* Line */}
