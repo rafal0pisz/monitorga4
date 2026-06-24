@@ -633,7 +633,15 @@ export async function POST(request: NextRequest) {
 
       const [results, paramResults] = await Promise.all([
         runAllChecks(project, accessToken, ecomEvents, customEventChecks),
-        checkParameters(project, accessToken, paramChecks, { current: ranges.current, prev: ranges.prev }),
+        checkParameters(project, accessToken, paramChecks, (() => {
+          const _today = new Date()
+          const _fmt = (d: Date) => d.toISOString().split('T')[0]
+          const _endC = new Date(_today); _endC.setDate(_today.getDate() - 1)
+          const _startC = new Date(_endC); _startC.setDate(_endC.getDate() - 6)
+          const _endP = new Date(_startC); _endP.setDate(_startC.getDate() - 1)
+          const _startP = new Date(_endP); _startP.setDate(_endP.getDate() - 6)
+          return { current: { startDate: _fmt(_startC), endDate: _fmt(_endC) }, prev: { startDate: _fmt(_startP), endDate: _fmt(_endP) } }
+        })()),
       ])
       const allResults = [...results, ...paramResults]
       const scoreTotal = +allResults.reduce((s, r) => s + r.score, 0).toFixed(2)
