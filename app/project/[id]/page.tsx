@@ -22,6 +22,7 @@ function storedSection(checkKey: string | null | undefined): 'ecommerce'|'custom
   if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkKey)) return 'ecommerce'
   if (checkKey.startsWith('ecom_')) return 'ecommerce'
   if (checkKey.startsWith('evt_')||checkKey.startsWith('event_')||checkKey.startsWith('custom_event')||checkKey.includes('_presence')) return 'custom_events'
+  if (checkKey === 'custom_events_check') return 'custom_events'
   return 'parameters'
 }
 
@@ -127,41 +128,8 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* Score history */}
-        {runs.length > 1 && (
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-              <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: '#6366f1' }} />
-              <span style={{ fontSize: 13, fontWeight: 700 }}>Score History</span>
-            </div>
-            <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
-                    {['Date','Score','Status','vs prev'].map((h, i) => (
-                      <th key={h} style={{ padding: '8px 16px', textAlign: i === 0 ? 'left' : 'right', fontWeight: 600, color: 'var(--color-text-secondary)', fontSize: 11 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {runs.map((run: RunRow, i: number) => {
-                    const prev: RunRow | undefined = runs[i + 1]
-                    const delta = prev?.score_total != null && run.score_total != null ? Math.round(run.score_total - prev.score_total) : null
-                    const col = run.score_total != null ? scoreColor(run.score_total) : '#9ca3af'
-                    return (
-                      <tr key={run.id} style={{ borderBottom: i < runs.length - 1 ? '1px solid var(--color-border-tertiary)' : 'none' }}>
-                        <td style={{ padding: '8px 16px' }}>{run.run_date}{i === 0 && <span style={{ marginLeft: 6, fontSize: 9, color: '#16a34a', fontWeight: 700 }}>LATEST</span>}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontWeight: 700, color: col }}>{run.score_total != null ? Math.round(run.score_total) : '—'}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11, color: run.status === 'failed' ? '#dc2626' : '#16a34a' }}>{run.status === 'failed' ? 'Failed' : 'OK'}</td>
-                        <td style={{ padding: '8px 16px', textAlign: 'right', fontSize: 11 }}>{delta != null ? <span style={{ color: delta >= 0 ? '#16a34a' : '#dc2626', fontWeight: 600 }}>{delta >= 0 ? '+' : ''}{delta}</span> : '—'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        {/* Score sparkline */}
+        {runs.length > 1 && <ScoreSparkline runs={runs} />}
 
         {/* Live checks: Traffic / Engagement / Users */}
         {project.ga4_property_id
@@ -206,6 +174,73 @@ export default async function ProjectPage({
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+
+function ScoreSparkline({ runs }: { runs: RunRow[] }) {
+  const pts = runs
+    .filter(r => r.score_total != null)
+    .map(r => r.score_total!)
+    .reverse()                    // oldest → newest
+
+  if (pts.length < 2) return null
+
+  const W = 200, H = 48, pad = 6
+  const min = 0, max = 100
+  const toX = (i: number) => pad + (i / (pts.length - 1)) * (W - pad * 2)
+  const toY = (v: number) => H - pad - ((v - min) / (max - min)) * (H - pad * 2)
+
+  const polyline = pts.map((v, i) => `${toX(i)},${toY(v)}`).join(' ')
+  const latestScore = pts[pts.length - 1]
+  const col = latestScore >= 80 ? '#16a34a' : latestScore >= 60 ? '#ca8a04' : '#dc2626'
+
+  // Filled area path
+  const areaPath = [
+    `M ${toX(0)},${H - pad}`,
+    ...pts.map((v, i) => `L ${toX(i)},${toY(v)}`),
+    `L ${toX(pts.length - 1)},${H - pad}`,
+    'Z',
+  ].join(' ')
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 20,
+      padding: '12px 20px', marginBottom: 20,
+      backgroundColor: 'var(--color-background-primary)',
+      border: '1px solid var(--color-border-tertiary)',
+      borderRadius: 10,
+    }}>
+      <div>
+        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 2 }}>Score trend</div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{pts.length} runs</div>
+      </div>
+      <svg width={W} height={H} style={{ display: 'block', flex: 1 }}>
+        {/* Filled area */}
+        <path d={areaPath} fill={col} fillOpacity={0.12} />
+        {/* Line */}
+        <polyline points={polyline} fill="none" stroke={col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots for each run */}
+        {pts.map((v, i) => (
+          <circle key={i} cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 4 : 2.5} fill={col} />
+        ))}
+        {/* Score labels for first and last */}
+        <text x={toX(0)}            y={toY(pts[0]) - 6}          fontSize={9} fill={col} textAnchor="middle">{Math.round(pts[0])}</text>
+        <text x={toX(pts.length-1)} y={toY(pts[pts.length-1]) - 6} fontSize={9} fill={col} textAnchor="middle" fontWeight="700">{Math.round(pts[pts.length-1])}</text>
+      </svg>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        {runs[0]?.run_date && <div style={{ fontSize: 10, color: 'var(--color-text-secondary)' }}>{runs[0].run_date}</div>}
+        {(() => {
+          const delta = runs.length > 1 && runs[0].score_total != null && runs[1].score_total != null
+            ? Math.round(runs[0].score_total - runs[1].score_total) : null
+          return delta != null ? (
+            <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
+              {delta >= 0 ? '+' : ''}{delta}
+            </div>
+          ) : null
+        })()}
       </div>
     </div>
   )

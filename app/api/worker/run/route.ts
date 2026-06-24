@@ -471,18 +471,23 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
           if (delta < -0.5) drops.push(ev)
         }
       }
-      const status = missing.length > 0 ? 'fail' : drops.length > 0 ? 'warn' : 'pass'
-      const w = 8
-      const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
-        check_key: 'custom_events_check', check_level: 'core', status, score, weight: w,
-        value: { events: eventNames, current: countC, prev: countP, missing, drops },
-        message: missing.length > 0
-          ? `Missing custom events: ${missing.join(', ')}`
-          : drops.length > 0
-          ? `Volume drop >50%: ${drops.join(', ')}`
-          : `All ${eventNames.length} custom events present`,
-      })
+      // Per-event results — one card per custom event
+      const wPerEv = +(8 / Math.max(eventNames.length, 1)).toFixed(2)
+      for (const ev of eventNames) {
+        const currCount = countC[ev] ?? 0
+        const prevCount = countP[ev] ?? 0
+        const pctDelta  = prevCount > 0 ? ((currCount - prevCount) / prevCount) * 100 : 0
+        const evStatus  = currCount === 0 ? 'fail' : Math.abs(pctDelta) > 50 ? 'warn' : 'pass'
+        const evScore   = evStatus === 'pass' ? wPerEv : evStatus === 'warn' ? wPerEv * 0.5 : 0
+        results.push({
+          check_key: `custom_event_${ev}`, check_level: 'core',
+          status: evStatus, score: evScore, weight: wPerEv,
+          value: { current: currCount, prev: prevCount, delta: +pctDelta.toFixed(1) },
+          message: currCount === 0
+            ? `No ${ev} events in current period`
+            : `${currCount.toLocaleString()} events (WoW: ${pctDelta > 0 ? '+' : ''}${pctDelta.toFixed(1)}%)`,
+        })
+      }
     } catch (e: any) {
       results.push({ check_key: 'custom_events_check', check_level: 'core', status: 'fail', score: 0, weight: 8, value: { error: e.message }, message: `API error: ${e.message}` })
     }
