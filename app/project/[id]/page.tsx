@@ -20,6 +20,7 @@ function storedSection(checkKey: string | null | undefined): 'ecommerce'|'custom
   if (!checkKey) return null
   if (SKIP_IDS.has(checkKey)) return null
   if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkKey)) return 'ecommerce'
+  if (checkKey.startsWith('ecom_')) return 'ecommerce'
   if (checkKey.startsWith('evt_')||checkKey.startsWith('event_')||checkKey.startsWith('custom_event')||checkKey.includes('_presence')) return 'custom_events'
   return 'parameters'
 }
@@ -69,6 +70,10 @@ export default async function ProjectPage({
   const { data: storedResults } = latestRun
     ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
     : { data: [] }
+
+  const { data: ecomRaw } = await admin.rpc('get_ecommerce_config', { p_project_id: id })
+  const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : []
+  const ecomEvents: string[] = ecomArr.filter((e: any) => e.is_enabled !== false).map((e: any) => e.event_name as string)
 
   const bySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
@@ -191,6 +196,11 @@ export default async function ProjectPage({
               {sectionId === 'custom_events' && expectedEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
                   <EventsDetailPanel propertyId={project.ga4_property_id} expectedEvents={expectedEvents} periodDays={periodDays} />
+                </div>
+              )}
+              {sectionId === 'ecommerce' && ecomEvents.length > 0 && project.ga4_property_id && (
+                <div style={{ marginTop: 14 }}>
+                  <EventsDetailPanel propertyId={project.ga4_property_id} expectedEvents={ecomEvents} periodDays={periodDays} />
                 </div>
               )}
             </div>

@@ -384,7 +384,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({
         check_key: 'purchase_duplicates', check_level: 'core', status, score, weight: w,
         value: { ratio_current: +ratioC.toFixed(3), ratio_prev: +ratioP.toFixed(3), delta: +delta.toFixed(1) },
-        message: evC === 0 ? 'Brak eventów purchase w tym okresie' : `Purchase/session ratio: ${ratioC.toFixed(3)} (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
+        message: evC === 0 ? 'No purchase events in this period' : `Purchase/session ratio: ${ratioC.toFixed(3)} (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'purchase_duplicates', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
