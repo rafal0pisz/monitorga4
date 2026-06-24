@@ -107,8 +107,8 @@ export default async function ProjectPage({
           </div>
         )}
 
-        <div style={{ padding: '32px 20px', textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, color: 'var(--color-text-secondary)', fontSize: 13 }}>
-          Live checks loading… (components being restored)
+        <div style={{ padding: 20, borderRadius: 10, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          Checks temporarily disabled — restoring…
         </div>
       </div>
     </div>
