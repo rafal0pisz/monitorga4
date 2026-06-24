@@ -89,8 +89,8 @@ export default async function AppSidebar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, color: '#16a34a', flexShrink: 0 }}>QS</div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>GA4 Quality Score</p>
-              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.3 }}>monitor.bettersteps.pl</p>
+              <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: 0, lineHeight: 1.3 }}>AlertGA4</p>
+              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0, lineHeight: 1.3 }}>alertga4.bettersteps.pl</p>
             </div>
           </div>
         </div>
