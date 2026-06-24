@@ -6,7 +6,7 @@ interface EventData { current: DayCount[]; prev: DayCount[]; totalCurrent: numbe
 
 function MiniBarChart({ current, prev }: { current: DayCount[]; prev: DayCount[] }) {
   const maxCount = Math.max(...current.map(d => d.count), ...prev.map(d => d.count), 1)
-  const days = Math.max(current.length, prev.length, 7)
+  const days = Math.min(Math.max(current.length, prev.length, 7), 14)
   return (
     <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36 }}>
       {Array.from({ length: days }).map((_, i) => {

@@ -42,6 +42,25 @@ const STATUS: Record<string, ST> = {
 }
 const scoreColor = (s: number) => s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626'
 
+
+// pageResponsive
+function PageStyles() {
+  return (
+    <style>{`
+      @media (max-width: 768px) {
+        .page-nav-actions { flex-wrap: wrap; gap: 6px !important; }
+        .page-score-header { flex-direction: column !important; }
+        .page-grid { grid-template-columns: 1fr !important; }
+        .page-history-table { font-size: 11px !important; }
+        .page-settings-grid { grid-template-columns: 1fr !important; }
+      }
+      @media (max-width: 480px) {
+        .page-period-label { display: none !important; }
+      }
+    `}</style>
+  )
+}
+
 export default async function ProjectPage({
   params, searchParams,
 }: {
@@ -89,6 +108,7 @@ export default async function ProjectPage({
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
+      <PageStyles />
       <nav style={{ backgroundColor: 'var(--color-background-secondary)', borderBottom: '1px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -111,7 +131,7 @@ export default async function ProjectPage({
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
         {/* Score header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
+        <div className="page-score-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>GA4 Property</div>
             <div style={{ fontSize: 12, fontFamily: 'monospace', marginBottom: 8 }}>{project.ga4_property_id || '—'}</div>
@@ -151,13 +171,13 @@ export default async function ProjectPage({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>{meta.label}</span>
+                  <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
                 </div>
                 {checks.length > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed</span>}
               </div>
               {checks.length === 0
                 ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
-                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                : <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 10 }}>
                     {checks.map((c: any) => <StoredCheckCard key={c.check_key ?? c.id} check={c} />)}
                   </div>
               }

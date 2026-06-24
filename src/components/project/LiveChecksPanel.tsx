@@ -118,7 +118,7 @@ function SectionBlock({ id, checks }: { id: string; checks: CheckResult[] }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-text-primary)' }}>
             {meta.label}
           </span>
         </div>
@@ -129,7 +129,7 @@ function SectionBlock({ id, checks }: { id: string; checks: CheckResult[] }) {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
         gap: 10,
       }}>
         {checks.map(c => <CheckCard key={c.id} check={c} />)}
@@ -167,6 +167,16 @@ function ErrorBlock({ message }: { message: string }) {
 }
 
 interface Props { propertyId: string; period: number }
+
+const LCStyle = () => (
+  <style>{`
+    @media (max-width: 600px) {
+      .lc-grid { grid-template-columns: 1fr !important; }
+      .lc-nav  { flex-wrap: wrap; gap: 8px !important; }
+    }
+  `}</style>
+)
+// lcResponsive
 
 export default function LiveChecksPanel({ propertyId, period }: Props) {
   const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
