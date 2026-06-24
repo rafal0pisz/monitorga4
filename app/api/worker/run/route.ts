@@ -17,6 +17,7 @@ const WEIGHTS: Record<string, number> = {
   bot_traffic_night:    12,
   geo_anomaly:           7,
   session_no_events:    10,
+  parameter_checks:      8,
 }
 
 // ============================================================
@@ -556,23 +557,30 @@ export async function POST(request: NextRequest) {
         .single()
 
       // Fetch ecommerce + custom events via RPC (bypasses schema cache)
-      const [{ data: ecomRaw }, { data: customRaw }] = await Promise.all([
+      const [{ data: ecomRaw }, { data: customRaw }, { data: paramRaw }] = await Promise.all([
         supabase.rpc('get_ecommerce_config', { p_project_id: project.id }),
         supabase.rpc('get_custom_event_checks', { p_project_id: project.id }),
+        supabase.rpc('get_parameter_checks',    { p_project_id: project.id }),
       ])
       const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : (typeof ecomRaw === 'string' ? JSON.parse(ecomRaw) : [])
       const ecomEvents = ecomArr.filter((e: any) => e.is_enabled).map((e: any) => e.event_name as string)
       const customArr = Array.isArray(customRaw) ? customRaw : (typeof customRaw === 'string' ? JSON.parse(customRaw) : [])
       const customEventChecks = customArr.filter((e: any) => e.is_enabled !== false)
+      const paramArr    = Array.isArray(paramRaw) ? paramRaw : (typeof paramRaw === 'string' ? JSON.parse(paramRaw) : [])
+      const paramChecks = paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
 
-      const results = await runAllChecks(project, accessToken, ecomEvents, customEventChecks)
-      const scoreTotal = +results.reduce((s, r) => s + r.score, 0).toFixed(2)
+      const [results, paramResults] = await Promise.all([
+        runAllChecks(project, accessToken, ecomEvents, customEventChecks),
+        checkParameters(project, accessToken, paramChecks),
+      ])
+      const allResults = [...results, ...paramResults]
+      const scoreTotal = +allResults.reduce((s, r) => s + r.score, 0).toFixed(2)
 
       // Keep best score of the day
       const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
       if (isBetter) {
         await supabase.from('dqs_results').delete().eq('run_id', run.id)
-        await supabase.from('dqs_results').insert(results.map(r => ({ ...r, run_id: run.id })))
+        await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
         await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
       } else {
         // Score not better — mark run as completed but keep old results
