@@ -15,12 +15,12 @@ const SKIP_IDS = new Set([
   'geo_anomaly','bot_traffic_night',
 ])
 
-// null-safe: check_id może być null w bazie
-function storedSection(checkId: string | null | undefined): 'ecommerce'|'custom_events'|'parameters'|null {
-  if (!checkId) return null
-  if (SKIP_IDS.has(checkId)) return null
-  if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkId)) return 'ecommerce'
-  if (checkId.startsWith('evt_')||checkId.startsWith('event_')||checkId.startsWith('custom_event')||checkId.includes('_presence')) return 'custom_events'
+// Worker saves results with column check_key (not check_id)
+function storedSection(checkKey: string | null | undefined): 'ecommerce'|'custom_events'|'parameters'|null {
+  if (!checkKey) return null
+  if (SKIP_IDS.has(checkKey)) return null
+  if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkKey)) return 'ecommerce'
+  if (checkKey.startsWith('evt_')||checkKey.startsWith('event_')||checkKey.startsWith('custom_event')||checkKey.includes('_presence')) return 'custom_events'
   return 'parameters'
 }
 
@@ -38,7 +38,6 @@ const STATUS: Record<string, ST> = {
   fail:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
   skip:  { color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb', label: 'Skip'  },
 }
-
 const scoreColor = (s: number) => s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626'
 
 export default async function ProjectPage({
@@ -74,7 +73,8 @@ export default async function ProjectPage({
   const bySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
     try {
-      const s = storedSection(r.check_id)
+      // Worker uses check_key column
+      const s = storedSection(r.check_key)
       if (s) bySection[s].push(r)
     } catch { /* skip malformed rows */ }
   }
@@ -104,7 +104,7 @@ export default async function ProjectPage({
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
-        {/* SCORE HEADER */}
+        {/* Score header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 2 }}>GA4 Property</div>
@@ -122,7 +122,7 @@ export default async function ProjectPage({
           )}
         </div>
 
-        {/* SCORE HISTORY */}
+        {/* Score history */}
         {runs.length > 1 && (
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
@@ -158,13 +158,13 @@ export default async function ProjectPage({
           </div>
         )}
 
-        {/* LIVE CHECKS */}
+        {/* Live checks: Traffic / Engagement / Users */}
         {project.ga4_property_id
           ? <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 
-        {/* STORED CHECKS */}
+        {/* Stored checks: Ecommerce / Custom Events / Parameters */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
           const meta   = SECTION_META[sectionId]
           const checks = bySection[sectionId]
@@ -184,7 +184,9 @@ export default async function ProjectPage({
               </div>
               {checks.length === 0
                 ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
-                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>{checks.map((c: any) => <StoredCheckCard key={c.check_id} check={c} />)}</div>
+                : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
+                    {checks.map((c: any) => <StoredCheckCard key={c.check_key ?? c.id} check={c} />)}
+                  </div>
               }
               {sectionId === 'custom_events' && expectedEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
@@ -194,7 +196,6 @@ export default async function ProjectPage({
             </div>
           )
         })}
-
       </div>
     </div>
   )
@@ -202,10 +203,11 @@ export default async function ProjectPage({
 
 function StoredCheckCard({ check }: { check: any }) {
   const st = STATUS[check.status ?? 'skip'] ?? STATUS.skip
+  const label = check.check_key ?? check.check_id ?? '—'
   return (
     <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600 }}>{check.check_id}</span>
+        <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
       </div>
       {check.value != null && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6 }}>{typeof check.value === 'number' ? check.value.toFixed(1) : check.value}</div>}
