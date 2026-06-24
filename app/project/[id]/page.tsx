@@ -247,16 +247,53 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
 }
 
 function StoredCheckCard({ check }: { check: any }) {
-  const st = STATUS[check.status ?? 'skip'] ?? STATUS.skip
+  const st    = STATUS[check.status ?? 'skip'] ?? STATUS.skip
   const label = check.check_key ?? check.check_id ?? '—'
+  const isParam  = typeof label === 'string' && label.startsWith('param_')
+  const isCount  = typeof label === 'string' && (label.startsWith('ecom_') || label.startsWith('custom_event_'))
+  const val      = check.value && typeof check.value === 'object' ? check.value : null
+  const covCurr  = isParam  && val ? (val.coverage_current ?? null) : null
+  const covPrev  = isParam  && val ? (val.coverage_prev   ?? null) : null
+  const cntCurr  = isCount  && val ? (val.current ?? null) : null
+  const cntPrev  = isCount  && val ? (val.prev    ?? null) : null
+
   return (
     <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
         <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
       </div>
-      {typeof check.value === "number" && <div style={{ fontSize: 20, fontWeight: 700, color: st.color, marginTop: 6 }}>{check.value.toFixed(1)}</div>}
-      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 5 }}>{check.message}</div>}
+
+      {/* Parameter — progress bar */}
+      {isParam && covCurr != null && (
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: st.color }}>{covCurr.toFixed(1)}%</span>
+            {covPrev != null && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>prev: {covPrev.toFixed(1)}%</span>}
+          </div>
+          <div style={{ height: 5, borderRadius: 3, backgroundColor: 'var(--color-border-tertiary)' }}>
+            <div style={{ height: '100%', borderRadius: 3, backgroundColor: st.color, width: `${Math.min(covCurr, 100)}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Ecommerce / Custom event — counts */}
+      {isCount && cntCurr != null && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: st.color }}>{Number(cntCurr).toLocaleString()}</span>
+          {cntPrev != null && Number(cntPrev) > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>prev: {Number(cntPrev).toLocaleString()}</span>
+          )}
+        </div>
+      )}
+
+      {/* Plain number */}
+      {typeof check.value === 'number' && (
+        <div style={{ fontSize: 18, fontWeight: 700, color: st.color, marginBottom: 4 }}>{check.value.toFixed(1)}</div>
+      )}
+
+      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{check.message}</div>}
     </div>
   )
 }
