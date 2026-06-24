@@ -2,81 +2,57 @@
 
 export default function PDFExportButton({ projectName }: { projectName: string }) {
   function handlePrint() {
+    // Fix overflow on all containers before print
+    const allDivs = document.querySelectorAll('div')
+    const overflows: string[] = []
+    allDivs.forEach(div => {
+      overflows.push(div.style.overflow)
+      div.style.overflow = 'visible'
+    })
+
     const title = document.title
     document.title = `AlertGA4 — ${projectName} — ${new Date().toLocaleDateString('en-GB')}`
-    window.print()
-    document.title = title
+
+    setTimeout(() => {
+      window.print()
+      document.title = title
+      // Restore overflow
+      allDivs.forEach((div, i) => { div.style.overflow = overflows[i] })
+    }, 300)
   }
 
   return (
     <>
       <style>{`
         @media print {
-          /* Hide everything non-essential */
           .app-sidebar,
           .sidebar-hamburger,
           .sidebar-overlay,
           nav,
           .no-print,
-          [data-no-print] {
-            display: none !important;
+          [data-no-print] { display: none !important; }
+
+          body { background: white !important; color: #111 !important; }
+
+          * {
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          /* Reset layout for print */
-          body {
-            background: white !important;
-            color: #111 !important;
-            font-size: 11pt !important;
-          }
+          .print-header { display: block !important; }
 
-          /* Make content full width */
-          main, #main-content {
-            margin: 0 !important;
-            padding: 0 !important;
-          }
+          svg { overflow: visible !important; }
 
-          /* Page breaks */
-          .section-break {
-            page-break-before: always;
-          }
-
-          /* Fix colors for print */
-          [style*="var(--color-background-primary)"] {
-            background: white !important;
-          }
-          [style*="var(--color-background-secondary)"] {
-            background: #f9fafb !important;
-          }
-          [style*="var(--color-text-primary)"] {
-            color: #111 !important;
-          }
-          [style*="var(--color-text-secondary)"] {
-            color: #555 !important;
-          }
-          [style*="var(--color-border-tertiary)"] {
-            border-color: #e5e7eb !important;
-          }
-
-          /* Print header */
-          .print-header {
-            display: block !important;
-            text-align: center;
-            padding: 12px 0 20px;
-            border-bottom: 1px solid #e5e7eb;
-            margin-bottom: 20px;
-          }
+          div[style*="height: 36"] { height: auto !important; }
         }
-
-        @media screen {
-          .print-header { display: none; }
-        }
+        @media screen { .print-header { display: none; } }
       `}</style>
 
-      {/* Hidden print header shown only when printing */}
-      <div className="print-header">
+      <div className="print-header" style={{ textAlign: 'center', padding: '12px 0 20px', borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
         <strong style={{ fontSize: 16 }}>AlertGA4 — GA4 Quality Report</strong>
         <div style={{ fontSize: 11, color: '#555', marginTop: 4 }}>
-          {projectName} · Generated {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {projectName} · {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
       </div>
 
@@ -84,13 +60,10 @@ export default function PDFExportButton({ projectName }: { projectName: string }
         onClick={handlePrint}
         className="no-print"
         style={{
-          fontSize: 12,
-          padding: '4px 12px',
-          borderRadius: 6,
+          fontSize: 12, padding: '4px 12px', borderRadius: 6,
           border: '1px solid var(--color-border-tertiary)',
           backgroundColor: 'var(--color-background-primary)',
-          color: 'var(--color-text-secondary)',
-          cursor: 'pointer',
+          color: 'var(--color-text-secondary)', cursor: 'pointer',
         }}
       >
         ↓ Export PDF
