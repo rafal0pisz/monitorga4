@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getGa4Token } from '@/lib/ga4/token'
 
 async function fetchGA4Accounts(token: string) {
   const res = await fetch('https://analyticsadmin.googleapis.com/v1beta/accounts', {
@@ -21,14 +21,11 @@ async function fetchGA4Properties(token: string, accountName: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const token = await getGa4Token()
 
-  if (!session?.provider_token) {
+  if (!token) {
     return NextResponse.json({ error: 'Brak tokena Google — zaloguj się ponownie' }, { status: 401 })
   }
-
-  const token = session.provider_token
 
   try {
     const accounts = await fetchGA4Accounts(token)

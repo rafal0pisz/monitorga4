@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 async function refreshGoogleToken(refreshToken: string): Promise<string> {
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -18,21 +18,19 @@ async function refreshGoogleToken(refreshToken: string): Promise<string> {
 
 /**
  * Get a valid GA4 access token.
+ *
+ * Always resolves via the `profiles` table (access token + expiry + refresh_token),
+ * never via the Supabase session's `provider_token` — Supabase does not refresh
+ * that value after the initial OAuth exchange, so it goes stale (~1h) while the
+ * app's own login session keeps looking active, causing GA4 calls to fail until
+ * the user re-authenticates with Google even though they're still "logged in".
+ *
  * Tries (in order):
- *   1. Current Supabase session provider_token
- *   2. Stored token in profiles table
- *   3. Refresh via refresh_token if expired
+ *   1. Stored access token in profiles table, if not yet expired
+ *   2. Refresh via stored refresh_token, then persist the new access token
  * Returns null if no token available.
  */
 export async function getGa4Token(): Promise<string | null> {
-  // 1. Try current session
-  try {
-    const sessionClient = await createClient()
-    const { data: { session } } = await sessionClient.auth.getSession()
-    if (session?.provider_token) return session.provider_token
-  } catch {}
-
-  // 2. Try profiles table
   const admin = createAdminClient()
   const { data: profile } = await admin
     .from('profiles')
