@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getGa4Token } from '@/lib/ga4/token'
 import type { Project, CheckResult } from '@/types'
 
 // ============================================================
@@ -18,28 +19,6 @@ const WEIGHTS: Record<string, number> = {
   geo_anomaly:           7,
   session_no_events:    10,
   parameter_checks:      8,
-}
-
-// ============================================================
-// Google token refresh
-// ============================================================
-async function refreshGoogleToken(refreshToken: string): Promise<string> {
-  const clientId     = process.env.GOOGLE_CLIENT_ID!
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!
-
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id:     clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
-      grant_type:    'refresh_token',
-    }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(`Token refresh failed: ${data.error_description ?? data.error}`)
-  return data.access_token
 }
 
 // ============================================================
@@ -588,33 +567,12 @@ export async function POST(request: NextRequest) {
   const runDate = new Date().toISOString().split('T')[0]
 
   // Token z profiles (DB-backed access token + refresh_token).
+  // Preferuje token aktualnie zalogowanego użytkownika (klik "Run now" z UI);
+  // spada na domyślny token organizacji tylko gdy brak sesji (cron).
   // Nie używamy session.provider_token — Supabase nie odświeża tego pola
   // po wymianie kodu OAuth, więc po ~1h staje się nieaktualne mimo że
   // sesja logowania w aplikacji wciąż wygląda jako aktywna.
-  let accessToken: string | null = null
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
-    .eq('org_id', '00000000-0000-0000-0000-000000000001')
-    .order('created_at').limit(1).single()
-
-  if (profile?.ga4_refresh_token) {
-    const expiry = profile.ga4_token_expiry ? new Date(profile.ga4_token_expiry) : new Date(0)
-    if (expiry <= new Date()) {
-      try {
-        accessToken = await refreshGoogleToken(profile.ga4_refresh_token)
-        await supabase.from('profiles')
-          .update({ ga4_access_token: accessToken, ga4_token_expiry: new Date(Date.now() + 3500 * 1000).toISOString() })
-          .eq('org_id', '00000000-0000-0000-0000-000000000001')
-      } catch (e: any) {
-        return NextResponse.json({ error: `Token refresh failed: ${e.message}` }, { status: 401 })
-      }
-    } else {
-      accessToken = profile.ga4_access_token
-    }
-  } else if (profile?.ga4_access_token) {
-    accessToken = profile.ga4_access_token
-  }
+  const accessToken = await getGa4Token()
 
   if (!accessToken) {
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
