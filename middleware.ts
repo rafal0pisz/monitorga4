@@ -3,6 +3,12 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/auth/callback', '/share']
 
+// API-only path: /api/worker/run authorizes itself (session OR CRON_SECRET
+// bearer token) inside the route handler — redirecting an unauthenticated
+// API/cron request to the HTML /login page would be wrong regardless, and
+// would break Vercel Cron (which never carries a session cookie).
+const AUTH_EXEMPT_API_PATHS = ['/api/worker/run']
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -27,8 +33,9 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p))
+  const isAuthExemptApi = AUTH_EXEMPT_API_PATHS.some(p => path.startsWith(p))
 
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') {
+  if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true' || isAuthExemptApi) {
     return supabaseResponse
   }
 

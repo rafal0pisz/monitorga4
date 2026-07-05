@@ -1,7 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import type { Project, CheckResult } from '@/types'
+
+// ============================================================
+// Autoryzacja
+// ============================================================
+// Ten endpoint musi być wywoływalny bez sesji przeglądarki (Vercel Cron —
+// codzienny automatyczny run) ORAZ z sesją (klik "Run now" z UI). Middleware
+// przepuszcza ten path bez przekierowania na /login, więc autoryzację
+// sprawdzamy tutaj: albo poprawny sekret crona, albo zalogowany użytkownik.
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+  const cronSecret = process.env.CRON_SECRET
+  if (cronSecret) {
+    const authHeader = request.headers.get('authorization')
+    if (authHeader === `Bearer ${cronSecret}`) return true
+  }
+
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    return !!user
+  } catch {
+    return false
+  }
+}
 
 // ============================================================
 // Wagi checków
@@ -558,12 +581,31 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
 }
 
 // ============================================================
-// ROUTE HANDLER
+// ROUTE HANDLERS
 // ============================================================
+// GET — wywoływany przez Vercel Cron (codziennie 23:00 UTC, bez body).
+// Przetwarza tylko projekty z auto_run = true.
+export async function GET(request: NextRequest) {
+  if (!(await isAuthorized(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  return runWorker(null)
+}
+
+// POST — wywoływany przyciskiem "Run now" z UI, zawsze z konkretnym project_id.
+// Manualny run działa niezależnie od auto_run (patrz opis w UI: "Disabled —
+// use Run now to check manually").
 export async function POST(request: NextRequest) {
-  const supabase = createAdminClient()
+  if (!(await isAuthorized(request))) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const body = await request.json().catch(() => ({}))
   const projectId: string | undefined = body.project_id
+  return runWorker(projectId ?? null)
+}
+
+async function runWorker(projectId: string | null) {
+  const supabase = createAdminClient()
   const runDate = new Date().toISOString().split('T')[0]
 
   // Token z profiles (DB-backed access token + refresh_token).
@@ -578,9 +620,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
   }
 
-  // Fetch projects
+  // Fetch projects — manualny run bierze konkretny projekt niezależnie od
+  // auto_run; automatyczny (cron) run bierze tylko projekty z auto_run = true.
   let query = supabase.from('projects').select('*').eq('status', 'active')
-  if (projectId) query = query.eq('id', projectId)
+  query = projectId ? query.eq('id', projectId) : query.eq('auto_run', true)
   const { data: projects } = await query
 
   const processed: string[] = []
