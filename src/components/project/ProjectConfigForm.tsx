@@ -92,7 +92,9 @@ export default function ProjectConfigForm({ project }: Props) {
   useEffect(() => { loadConfig() }, [loadConfig])
 
   function addCustomEvent() {
-    const n = newEvent.trim().toLowerCase().replace(/\s+/g, '_')
+    // GA4 event names are case-sensitive (e.g. "testAB" !== "testab") —
+    // don't lowercase, just tidy whitespace.
+    const n = newEvent.trim().replace(/\s+/g, '_')
     if (!n || customEvents.some(e => e.event_name === n)) return
     setCustomEvents(prev => [...prev, { event_name: n, check_type: 'presence', is_enabled: true }])
     setNewEvent('')
@@ -107,8 +109,9 @@ export default function ProjectConfigForm({ project }: Props) {
   }
 
   function addParam() {
-    const evt   = newEvtName.trim().toLowerCase().replace(/\s+/g, '_')
-    const param = newParamName.trim().toLowerCase().replace(/\s+/g, '_')
+    // GA4 event/parameter names are case-sensitive — don't lowercase.
+    const evt   = newEvtName.trim().replace(/\s+/g, '_')
+    const param = newParamName.trim().replace(/\s+/g, '_')
     if (!evt || !param) return
     if (params.some(p => p.event_name === evt && p.parameter_name === param)) return
     setParams(prev => [...prev, { event_name: evt, parameter_name: param }])
