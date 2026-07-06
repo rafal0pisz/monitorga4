@@ -1,4 +1,4 @@
-import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, fmtDate } from './shared'
+import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
 
 export interface DigestEntry {
   projectId: string
@@ -18,28 +18,23 @@ function scoreColor(score: number): string {
 }
 
 function deltaHtml(curr: number | null, prev: number | null): string {
-  if (curr == null || prev == null) return `<span style="font-size:12px;color:${BRAND.soft};background:#f2f3f3;padding:2px 7px;border-radius:100px;">—</span>`
+  if (curr == null || prev == null) return `<span style="font-size:12px;color:${BRAND.soft};">—</span>`
   const delta = Math.round(curr - prev)
-  if (delta === 0) return `<span style="font-size:12px;color:${BRAND.soft};background:#f2f3f3;padding:2px 7px;border-radius:100px;">— 0</span>`
+  if (delta === 0) return `<span style="font-size:12px;color:${BRAND.soft};">— 0</span>`
   const up = delta > 0
-  const bg = up ? '#eceeef' : '#fdeceb'
-  const color = up ? '#4a5157' : '#c23b34'
-  return `<span style="font-size:12px;font-weight:600;color:${color};background:${bg};padding:2px 7px;border-radius:100px;">${up ? '▲' : '▼'} ${Math.abs(delta)}</span>`
+  const color = up ? '#4a5157' : BRAND.coralText
+  return `<span style="font-size:12px;font-weight:600;color:${color};">${up ? '▲' : '▼'} ${Math.abs(delta)}</span>`
 }
 
 function runRow(e: DigestEntry): string {
   const hasIssue = e.runStatus === 'failed' || e.checkErrors.length > 0
-  const bg = hasIssue ? `background:${BRAND.alert};border-color:#ece94a;` : ''
-  const mark = hasIssue
-    ? `<span style="flex:none;width:16px;height:16px;border-radius:50%;background:${BRAND.ink};color:${BRAND.alert};display:inline-flex;align-items:center;justify-content:center;font-size:10px;">!</span>`
-    : `<span style="flex:none;width:16px;height:16px;border-radius:50%;background:${BRAND.ink};color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;">✓</span>`
 
   let note = ''
   if (e.runStatus === 'failed') {
-    note = `<span style="color:#5c5400;display:block;margin-top:2px;font-size:12.5px;">Run failed: ${e.errorMessage ?? 'unknown error'}</span>`
+    note = `<div style="color:#8a7c00;margin-top:2px;font-size:12.5px;">Run failed: ${e.errorMessage ?? 'unknown error'}</div>`
   } else if (e.checkErrors.length > 0) {
     const first = e.checkErrors[0]
-    note = `<span style="color:#5c5400;display:block;margin-top:2px;font-size:12.5px;">${first.checkKey}: ${first.message}${e.checkErrors.length > 1 ? ` (+${e.checkErrors.length - 1} more)` : ''}</span>`
+    note = `<div style="color:#8a7c00;margin-top:2px;font-size:12.5px;">${first.checkKey}: ${first.message}${e.checkErrors.length > 1 ? ` (+${e.checkErrors.length - 1} more)` : ''}</div>`
   }
 
   const statusText = e.runStatus === 'failed'
@@ -48,32 +43,33 @@ function runRow(e: DigestEntry): string {
       ? `completed with ${e.checkErrors.length} check error${e.checkErrors.length > 1 ? 's' : ''}`
       : 'completed, all checks ran'
 
-  return `
-  <div style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;padding:9px 12px;border-radius:8px;border:1px solid ${BRAND.line};${bg}margin-bottom:8px;">
-    ${mark}
-    <span style="color:#3a4046;"><b style="color:${BRAND.ink};">${e.name}</b> — ${statusText}${note}</span>
-  </div>`
+  const row = hstack([
+    { html: `<span style="display:inline-block;width:16px;height:16px;line-height:16px;border-radius:50%;background:${BRAND.ink};color:${hasIssue ? BRAND.alert : '#fff'};font-size:10px;text-align:center;">${hasIssue ? '!' : '✓'}</span>`, width: 24, valign: 'top' },
+    { html: `<span style="color:#3a4046;font-size:13.5px;"><b style="color:${BRAND.ink};">${e.name}</b> — ${statusText}</span>${note}`, valign: 'top' },
+  ])
+
+  return `<div style="padding:9px 12px;border-radius:8px;border:1px solid ${BRAND.line};${hasIssue ? `background:${BRAND.alert};border-color:#ece94a;` : ''}margin-bottom:8px;">${row}</div>`
 }
 
 function scoreRow(e: DigestEntry): string {
-  const badgeLabel = e.runStatus === 'failed' ? 'RUN FAILED' : e.belowThreshold ? 'BELOW THRESHOLD' : null
+  const badgeLabel = e.runStatus === 'failed' ? 'Run failed' : e.belowThreshold ? 'Below threshold' : null
   const badge = badgeLabel
-    ? `<span style="font-size:10.5px;font-weight:700;color:${BRAND.ink};background:${BRAND.alert};border:1px solid #ece94a;padding:1px 6px;border-radius:5px;letter-spacing:0.02em;">${badgeLabel}</span>`
+    ? `<span style="font-size:10.5px;font-weight:700;color:${BRAND.ink};background:${BRAND.alert};padding:1px 6px;border-radius:4px;">${badgeLabel}</span>`
     : ''
   const num = e.scoreTotal != null ? Math.round(e.scoreTotal) : '—'
   const color = e.scoreTotal != null ? scoreColor(e.scoreTotal) : BRAND.soft
 
-  return `
-  <div style="display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #f2f3f3;">
-    <div class="serif" style="font-size:26px;font-variant-numeric:tabular-nums;width:54px;text-align:right;flex:none;color:${color};">${num}</div>
-    <div style="flex:1;min-width:0;">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${e.name}</span>${badge}
-      </div>
-      <div style="font-size:12.5px;color:${BRAND.soft};margin-top:2px;">${e.topSignal}</div>
-    </div>
-    ${deltaHtml(e.scoreTotal, e.prevScore)}
-  </div>`
+  const body = `
+    <div><span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${e.name}</span>${badge ? ' ' + badge : ''}</div>
+    <div style="font-size:12.5px;color:${BRAND.soft};margin-top:2px;">${e.topSignal}</div>`
+
+  const row = hstack([
+    { html: `<span class="serif" style="font-size:26px;color:${color};">${num}</span>`, width: 56, align: 'right' },
+    { html: body },
+    { html: deltaHtml(e.scoreTotal, e.prevScore), width: 50, align: 'right' },
+  ])
+
+  return `<div style="padding:14px 0;border-bottom:1px solid #f2f3f3;">${row}</div>`
 }
 
 export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string): { subject: string; html: string } {
@@ -86,26 +82,30 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string):
     : `AlertGA4 Daily Report — ${dateLabel} · ${attention.length} project${attention.length > 1 ? 's' : ''} need${attention.length > 1 ? '' : 's'} attention`
 
   const calloutHtml = attention.length === 0 ? '' : `
-  <div style="margin:18px 32px 0;background:${BRAND.alert};border-left:3px solid ${BRAND.ink};border-radius:8px;padding:14px 16px;">
-    <h3 style="margin:0 0 6px;font-size:13.5px;color:${BRAND.ink};">Worth checking</h3>
-    ${attention.map(e => `
-      <p style="margin:0 0 8px;font-size:13px;color:#3a4046;line-height:1.5;">
-        <b>${e.name}</b>${e.scoreTotal != null ? ` scored ${Math.round(e.scoreTotal)}, below its alert threshold of ${e.alertThreshold}.` : ` failed to complete its run — ${e.errorMessage ?? 'unknown error'}.`}
-        ${e.topSignal ? `${e.topSignal} — ` : ''}
-        <a href="${APP_URL}/project/${e.projectId}" style="font-weight:600;color:${BRAND.coralLink};text-decoration:none;">Open in dashboard →</a>
-      </p>`).join('')}
-  </div>`
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;">
+    <tr><td style="background:${BRAND.alert};border-left:3px solid ${BRAND.ink};border-radius:8px;padding:14px 16px;">
+      <h3 style="margin:0 0 6px;font-size:13.5px;color:${BRAND.ink};">Worth checking</h3>
+      ${attention.map(e => `
+        <p style="margin:0 0 8px;font-size:13px;color:#3a4046;line-height:1.5;">
+          <b>${e.name}</b>${e.scoreTotal != null ? ` scored ${Math.round(e.scoreTotal)}, below its alert threshold of ${e.alertThreshold}.` : ` failed to complete its run — ${e.errorMessage ?? 'unknown error'}.`}
+          ${e.topSignal ? `${e.topSignal} — ` : ''}
+          <a href="${APP_URL}/project/${e.projectId}" style="font-weight:600;color:${BRAND.coralLink};text-decoration:none;">Open in dashboard →</a>
+        </p>`).join('')}
+    </td></tr>
+  </table>`
+
+  const masthead = hstack([
+    { html: `<span class="serif" style="font-size:22px;font-weight:600;color:${BRAND.ink};">Alert<span style="color:${BRAND.coralText};">GA4</span></span>` },
+    { html: `<span style="font-size:12.5px;color:${BRAND.soft};">${new Date(runDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 23:00 UTC run</span>`, align: 'right' },
+  ])
 
   const body = `
-    <div style="padding:28px 32px 22px;border-bottom:1px solid ${BRAND.line};display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <div class="serif" style="font-size:22px;font-weight:600;letter-spacing:0.01em;color:${BRAND.ink};">Alert<span style="color:${BRAND.coralText};">GA4</span></div>
-      <div style="font-size:12.5px;color:${BRAND.soft};">${new Date(runDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 23:00 UTC run</div>
-    </div>
+    <div style="padding:28px 32px 22px;border-bottom:1px solid ${BRAND.line};">${masthead}</div>
 
-    <div style="padding:18px 32px;background:#fafafa;border-bottom:1px solid ${BRAND.line};font-size:14px;color:#3a4046;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <b class="serif" style="font-size:16px;color:${BRAND.ink};">${entries.length} project${entries.length === 1 ? '' : 's'} checked</b>
-      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;">${healthy} healthy</span>
-      ${attention.length > 0 ? `<span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:${BRAND.alert};color:${BRAND.ink};border:1px solid #ece94a;">${attention.length} needs attention</span>` : ''}
+    <div style="padding:18px 32px;background:#fafafa;border-bottom:1px solid ${BRAND.line};font-size:14px;color:#3a4046;">
+      <span class="serif" style="font-size:16px;color:${BRAND.ink};font-weight:600;">${entries.length} project${entries.length === 1 ? '' : 's'} checked</span>
+      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:8px;">${healthy} healthy</span>
+      ${attention.length > 0 ? `<span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:${BRAND.alert};color:${BRAND.ink};margin-left:6px;">${attention.length} needs attention</span>` : ''}
     </div>
 
     <div style="padding:24px 32px 4px;">
@@ -118,7 +118,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string):
       ${entries.map(scoreRow).join('')}
     </div>
 
-    ${calloutHtml}
+    <div style="padding:0 32px;">${calloutHtml}</div>
     ${ctaHtml('View full dashboard', `${APP_URL}/dashboard`)}
     ${footerHtml([
       'Automated daily report from AlertGA4, generated after the 23:00 UTC check run.',
