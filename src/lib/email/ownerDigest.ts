@@ -1,4 +1,5 @@
 import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
+import { checkLabel } from './checkLabels'
 
 export interface DigestEntry {
   projectId: string
@@ -34,7 +35,7 @@ function runRow(e: DigestEntry): string {
     note = `<div style="color:#8a7c00;margin-top:2px;font-size:12.5px;">Run failed: ${e.errorMessage ?? 'unknown error'}</div>`
   } else if (e.checkErrors.length > 0) {
     const first = e.checkErrors[0]
-    note = `<div style="color:#8a7c00;margin-top:2px;font-size:12.5px;">${first.checkKey}: ${first.message}${e.checkErrors.length > 1 ? ` (+${e.checkErrors.length - 1} more)` : ''}</div>`
+    note = `<div style="color:#8a7c00;margin-top:2px;font-size:12.5px;">${checkLabel(first.checkKey)}: ${first.message}${e.checkErrors.length > 1 ? ` (+${e.checkErrors.length - 1} more)` : ''}</div>`
   }
 
   const statusText = e.runStatus === 'failed'

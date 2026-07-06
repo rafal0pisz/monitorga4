@@ -218,7 +218,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
         results.push({
           check_key: 'expected_events', check_level: 'core', status, score, weight: w,
           value: { missing, found: [...found] },
-          message: missing.length === 0 ? 'Wszystkie expected events obecne' : `Brak eventów: ${missing.join(', ')}`,
+          message: missing.length === 0 ? 'All expected events present' : `Missing events: ${missing.join(', ')}`,
         })
       } catch (e: any) {
         results.push({ check_key: 'expected_events', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -230,7 +230,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
   {
     const w = WEIGHTS.self_referral
     if (!project.own_domain) {
-      results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'Brak skonfigurowanej domeny — check pominięty' })
+      results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No domain configured — check skipped' })
     } else {
       try {
         const r = await ga4Report(pid, token, {
@@ -251,7 +251,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
         results.push({
           check_key: 'self_referral', check_level: 'core', status, score, weight: w,
           value: { ratio: +(ratio * 100).toFixed(2), self_sessions: selfSessions, total },
-          message: ratio === 0 ? 'Brak self-referrali' : `Self-referral: ${(ratio * 100).toFixed(2)}% sesji`,
+          message: ratio === 0 ? 'No self-referrals' : `Self-referral: ${(ratio * 100).toFixed(2)}% of sessions`,
         })
       } catch (e: any) {
         results.push({ check_key: 'self_referral', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -306,7 +306,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({
         check_key: 'direct_traffic_spike', check_level: 'core', status, score, weight: w,
         value: { direct_ratio_current: +(ratioC * 100).toFixed(1), direct_ratio_prev: +(ratioP * 100).toFixed(1), delta: +delta.toFixed(1) },
-        message: `Ruch Direct: ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
+        message: `Direct traffic: ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'direct_traffic_spike', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -369,25 +369,25 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     }
   }
 
-  // ── 7. BOT TRAFFIC — NOCNY SPIKE (WoW) ───────────────────
+  // ── 7. BOT TRAFFIC — NIGHT SPIKE (WoW) ───────────────────
   {
     const w = WEIGHTS.bot_traffic_night
     try {
-      const r = await ga4Report(pid, token, {
-        dateRanges: [ranges.current, ranges.prev],
-        dimensions: [{ name: 'dateRange' }, { name: 'hour' }],
-        metrics: [{ name: 'sessions' }],
-      })
-      const rows = r.rows ?? []
+      // Dwa osobne requesty — GA4 nie pozwala używać dateRange jako wymiaru
+      const [rC, rP] = await Promise.all([
+        ga4Report(pid, token, { dateRanges: [ranges.current], dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
+        ga4Report(pid, token, { dateRanges: [ranges.prev],    dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
+      ])
       const nightHours = ['0','1','2','3','4','5']
-      const sumNight = (range: string) => rows
-        .filter((r: any) => r.dimensionValues?.[0]?.value === range && nightHours.includes(r.dimensionValues?.[1]?.value))
+      const sumNight = (rows: any[]) => rows
+        .filter((r: any) => nightHours.includes(r.dimensionValues?.[0]?.value))
         .reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
-      const sumTotal = (range: string) => rows
-        .filter((r: any) => r.dimensionValues?.[0]?.value === range)
+      const sumTotal = (rows: any[]) => rows
         .reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
-      const nightC = sumNight('current'); const totalC = sumTotal('current')
-      const nightP = sumNight('prev');   const totalP = sumTotal('prev')
+      const rowsC = rC.rows ?? []
+      const rowsP = rP.rows ?? []
+      const nightC = sumNight(rowsC); const totalC = sumTotal(rowsC)
+      const nightP = sumNight(rowsP); const totalP = sumTotal(rowsP)
       const ratioC = totalC > 0 ? nightC / totalC : 0
       const ratioP = totalP > 0 ? nightP / totalP : 0
       const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
@@ -396,7 +396,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({
         check_key: 'bot_traffic_night', check_level: 'core', status, score, weight: w,
         value: { night_ratio_current: +(ratioC * 100).toFixed(1), night_ratio_prev: +(ratioP * 100).toFixed(1), delta: +delta.toFixed(1) },
-        message: `Ruch nocny (0–5h): ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
+        message: `Night traffic (0–5h): ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'bot_traffic_night', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -446,7 +446,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({
         check_key: 'geo_anomaly', check_level: 'optional', status, score, weight: w,
         value: { top5_current: [...top5C], top5_prev: [...top5P], new_countries: newCountries },
-        message: newCountries.length === 0 ? 'Top 5 krajów bez zmian' : `Nowe kraje w Top 5: ${newCountries.join(', ')}`,
+        message: newCountries.length === 0 ? 'Top 5 countries unchanged' : `New countries in Top 5: ${newCountries.join(', ')}`,
       })
     } catch (e: any) {
       results.push({ check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -472,7 +472,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({
         check_key: 'session_no_events', check_level: 'optional', status, score, weight: w,
         value: { estimated_empty: emptyEstimate, total_sessions: total, ratio: +(ratio * 100).toFixed(1) },
-        message: `Szacowane sesje bez zaangażowania: ${(ratio * 100).toFixed(1)}%`,
+        message: `Estimated sessions without engagement: ${(ratio * 100).toFixed(1)}%`,
       })
     } catch (e: any) {
       results.push({ check_key: 'session_no_events', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })

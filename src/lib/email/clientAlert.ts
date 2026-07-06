@@ -1,4 +1,5 @@
 import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, barChartHtml, fmtDate } from './shared'
+import { checkLabel } from './checkLabels'
 
 export interface TrendPoint { runDate: string; score: number }
 export interface CheckIssue { checkKey: string; message: string }
@@ -34,7 +35,7 @@ function trendHtml(trend: TrendPoint[], threshold: number): string {
 
   return `
   <div style="padding:20px 32px 4px;">
-    <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 10px;font-weight:700;">${trend.length}-day trend</h2>
+    <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 10px;font-weight:700;">Trend checks</h2>
     ${barChartHtml(bars, BAR_HEIGHT, thresholdTop, `threshold ${threshold}`)}
     <div style="margin-top:6px;">${hstack([
       { html: `<span style="font-size:10.5px;color:${BRAND.soft};">${fmtDate(trend[0].runDate)}</span>` },
@@ -49,7 +50,7 @@ function issueRow(issue: CheckIssue, kind: 'fail' | 'warn'): string {
   const row = hstack([
     { html: `<span style="font-size:10px;font-weight:700;letter-spacing:0.04em;color:${tagColor};">${kind === 'fail' ? 'FAIL' : 'WARN'}</span>`, width: 42, valign: 'top' },
     {
-      html: `<div style="font-weight:600;color:${BRAND.ink};">${issue.checkKey}</div><div style="color:#4a5157;margin-top:1px;">${issue.message}</div>`,
+      html: `<div style="font-weight:600;color:${BRAND.ink};">${checkLabel(issue.checkKey)}</div><div style="color:#4a5157;margin-top:1px;">${issue.message}</div>`,
       valign: 'top',
     },
   ])
@@ -89,7 +90,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
       ${d.warning.map(i => issueRow(i, 'warn')).join('')}
       ${d.passingCount > 0 ? `
       <div style="font-size:12.5px;color:#6b7278;padding:8px 12px;border-top:1px dashed ${BRAND.line};margin-top:4px;">
-        <b style="color:${BRAND.ink};">✓ ${d.passingCount} more check${d.passingCount > 1 ? 's' : ''} passing</b>${d.passingLabels.length ? ` — ${d.passingLabels.join(', ')}` : ''}
+        <b style="color:${BRAND.ink};">✓ ${d.passingCount} more check${d.passingCount > 1 ? 's' : ''} passing</b>${d.passingLabels.length ? ` — ${d.passingLabels.map(checkLabel).join(', ')}` : ''}
       </div>` : ''}
     </div>
 
