@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { sendEmail } from '@/lib/email/resend'
+import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
+import { renderClientAlertEmail } from '@/lib/email/clientAlert'
 import type { Project, CheckResult } from '@/types'
 
 // ============================================================
@@ -628,6 +631,11 @@ async function runWorker(projectId: string | null) {
 
   const processed: string[] = []
   const errors: Record<string, string> = {}
+  const digestEntries: DigestEntry[] = []
+
+  const prevDateObj = new Date(runDate)
+  prevDateObj.setDate(prevDateObj.getDate() - 1)
+  const prevDate = prevDateObj.toISOString().split('T')[0]
 
   for (const project of (projects ?? []) as Project[]) {
     // Create / update run
@@ -681,6 +689,7 @@ async function runWorker(projectId: string | null) {
 
       // Keep best score of the day
       const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
+      const finalScore = isBetter ? scoreTotal : (existingRun!.score_total ?? scoreTotal)
       if (isBetter) {
         await supabase.from('dqs_results').delete().eq('run_id', run.id)
         await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
@@ -692,7 +701,38 @@ async function runWorker(projectId: string | null) {
 
       processed.push(project.id)
 
-      // Alert
+      // Yesterday's score, for the WoW delta shown in both email types
+      const { data: prevRun } = await supabase
+        .from('dqs_runs')
+        .select('score_total')
+        .eq('project_id', project.id)
+        .eq('run_date', prevDate)
+        .eq('status', 'completed')
+        .maybeSingle()
+
+      const coreResults = allResults.filter(r => r.check_level === 'core')
+      const checkErrors = allResults
+        .filter(r => r.value && typeof r.value === 'object' && 'error' in (r.value as Record<string, unknown>))
+        .map(r => ({ checkKey: r.check_key, message: String((r.value as Record<string, unknown>).error) }))
+      const worstFail = coreResults.find(r => r.status === 'fail')
+      const worstWarn = coreResults.find(r => r.status === 'warn')
+      const topSignal = worstFail?.message ?? worstWarn?.message ?? 'All core checks passing'
+
+      digestEntries.push({
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'completed',
+        checkErrors,
+        scoreTotal: finalScore,
+        prevScore: prevRun?.score_total ?? null,
+        topSignal,
+        belowThreshold: finalScore < project.alert_threshold,
+        alertThreshold: project.alert_threshold,
+      })
+
+      // Per-project client alert — separate from the owner digest, only to
+      // the address configured on this specific project, only about this
+      // one project's data.
       if (scoreTotal < project.alert_threshold && project.alert_email) {
         const { data: lastAlert } = await supabase.from('alert_log')
           .select('sent_at').eq('project_id', project.id)
@@ -700,13 +740,63 @@ async function runWorker(projectId: string | null) {
         const lastDate = lastAlert?.sent_at ? new Date(lastAlert.sent_at).toISOString().split('T')[0] : null
         if (lastDate !== runDate) {
           await supabase.from('alert_log').insert({ project_id: project.id, run_id: run.id, score: scoreTotal })
-          // TODO: Resend.send()
+
+          const { data: trendRaw } = await supabase
+            .from('dqs_runs')
+            .select('run_date, score_total')
+            .eq('project_id', project.id)
+            .eq('status', 'completed')
+            .order('run_date', { ascending: false })
+            .limit(10)
+          const trend = (trendRaw ?? [])
+            .filter((r: { run_date: string; score_total: number | null }) => r.score_total != null)
+            .reverse()
+            .map((r: { run_date: string; score_total: number }) => ({ runDate: r.run_date, score: r.score_total }))
+
+          const failing = allResults.filter(r => r.status === 'fail').map(r => ({ checkKey: r.check_key, message: r.message }))
+          const warning = allResults.filter(r => r.status === 'warn').map(r => ({ checkKey: r.check_key, message: r.message }))
+          const passing = allResults.filter(r => r.status === 'pass')
+
+          await sendEmail({
+            to: project.alert_email,
+            ...renderClientAlertEmail({
+              projectId: project.id,
+              projectName: project.name,
+              shareToken: project.share_token,
+              scoreTotal: finalScore,
+              prevScore: prevRun?.score_total ?? null,
+              alertThreshold: project.alert_threshold,
+              trend,
+              failing,
+              warning,
+              passingCount: passing.length,
+              passingLabels: passing.slice(0, 10).map(r => r.check_key),
+            }),
+          })
         }
       }
     } catch (e: any) {
       await supabase.from('dqs_runs').update({ status: 'failed', error_message: e.message }).eq('id', run.id)
       errors[project.id] = e.message
+      digestEntries.push({
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'failed',
+        errorMessage: e.message,
+        checkErrors: [],
+        scoreTotal: null,
+        prevScore: null,
+        topSignal: '',
+        belowThreshold: true,
+        alertThreshold: project.alert_threshold,
+      })
     }
+  }
+
+  // Owner digest — only for the automatic (cron) pass across all projects,
+  // never for a single-project manual "Run now".
+  if (!projectId && digestEntries.length > 0 && process.env.DIGEST_EMAIL) {
+    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate) })
   }
 
   return NextResponse.json({ ok: true, processed, errors, run_date: runDate })
