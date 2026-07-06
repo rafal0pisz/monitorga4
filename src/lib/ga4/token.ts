@@ -33,8 +33,7 @@ function isStillValid(row: TokenRow): boolean {
 
 async function refreshAndPersist(
   admin: ReturnType<typeof createAdminClient>,
-  matchColumn: 'id' | 'org_id',
-  matchValue: string,
+  profileId: string,
   refreshToken: string
 ): Promise<string | null> {
   try {
@@ -45,7 +44,7 @@ async function refreshAndPersist(
         ga4_access_token: newToken,
         ga4_token_expiry: new Date(Date.now() + 3500 * 1000).toISOString(),
       })
-      .eq(matchColumn, matchValue)
+      .eq('id', profileId)
     return newToken
   } catch (err) {
     console.error('[getGa4Token] refresh failed:', err instanceof Error ? err.message : err)
@@ -62,14 +61,19 @@ async function refreshAndPersist(
  *     different team members may have Google accounts with different GA4
  *     property access — using someone else's stored token can produce a
  *     misleading 403 even though the signed-in user has access.
- *  2. Falls back to the org's oldest stored profile — used for unattended
- *     cron runs where there is no signed-in user/session at all.
+ *  2. Falls back to the profile explicitly flagged `is_ga4_default` — used for
+ *     unattended cron runs where there is no signed-in user/session at all.
+ *     This is NOT "whichever account happened to log in first": an old
+ *     throwaway/test login with access to only one property would silently
+ *     produce a GA4 403 on every other property. The default account must be
+ *     picked deliberately (see profiles.is_ga4_default).
  *
  * Never uses the Supabase session's `provider_token` directly — Supabase
  * does not refresh that value after the initial OAuth exchange, so it goes
  * stale (~1h) while the app's own login session keeps looking active.
  *
- * Returns null if no token can be obtained (user needs to (re-)connect Google).
+ * Returns null if no token can be obtained (user needs to (re-)connect Google,
+ * or nobody has been designated as the default GA4 account yet).
  */
 export async function getGa4Token(): Promise<string | null> {
   const admin = createAdminClient()
@@ -82,13 +86,13 @@ export async function getGa4Token(): Promise<string | null> {
         .from('profiles')
         .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (ownProfile?.ga4_access_token && isStillValid(ownProfile)) {
         return ownProfile.ga4_access_token
       }
       if (ownProfile?.ga4_refresh_token) {
-        const token = await refreshAndPersist(admin, 'id', user.id, ownProfile.ga4_refresh_token)
+        const token = await refreshAndPersist(admin, user.id, ownProfile.ga4_refresh_token)
         if (token) return token
       }
     }
@@ -96,18 +100,20 @@ export async function getGa4Token(): Promise<string | null> {
     // No session context (e.g. cron worker) — fall through to org default
   }
 
-  // Unattended / no per-user token available — fall back to the org's default
+  // Unattended / no per-user token available — fall back to the explicitly
+  // designated default account for this org.
   const { data: profile } = await admin
     .from('profiles')
-    .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
+    .select('id, ga4_access_token, ga4_refresh_token, ga4_token_expiry')
     .eq('org_id', ORG_ID)
+    .eq('is_ga4_default', true)
     .order('created_at', { ascending: true })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   if (!profile) return null
   if (isStillValid(profile)) return profile.ga4_access_token
-  if (profile.ga4_refresh_token) return refreshAndPersist(admin, 'org_id', ORG_ID, profile.ga4_refresh_token)
+  if (profile.ga4_refresh_token) return refreshAndPersist(admin, profile.id, profile.ga4_refresh_token)
 
   return null
 }
