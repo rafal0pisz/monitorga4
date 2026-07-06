@@ -125,7 +125,11 @@ async function checkParameters(
   ranges: { current: { startDate: string; endDate: string }; prev: { startDate: string; endDate: string } }
 ): Promise<CheckResult[]> {
   if (!paramChecks.length) return []
-  const w = WEIGHTS['parameter_checks'] ?? 8
+  // Cały check_key "parameter_checks" ma stały budżet wagowy niezależnie od
+  // liczby skonfigurowanych par event/parametr — analogicznie do custom
+  // events, żeby ta kategoria nie rosła bez ograniczeń wraz z liczbą
+  // sprawdzanych parametrów.
+  const w = +((WEIGHTS['parameter_checks'] ?? 8) / paramChecks.length).toFixed(2)
   const results: CheckResult[] = []
 
   const rangeC = ranges.current
@@ -685,7 +689,15 @@ async function runWorker(projectId: string | null) {
         })()),
       ])
       const allResults = [...results, ...paramResults]
-      const scoreTotal = +allResults.reduce((s, r) => s + r.score, 0).toFixed(2)
+      // Normalizacja do rzeczywistej sumy wag checków, które się wykonały
+      // w tym przebiegu — 10 zawsze aktywnych checków sumuje się do 100,
+      // ale Ecommerce/Custom events/Parameter checks są doliczane tylko
+      // gdy dany projekt ma je skonfigurowane, więc "100%" musi być liczone
+      // względem tego, co faktycznie brało udział w tym przebiegu, a nie
+      // względem sztywnej sumy — inaczej wynik przekraczałby 100.
+      const totalWeight = allResults.reduce((s, r) => s + r.weight, 0)
+      const rawScore = allResults.reduce((s, r) => s + r.score, 0)
+      const scoreTotal = totalWeight > 0 ? +((rawScore / totalWeight) * 100).toFixed(2) : 0
 
       // Keep best score of the day
       const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
