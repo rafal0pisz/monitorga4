@@ -146,25 +146,28 @@ export interface WorkerRunResult {
 // Score helper
 // ============================================================
 
-export type ScoreGrade = 'excellent' | 'good' | 'warning' | 'critical'
+export type ScoreGrade = 'excellent' | 'good' | 'fair' | 'warning' | 'critical'
 
 // Single source of truth for score → grade/color across the whole app
 // (sidebar, dashboard, project page, share page). Scale:
 //   0–50   critical  red
-//   51–80  warning   orange
+//   51–70  warning   orange
+//   71–80  fair      light green
 //   81–90  good      green
 //   91–100 excellent dark green
 export function getScoreGrade(score: number | null): ScoreGrade {
   if (score === null) return 'critical'
   if (score >= 91) return 'excellent'
   if (score >= 81) return 'good'
+  if (score >= 71) return 'fair'
   if (score >= 51) return 'warning'
   return 'critical'
 }
 
 export const SCORE_GRADE_STYLE: Record<ScoreGrade, { color: string; bg: string; border: string; label: string }> = {
-  excellent: { color: '#15803d', bg: '#f0fdf4', border: '#86efac', label: 'Excellent' },
-  good:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Good' },
+  excellent: { color: '#166534', bg: '#f0fdf4', border: '#4ade80', label: 'Excellent' },
+  good:      { color: '#16a34a', bg: '#f0fdf4', border: '#86efac', label: 'Good' },
+  fair:      { color: '#22c55e', bg: '#f0fdf4', border: '#bbf7d0', label: 'Fair' },
   warning:   { color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', label: 'Warning' },
   critical:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Critical' },
 }
