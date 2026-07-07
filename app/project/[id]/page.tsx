@@ -7,25 +7,27 @@ import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
+import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
-
-const SKIP_IDS = new Set([
-  'expected_events','self_referral','direct_traffic_spike',
-  'bounce_rate_anomaly','conversion_rate','page_title_null','session_no_events',
-  'geo_anomaly','bot_traffic_night',
-])
+type SectionId = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
 
 // Worker saves results with column check_key (not check_id)
-function storedSection(checkKey: string | null | undefined): 'ecommerce'|'custom_events'|'parameters'|null {
+function storedSection(checkKey: string | null | undefined): SectionId | null {
   if (!checkKey) return null
-  if (SKIP_IDS.has(checkKey)) return null
+  if (CORE_CHECK_SECTION[checkKey]) return CORE_CHECK_SECTION[checkKey]
   if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkKey)) return 'ecommerce'
   if (checkKey.startsWith('ecom_')) return 'ecommerce'
   if (checkKey.startsWith('evt_')||checkKey.startsWith('event_')||checkKey.startsWith('custom_event')||checkKey.includes('_presence')) return 'custom_events'
   if (checkKey === 'custom_events_check') return 'custom_events'
   return 'parameters'
 }
+
+const CORE_SECTION_META = {
+  traffic:    { label: 'Traffic Source', accent: '#0ea5e9' },
+  engagement: { label: 'Engagement',     accent: '#14b8a6' },
+  users:      { label: 'Users',          accent: '#ec4899' },
+} as const
 
 const SECTION_META = {
   ecommerce:     { label: 'Ecommerce',     accent: '#f97316' },
@@ -96,7 +98,7 @@ export default async function ProjectPage({
   const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : []
   const ecomEvents: string[] = ecomArr.filter((e: any) => e.is_enabled !== false).map((e: any) => e.event_name as string)
 
-  const bySection: Record<string, any[]> = { ecommerce: [], custom_events: [], parameters: [] }
+  const bySection: Record<SectionId, any[]> = { traffic: [], engagement: [], users: [], ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
     try {
       // Worker uses check_key column
@@ -158,6 +160,42 @@ export default async function ProjectPage({
           ? <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
+
+        {/* Core Checks: the 9 always-on checks that make up most of the
+            Overall Score but aren't tied to any project-specific config —
+            distinct from the live Traffic/Engagement/Users panel above,
+            which shows real-time data, not the scored daily-run results. */}
+        {latestRun && (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ fontSize: 22, fontWeight: 800 }}>Core Checks</span>
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                Always-on checks from the last run, counted toward your Overall Score
+              </div>
+            </div>
+            {(['traffic', 'engagement', 'users'] as const).map(sectionId => {
+              const meta   = CORE_SECTION_META[sectionId]
+              const checks = bySection[sectionId]
+              return (
+                <div key={sectionId} style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
+                      <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
+                    </div>
+                    {checks.length > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed</span>}
+                  </div>
+                  {checks.length === 0
+                    ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>No data for this run yet.</div>
+                    : <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 10 }}>
+                        {checks.map((c: any) => <StoredCheckCard key={c.check_key ?? c.id} check={c} />)}
+                      </div>
+                  }
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Stored checks: Ecommerce / Custom Events / Parameters */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
@@ -289,9 +327,14 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
 
 function StoredCheckCard({ check }: { check: any }) {
   const st    = STATUS[check.status ?? 'skip'] ?? STATUS.skip
-  const label = check.check_key ?? check.check_id ?? '—'
-  const isParam  = typeof label === 'string' && label.startsWith('param_')
-  const isCount  = typeof label === 'string' && (label.startsWith('ecom_') || label.startsWith('custom_event_'))
+  const rawKey = check.check_key ?? check.check_id ?? '—'
+  const isParam  = typeof rawKey === 'string' && rawKey.startsWith('param_')
+  const isCount  = typeof rawKey === 'string' && (rawKey.startsWith('ecom_') || rawKey.startsWith('custom_event_'))
+  // Parameter checks share one generic label ("Parameter coverage") — use
+  // the "event.parameter" prefix already in the message instead, so each
+  // card still reads as which check it actually is.
+  const paramLabel = isParam && typeof check.message === 'string' ? check.message.split(':')[0] : null
+  const label = paramLabel ?? (typeof rawKey === 'string' ? checkLabel(rawKey) : rawKey)
   const val      = check.value && typeof check.value === 'object' ? check.value : null
   const covCurr  = isParam  && val ? (val.coverage_current ?? null) : null
   const covPrev  = isParam  && val ? (val.coverage_prev   ?? null) : null

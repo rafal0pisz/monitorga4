@@ -1,5 +1,5 @@
 import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
-import { checkLabel } from './checkLabels'
+import { checkLabel } from '@/lib/ga4/checkLabels'
 
 export interface DigestEntry {
   projectId: string
