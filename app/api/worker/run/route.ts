@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
@@ -95,28 +96,6 @@ function getWoWRanges() {
 // ============================================================
 // Parameter coverage check
 // ============================================================
-
-// Standard GA4 parameter → Data API dimension name mapping
-// These are auto-collected by GA4 and don't need custom dimension registration
-const GA4_STANDARD_PARAMS: Record<string, string> = {
-  transaction_id: 'transactionId',
-  currency:       'currencyCode',
-  item_id:        'itemId',
-  item_name:      'itemName',
-  item_brand:     'itemBrand',
-  item_category:  'itemCategory',
-  item_variant:   'itemVariant',
-  affiliation:    'orderCoupon',
-  coupon:         'orderCoupon',
-}
-// Standard GA4 metrics (not dimensions)
-const GA4_STANDARD_METRICS: Record<string, string> = {
-  value:    'purchaseRevenue',
-  price:    'itemRevenue',
-  quantity: 'itemsAddedToCart',
-  shipping: 'shippingAmount',
-  tax:      'taxAmount',
-}
 
 // Item-scoped dimensions (product-level ecommerce fields) can't be combined
 // with the event-scoped `eventCount` metric — GA4 Data API rejects it

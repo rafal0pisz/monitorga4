@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 
 const ECOM_EVENTS = [
   'purchase', 'add_to_cart', 'remove_from_cart', 'view_item',
@@ -55,6 +56,12 @@ export default function ProjectConfigForm({ project }: Props) {
   const [newEvtName,  setNewEvtName]  = useState('')
   const [newParamName,setNewParamName]= useState('')
 
+  // null = not loaded yet (or couldn't load) — validation is skipped rather
+  // than blocking adds when we can't confirm either way.
+  const [customDimensions, setCustomDimensions] = useState<Set<string> | null>(null)
+  const [paramWarning,     setParamWarning]     = useState<string | null>(null)
+  const [pendingParam,     setPendingParam]     = useState<ParamCheck | null>(null)
+
   const [openSection, setOpenSection] = useState<string | null>(null)
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
@@ -91,6 +98,14 @@ export default function ProjectConfigForm({ project }: Props) {
 
   useEffect(() => { loadConfig() }, [loadConfig])
 
+  useEffect(() => {
+    if (!project.ga4_property_id) return
+    fetch(`/api/ga4/custom-dimensions?propertyId=${encodeURIComponent(project.ga4_property_id)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (data?.parameterNames) setCustomDimensions(new Set(data.parameterNames)) })
+      .catch(() => {})
+  }, [project.ga4_property_id])
+
   function addCustomEvent() {
     // GA4 event names are case-sensitive (e.g. "testAB" !== "testab") —
     // don't lowercase, just tidy whitespace.
@@ -114,8 +129,30 @@ export default function ProjectConfigForm({ project }: Props) {
     const param = newParamName.trim().replace(/\s+/g, '_')
     if (!evt || !param) return
     if (params.some(p => p.event_name === evt && p.parameter_name === param)) return
+
+    const isStandard = param in GA4_STANDARD_PARAMS || param in GA4_STANDARD_METRICS
+    if (!isStandard && customDimensions && !customDimensions.has(param)) {
+      setPendingParam({ event_name: evt, parameter_name: param })
+      setParamWarning(
+        `"${param}" is not a standard GA4 parameter and no custom dimension with that exact name is registered on this property. ` +
+        `Check GA4 Admin → Custom definitions for the correct name/casing, or add it anyway if this is a new event that hasn't fired yet.`
+      )
+      return
+    }
+
     setParams(prev => [...prev, { event_name: evt, parameter_name: param }])
     setNewEvtName(''); setNewParamName('')
+  }
+
+  function confirmAddParamAnyway() {
+    if (!pendingParam) return
+    setParams(prev => [...prev, pendingParam])
+    setPendingParam(null); setParamWarning(null)
+    setNewEvtName(''); setNewParamName('')
+  }
+
+  function cancelAddParam() {
+    setPendingParam(null); setParamWarning(null)
   }
 
   async function handleSave() {
@@ -389,6 +426,21 @@ export default function ProjectConfigForm({ project }: Props) {
                 Add
               </button>
             </div>
+            {paramWarning && (
+              <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, backgroundColor: '#fefce8', border: '1px solid #fde68a' }}>
+                <div style={{ fontSize: 12, color: '#854d0e', marginBottom: 8 }}>⚠ {paramWarning}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={confirmAddParamAnyway}
+                    style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', backgroundColor: '#ca8a04', color: '#fff', border: 'none' }}>
+                    Add anyway
+                  </button>
+                  <button onClick={cancelAddParam}
+                    style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', backgroundColor: 'transparent', color: '#854d0e', border: '1px solid #fde68a' }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
