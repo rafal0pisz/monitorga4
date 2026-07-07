@@ -118,6 +118,24 @@ const GA4_STANDARD_METRICS: Record<string, string> = {
   tax:      'taxAmount',
 }
 
+// Item-scoped dimensions (product-level ecommerce fields) can't be combined
+// with the event-scoped `eventCount` metric — GA4 Data API rejects it
+// ("Please remove eventCount to make the request compatible"). Each needs
+// the item-scoped metric that matches the event it's reported against.
+const ITEM_SCOPED_DIMENSIONS = new Set(['itemId', 'itemName', 'itemBrand', 'itemCategory', 'itemVariant'])
+const ITEM_METRIC_BY_EVENT: Record<string, string> = {
+  view_item_list:    'itemListViewEvents',
+  select_item:       'itemsClickedInList',
+  view_item:         'itemsViewed',
+  add_to_cart:       'itemsAddedToCart',
+  begin_checkout:    'itemsCheckedOut',
+  add_shipping_info: 'itemsCheckedOut',
+  add_payment_info:  'itemsCheckedOut',
+  purchase:          'itemsPurchased',
+  view_promotion:    'itemListViewEvents',
+  select_promotion:  'itemsClickedInPromotion',
+}
+
 async function checkParameters(
   project: { ga4_property_id: string },
   token: string,
@@ -154,6 +172,27 @@ async function checkParameters(
           })
           const val = parseFloat(data.rows?.[0]?.metricValues?.[0]?.value ?? '0')
           return val > 0 ? 100 : 0
+        }
+
+        if (stdDim && ITEM_SCOPED_DIMENSIONS.has(stdDim)) {
+          const itemMetric = ITEM_METRIC_BY_EVENT[event_name]
+          if (!itemMetric) {
+            throw new Error(`Coverage check not supported for item-scoped parameter "${parameter_name}" on event "${event_name}"`)
+          }
+          // No eventName filter here — the item metric is already specific
+          // to that event (e.g. itemsAddedToCart only counts add_to_cart).
+          const data = await ga4Report(project.ga4_property_id, token, {
+            dateRanges: [dateRange],
+            dimensions: [{ name: stdDim }],
+            metrics:    [{ name: itemMetric }],
+            limit: 100,
+          })
+          const rows = data.rows ?? []
+          const total     = rows.reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+          const withParam = rows
+            .filter((r: any) => r.dimensionValues?.[0]?.value !== '(not set)' && r.dimensionValues?.[0]?.value !== '')
+            .reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+          return total > 0 ? (withParam / total) * 100 : 0
         }
 
         const data = await ga4Report(project.ga4_property_id, token, {
