@@ -1,14 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Project, DqsRun, DqsResult, ChecksCatalog } from '@/types'
-import { getScoreGrade } from '@/types'
-
-const G = {
-  color:  { excellent:'#16a34a', good:'#ca8a04', warning:'#ea580c', critical:'#dc2626' },
-  bg:     { excellent:'#f0fdf4', good:'#fefce8', warning:'#fff7ed', critical:'#fef2f2' },
-  border: { excellent:'#bbf7d0', good:'#fef08a', warning:'#fed7aa', critical:'#fecaca' },
-  label:  { excellent:'Excellent', good:'Good', warning:'Warning', critical:'Critical' },
-}
+import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 const ST = {
   accent: { pass:'#16a34a', warn:'#ca8a04', fail:'#dc2626' },
   color:  { pass:'#16a34a', warn:'#ca8a04', fail:'#dc2626' },
@@ -81,10 +74,10 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
               <div>
                 <p style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>Quality Score</p>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
-                  <span style={{ fontSize: 56, fontWeight: 500, lineHeight: 1, color: G.color[grade] }}>{Math.round(run.score_total ?? 0)}</span>
+                  <span style={{ fontSize: 56, fontWeight: 500, lineHeight: 1, color: G[grade].color }}>{Math.round(run.score_total ?? 0)}</span>
                   <span style={{ fontSize: 14, color: 'var(--color-border-primary)', marginBottom: 4 }}>/100</span>
                 </div>
-                <span style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 6, background: G.bg[grade], border: `0.5px solid ${G.border[grade]}`, color: G.color[grade] }}>{G.label[grade]}</span>
+                <span style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 6, background: G[grade].bg, border: `0.5px solid ${G[grade].border}`, color: G[grade].color }}>{G[grade].label}</span>
               </div>
               <div style={{ paddingLeft: 24, borderLeft: '0.5px solid var(--color-border-tertiary)' }}>
                 <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>Podsumowanie</p>

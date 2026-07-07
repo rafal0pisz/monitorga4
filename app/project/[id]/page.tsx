@@ -9,6 +9,7 @@ import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
+import { scoreColor } from '@/types'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
 type SectionId = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
@@ -38,7 +39,6 @@ const STATUS: Record<string, ST> = {
   fail:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
   skip:  { color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb', label: 'Skip'  },
 }
-const scoreColor = (s: number) => s >= 80 ? '#16a34a' : s >= 60 ? '#ca8a04' : '#dc2626'
 
 
 // pageResponsive
@@ -221,7 +221,7 @@ function ScoreSparkline({ runs }: { runs: RunRow[] }) {
 
   const polyline = pts.map((v, i) => `${toX(i)},${toY(v)}`).join(' ')
   const latestScore = pts[pts.length - 1]
-  const col = latestScore >= 80 ? '#16a34a' : latestScore >= 60 ? '#ca8a04' : '#dc2626'
+  const col = scoreColor(latestScore)
   const areaPath = [
     `M ${toX(0)},${H - pad}`,
     ...pts.map((v, i) => `L ${toX(i)},${toY(v)}`),

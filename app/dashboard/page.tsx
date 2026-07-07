@@ -1,8 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import type { DashboardProject } from '@/types'
-import { getScoreGrade } from '@/types'
+import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import Link from 'next/link'
-const G = { color: { excellent:'#16a34a', good:'#ca8a04', warning:'#ea580c', critical:'#dc2626' }, bg: { excellent:'#f0fdf4', good:'#fefce8', warning:'#fff7ed', critical:'#fef2f2' }, border: { excellent:'#bbf7d0', good:'#fef08a', warning:'#fed7aa', critical:'#fecaca' }, label: { excellent:'Excellent', good:'Good', warning:'Warning', critical:'Critical' } }
 export default async function DashboardPage() {
   const supabase = createAdminClient()
   const { data: projects } = await supabase.from('dashboard_projects').select('*').order('name')
@@ -45,16 +44,16 @@ export default async function DashboardPage() {
             return (
               <Link key={p.id} href={`/project/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px', borderBottom: i < list.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: G.color[grade] }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: G[grade].color }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, margin: '0 0 1px', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
                     <p style={{ fontSize: 11, margin: 0, color: 'var(--color-text-secondary)', fontFamily: 'var(--font-mono)' }}>{p.ga4_property_id}</p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     {diff !== null && <span style={{ fontSize: 11, color: diff >= 0 ? '#16a34a' : '#dc2626' }}>{diff >= 0 ? '▲' : '▼'} {Math.abs(diff)}</span>}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: G.bg[grade], border: `0.5px solid ${G.border[grade]}`, borderRadius: 6, padding: '3px 10px' }}>
-                      <span style={{ fontSize: 15, fontWeight: 500, color: G.color[grade], lineHeight: 1 }}>{p.last_score != null ? Math.round(p.last_score) : '–'}</span>
-                      <span style={{ fontSize: 11, color: G.color[grade] }}>{G.label[grade]}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: G[grade].bg, border: `0.5px solid ${G[grade].border}`, borderRadius: 6, padding: '3px 10px' }}>
+                      <span style={{ fontSize: 15, fontWeight: 500, color: G[grade].color, lineHeight: 1 }}>{p.last_score != null ? Math.round(p.last_score) : '–'}</span>
+                      <span style={{ fontSize: 11, color: G[grade].color }}>{G[grade].label}</span>
                     </div>
                   </div>
                 </div>

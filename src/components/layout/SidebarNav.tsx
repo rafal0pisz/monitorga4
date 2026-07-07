@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { scoreColor } from '@/types'
 
 interface Project {
   id: string
@@ -12,11 +13,7 @@ interface Project {
 }
 
 function scoreDotColor(score: number | null): string {
-  if (score === null) return '#d1d5db'
-  if (score >= 90) return '#16a34a'
-  if (score >= 70) return '#ca8a04'
-  if (score >= 50) return '#ea580c'
-  return '#dc2626'
+  return score === null ? '#d1d5db' : scoreColor(score)
 }
 
 export default function SidebarNav({ projects }: { projects: Project[] }) {

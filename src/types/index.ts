@@ -148,32 +148,38 @@ export interface WorkerRunResult {
 
 export type ScoreGrade = 'excellent' | 'good' | 'warning' | 'critical'
 
+// Single source of truth for score → grade/color across the whole app
+// (sidebar, dashboard, project page, share page). Scale:
+//   0–50   critical  red
+//   51–80  warning   orange
+//   81–90  good      green
+//   91–100 excellent dark green
 export function getScoreGrade(score: number | null): ScoreGrade {
   if (score === null) return 'critical'
-  if (score >= 90) return 'excellent'
-  if (score >= 70) return 'good'
-  if (score >= 50) return 'warning'
+  if (score >= 91) return 'excellent'
+  if (score >= 81) return 'good'
+  if (score >= 51) return 'warning'
   return 'critical'
 }
 
+export const SCORE_GRADE_STYLE: Record<ScoreGrade, { color: string; bg: string; border: string; label: string }> = {
+  excellent: { color: '#15803d', bg: '#f0fdf4', border: '#86efac', label: 'Excellent' },
+  good:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Good' },
+  warning:   { color: '#ea580c', bg: '#fff7ed', border: '#fed7aa', label: 'Warning' },
+  critical:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Critical' },
+}
+
 export function getScoreColor(grade: ScoreGrade): string {
-  const colors: Record<ScoreGrade, string> = {
-    excellent: '#84cc16',
-    good:      '#FFFD73',
-    warning:   '#f97316',
-    critical:  '#ef4444',
-  }
-  return colors[grade]
+  return SCORE_GRADE_STYLE[grade].color
 }
 
 export function getScoreLabel(grade: ScoreGrade): string {
-  const labels: Record<ScoreGrade, string> = {
-    excellent: 'Excellent',
-    good:      'Good',
-    warning:   'Warning',
-    critical:  'Critical',
-  }
-  return labels[grade]
+  return SCORE_GRADE_STYLE[grade].label
+}
+
+// Convenience: go straight from a raw score to its color.
+export function scoreColor(score: number | null): string {
+  return getScoreColor(getScoreGrade(score))
 }
 
 // ============================================================
