@@ -8,6 +8,7 @@ import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
+import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
 type SectionId = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
@@ -22,12 +23,6 @@ function storedSection(checkKey: string | null | undefined): SectionId | null {
   if (checkKey === 'custom_events_check') return 'custom_events'
   return 'parameters'
 }
-
-const CORE_SECTION_META = {
-  traffic:    { label: 'Traffic Source', accent: '#0ea5e9' },
-  engagement: { label: 'Engagement',     accent: '#14b8a6' },
-  users:      { label: 'Users',          accent: '#ec4899' },
-} as const
 
 const SECTION_META = {
   ecommerce:     { label: 'Ecommerce',     accent: '#f97316' },
@@ -109,6 +104,10 @@ export default async function ProjectPage({
 
   const expectedEvents: string[] = Array.isArray(project.expected_events) ? project.expected_events : []
 
+  const coreExtraChecks = [...bySection.traffic, ...bySection.engagement, ...bySection.users]
+    .map(r => formatCoreCheckForPanel(r))
+    .filter((c): c is NonNullable<typeof c> => c != null)
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
       <PageStyles />
@@ -155,47 +154,13 @@ export default async function ProjectPage({
         {/* Score sparkline */}
         {runs.length > 1 && <ScoreSparkline runs={runs} />}
 
-        {/* Live checks: Traffic / Engagement / Users */}
+        {/* Traffic Source / Engagement / Users — live on-demand checks plus
+            the 9 always-on checks from the last daily run, merged into the
+            same sections rather than shown as a separate duplicate block. */}
         {project.ga4_property_id
-          ? <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} />
+          ? <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} extraChecks={coreExtraChecks} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
-
-        {/* Core Checks: the 9 always-on checks that make up most of the
-            Overall Score but aren't tied to any project-specific config —
-            distinct from the live Traffic/Engagement/Users panel above,
-            which shows real-time data, not the scored daily-run results. */}
-        {latestRun && (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ marginBottom: 16 }}>
-              <span style={{ fontSize: 22, fontWeight: 800 }}>Core Checks</span>
-              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                Always-on checks from the last run, counted toward your Overall Score
-              </div>
-            </div>
-            {(['traffic', 'engagement', 'users'] as const).map(sectionId => {
-              const meta   = CORE_SECTION_META[sectionId]
-              const checks = bySection[sectionId]
-              return (
-                <div key={sectionId} style={{ marginBottom: 28 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                      <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
-                    </div>
-                    {checks.length > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed</span>}
-                  </div>
-                  {checks.length === 0
-                    ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>No data for this run yet.</div>
-                    : <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 10 }}>
-                        {checks.map((c: any) => <StoredCheckCard key={c.check_key ?? c.id} check={c} />)}
-                      </div>
-                  }
-                </div>
-              )
-            })}
-          </div>
-        )}
 
         {/* Stored checks: Ecommerce / Custom Events / Parameters */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {

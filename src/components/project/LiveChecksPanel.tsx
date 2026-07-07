@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 
 type Status = 'pass' | 'warn' | 'check'
 
-interface CheckResult {
+export interface CheckResult {
   id: string
   section: 'traffic' | 'engagement' | 'users'
   label: string
@@ -166,7 +166,7 @@ function ErrorBlock({ message }: { message: string }) {
   )
 }
 
-interface Props { propertyId: string; period: number }
+interface Props { propertyId: string; period: number; extraChecks?: CheckResult[] }
 
 const LCStyle = () => (
   <style>{`
@@ -178,7 +178,7 @@ const LCStyle = () => (
 )
 // lcResponsive
 
-export default function LiveChecksPanel({ propertyId, period }: Props) {
+export default function LiveChecksPanel({ propertyId, period, extraChecks = [] }: Props) {
   const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
@@ -204,14 +204,18 @@ export default function LiveChecksPanel({ propertyId, period }: Props) {
     return () => { cancelled = true }
   }, [propertyId, period])
 
-  if (loading) return <Loading />
-  if (error)   return <ErrorBlock message={error} />
-  if (!checks) return null
+  // extraChecks (from the last daily run) render immediately — they don't
+  // depend on the live GA4 fetch above, so a slow/failed live fetch
+  // shouldn't hide them.
+  const merged = [...(checks ?? []), ...extraChecks]
+  const showSections = merged.length > 0
 
   return (
     <div>
-      {(['traffic', 'engagement', 'users'] as const).map(s => (
-        <SectionBlock key={s} id={s} checks={checks.filter(c => c.section === s)} />
+      {loading && !showSections && <Loading />}
+      {error && <ErrorBlock message={error} />}
+      {showSections && (['traffic', 'engagement', 'users'] as const).map(s => (
+        <SectionBlock key={s} id={s} checks={merged.filter(c => c.section === s)} />
       ))}
     </div>
   )
