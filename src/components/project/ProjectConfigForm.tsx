@@ -58,9 +58,10 @@ export default function ProjectConfigForm({ project }: Props) {
 
   // null = not loaded yet (or couldn't load) — validation is skipped rather
   // than blocking adds when we can't confirm either way.
-  const [customDimensions, setCustomDimensions] = useState<Set<string> | null>(null)
-  const [paramWarning,     setParamWarning]     = useState<string | null>(null)
-  const [pendingParam,     setPendingParam]     = useState<ParamCheck | null>(null)
+  const [customDimensions,  setCustomDimensions]  = useState<Set<string> | null>(null)
+  const [dimensionsError,   setDimensionsError]   = useState<string | null>(null)
+  const [paramWarning,      setParamWarning]      = useState<string | null>(null)
+  const [pendingParam,      setPendingParam]      = useState<ParamCheck | null>(null)
 
   const [openSection, setOpenSection] = useState<string | null>(null)
   const [saving,      setSaving]      = useState(false)
@@ -101,9 +102,19 @@ export default function ProjectConfigForm({ project }: Props) {
   useEffect(() => {
     if (!project.ga4_property_id) return
     fetch(`/api/ga4/custom-dimensions?propertyId=${encodeURIComponent(project.ga4_property_id)}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (data?.parameterNames) setCustomDimensions(new Set(data.parameterNames)) })
-      .catch(() => {})
+      .then(async r => {
+        const data = await r.json().catch(() => null)
+        if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
+        return data
+      })
+      .then(data => {
+        if (data?.parameterNames) setCustomDimensions(new Set(data.parameterNames))
+        else throw new Error('Malformed response')
+      })
+      .catch(e => {
+        console.error('[custom-dimensions] fetch failed:', e.message)
+        setDimensionsError(e.message)
+      })
   }, [project.ga4_property_id])
 
   function addCustomEvent() {
@@ -142,6 +153,15 @@ export default function ProjectConfigForm({ project }: Props) {
 
     setParams(prev => [...prev, { event_name: evt, parameter_name: param }])
     setNewEvtName(''); setNewParamName('')
+  }
+
+  // Flags already-saved parameters that don't match a standard GA4 field
+  // or a registered custom dimension — catches entries added before this
+  // validation existed (or via "Add anyway"), not just new ones.
+  function isUnrecognizedParam(paramName: string): boolean {
+    if (!customDimensions) return false // couldn't verify — don't flag
+    const isStandard = paramName in GA4_STANDARD_PARAMS || paramName in GA4_STANDARD_METRICS
+    return !isStandard && !customDimensions.has(paramName)
   }
 
   function confirmAddParamAnyway() {
@@ -387,6 +407,11 @@ export default function ProjectConfigForm({ project }: Props) {
         <SectionHeader id="parameters" title="Parameter Checks" subtitle="Event + parameter pairs to check coverage rate week-over-week" count={params.length} />
         {openSection === 'parameters' && (
           <div style={{ padding: 18 }}>
+            {dimensionsError && (
+              <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, backgroundColor: '#fef2f2', border: '1px solid #fecaca', fontSize: 11.5, color: '#991b1b' }}>
+                Couldn't check parameter names against GA4 ({dimensionsError}) — validation against registered custom dimensions is unavailable right now.
+              </div>
+            )}
             {params.length > 0 && (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 14 }}>
                 <thead>
@@ -397,18 +422,32 @@ export default function ProjectConfigForm({ project }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  {params.map((p, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                      <td style={{ padding: '8px 0', fontFamily: 'monospace', fontSize: 12 }}>{p.event_name}</td>
-                      <td style={{ padding: '8px 0', fontFamily: 'monospace', fontSize: 12 }}>{p.parameter_name}</td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button onClick={() => setParams(prev => prev.filter((_, j) => j !== i))}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16 }}>×</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {params.map((p, i) => {
+                    const unrecognized = isUnrecognizedParam(p.parameter_name)
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid var(--color-border-tertiary)', backgroundColor: unrecognized ? '#fefce8' : undefined }}>
+                        <td style={{ padding: '8px 0', paddingLeft: unrecognized ? 8 : 0, fontFamily: 'monospace', fontSize: 12 }}>{p.event_name}</td>
+                        <td style={{ padding: '8px 0', fontFamily: 'monospace', fontSize: 12 }}>
+                          {p.parameter_name}
+                          {unrecognized && (
+                            <span title={`"${p.parameter_name}" is not a standard GA4 parameter and no matching custom dimension is registered on this property — the nightly check will fail for this row.`}
+                              style={{ marginLeft: 6, fontSize: 11, color: '#854d0e', cursor: 'help' }}>⚠</span>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'right', paddingRight: unrecognized ? 8 : 0 }}>
+                          <button onClick={() => setParams(prev => prev.filter((_, j) => j !== i))}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16 }}>×</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
+            )}
+            {customDimensions && params.some(p => isUnrecognizedParam(p.parameter_name)) && (
+              <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 11.5, color: '#854d0e' }}>
+                ⚠ Rows highlighted above (⚠) don't match a registered GA4 custom dimension — they'll keep failing in the nightly check until fixed or removed.
+              </div>
             )}
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <div style={{ flex: 1 }}>
