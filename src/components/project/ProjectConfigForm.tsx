@@ -70,6 +70,9 @@ export default function ProjectConfigForm({ project }: Props) {
   const [error,       setError]       = useState<string | null>(null)
   const [success,     setSuccess]     = useState(false)
 
+  const [showDeleteModal,  setShowDeleteModal]  = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+
   const loadConfig = useCallback(async () => {
     setLoading(true)
     try {
@@ -222,7 +225,7 @@ export default function ProjectConfigForm({ project }: Props) {
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this project? This cannot be undone.')) return
+    if (deleteConfirmText.trim().toLowerCase() !== 'delete') return
     setDeleting(true)
     const { error } = await supabase.from('projects').delete().eq('id', project.id)
     if (error) { setError(error.message); setDeleting(false); return }
@@ -515,7 +518,7 @@ export default function ProjectConfigForm({ project }: Props) {
 
       {/* ── ACTIONS ───────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 4 }}>
-        <button onClick={handleDelete} disabled={deleting}
+        <button onClick={() => setShowDeleteModal(true)} disabled={deleting}
           style={{ fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}>
           {deleting ? 'Deleting…' : 'Delete project'}
         </button>
@@ -524,6 +527,57 @@ export default function ProjectConfigForm({ project }: Props) {
           {saving ? 'Saving…' : 'Save settings'}
         </button>
       </div>
+
+      {/* ── DELETE CONFIRMATION MODAL ────────────────────────────────────── */}
+      {showDeleteModal && (
+        <div
+          onClick={() => { if (!deleting) { setShowDeleteModal(false); setDeleteConfirmText('') } }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: 380, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 14, padding: '24px 24px 20px' }}
+          >
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-text-primary)' }}>
+              Delete this project?
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
+              This permanently deletes <strong>{project.name}</strong> and all of its check history. This cannot be undone.
+            </p>
+            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', display: 'block', marginBottom: 6 }}>
+              Type <strong>delete</strong> to confirm
+            </label>
+            <input
+              autoFocus
+              value={deleteConfirmText}
+              onChange={e => setDeleteConfirmText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && deleteConfirmText.trim().toLowerCase() === 'delete') handleDelete() }}
+              placeholder="delete"
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)', color: 'var(--color-text-primary)', marginBottom: 18, boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
+                disabled={deleting}
+                style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1px solid var(--color-border-tertiary)', background: 'none', color: 'var(--color-text-primary)', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmText.trim().toLowerCase() !== 'delete'}
+                style={{
+                  fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 8, border: 'none', color: '#fff',
+                  backgroundColor: deleting || deleteConfirmText.trim().toLowerCase() !== 'delete' ? '#fca5a5' : '#dc2626',
+                  cursor: deleting || deleteConfirmText.trim().toLowerCase() !== 'delete' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Delete project'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
