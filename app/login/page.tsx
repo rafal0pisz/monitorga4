@@ -46,7 +46,7 @@ export default function LoginPage() {
             AlertGA4
           </h1>
           <p style={{ fontSize: 12, margin: 0, color: 'var(--color-text-secondary)' }}>
-            GA4 implementation quality monitor
+            Monitor jakości implementacji GA4
           </p>
         </div>
 
@@ -58,10 +58,10 @@ export default function LoginPage() {
           padding: '24px 24px 20px',
         }}>
           <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>
-            Sign in
+            Zaloguj się
           </p>
           <p style={{ fontSize: 12, margin: '0 0 20px', color: 'var(--color-text-secondary)' }}>
-            Google account with GA4 Viewer access required.
+            Wymagane konto Google z dostępem Viewer do GA4. Logowanie zakłada też konto — osobna rejestracja nie jest potrzebna.
           </p>
 
           <button
@@ -92,18 +92,18 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.548 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
             </svg>
-            {loading ? 'Redirecting…' : 'Continue with Google'}
+            {loading ? 'Przekierowywanie…' : 'Kontynuuj przez Google'}
           </button>
 
           <p style={{ fontSize: 11, textAlign: 'center', margin: '14px 0 0', color: 'var(--color-text-secondary)' }}>
-            Read-only access to Google Analytics
+            Dostęp tylko do odczytu Google Analytics
           </p>
         </div>
 
         <p style={{ fontSize: 11, textAlign: 'center', margin: '16px 0 0', color: '#6b7280' }}>
-          <a href="/privacy" style={{ color: '#6b7280', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/privacy" style={{ color: '#6b7280', textDecoration: 'none' }}>Polityka prywatności</a>
           <span style={{ margin: '0 6px' }}>·</span>
-          <a href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>Regulamin</a>
         </p>
         <p style={{ fontSize: 11, textAlign: 'center', margin: '8px 0 0', color: '#6b7280' }}>
           bettersteps.pl · 2026

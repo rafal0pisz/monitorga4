@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export const metadata = { title: 'Terms of Service — AlertGA4' }
+export const metadata = { title: 'Regulamin — AlertGA4' }
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }
 const p: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', margin: '0 0 12px' }
@@ -14,84 +14,91 @@ export default function TermsPage() {
       </header>
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Terms of Service</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Last updated: 8 July 2026</p>
+        <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Regulamin</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 8 lipca 2026</p>
 
         <p style={p}>
-          These terms govern your use of AlertGA4, a Google Analytics 4 (GA4) implementation-monitoring service
-          operated by Bettersteps (&ldquo;Bettersteps&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) at alertga4.bettersteps.pl.
-          By signing in and using AlertGA4, you agree to these terms.
+          Niniejszy regulamin określa zasady korzystania z AlertGA4 — usługi do monitorowania jakości implementacji
+          Google Analytics 4 (GA4), dostępnej pod adresem alertga4.bettersteps.pl. Usługodawcą jest:
         </p>
+        <p style={{ ...p, padding: '14px 16px', borderRadius: 8, backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
+          <strong>Bettersteps spółka z ograniczoną odpowiedzialnością</strong><br />
+          ul. Domaniewska 47, 02-672 Warszawa<br />
+          KRS: 0001011888 · NIP: 5214000359 · REGON: 524154200<br />
+          E-mail: <a href="mailto:kontakt@bettersteps.pl" style={{ color: '#16a34a' }}>kontakt@bettersteps.pl</a>
+        </p>
+        <p style={p}>Logując się i korzystając z AlertGA4, akceptujesz niniejszy regulamin.</p>
 
-        <h2 style={h2}>1. The service</h2>
+        <h2 style={h2}>1. Opis usługi</h2>
         <p style={p}>
-          AlertGA4 connects to a GA4 property you have access to, using read-only Google API access, and runs
-          automated checks against its configuration and reporting data to produce a quality score, trend, and email
-          alerts. AlertGA4 never modifies your GA4 property, its configuration, or its underlying data — all access
-          is read-only.
+          AlertGA4 łączy się z usługą GA4, do której masz dostęp, wykorzystując dostęp do API Google wyłącznie do
+          odczytu, i uruchamia automatyczne sprawdzenia jej konfiguracji oraz danych raportowych, żeby wyliczyć wynik
+          jakości, trend i wysyłać alerty e-mail. AlertGA4 nigdy nie zmienia Twojej usługi GA4, jej konfiguracji ani
+          danych źródłowych — cały dostęp jest wyłącznie do odczytu.
         </p>
 
-        <h2 style={h2}>2. Your account and access</h2>
+        <h2 style={h2}>2. Konto i dostęp</h2>
         <ul style={{ paddingLeft: 20, margin: '0 0 12px' }}>
-          <li style={li}>You must sign in with a Google account that has legitimate (at least Viewer-level) access to any GA4 property you add.</li>
-          <li style={li}>You are responsible for the projects, configuration, and alert recipients you set up under your account.</li>
-          <li style={li}>You may not use AlertGA4 to access, or attempt to access, a GA4 property you are not authorized to view.</li>
+          <li style={li}>Musisz zalogować się kontem Google, które posiada uprawniony dostęp (co najmniej na poziomie „Viewer”) do każdej dodawanej usługi GA4.</li>
+          <li style={li}>Odpowiadasz za projekty, konfigurację i odbiorców alertów skonfigurowanych na swoim koncie.</li>
+          <li style={li}>Nie możesz używać AlertGA4 do uzyskiwania ani prób uzyskiwania dostępu do usługi GA4, do której nie jesteś uprawniony.</li>
         </ul>
 
-        <h2 style={h2}>3. Acceptable use</h2>
-        <p style={p}>You agree not to:</p>
+        <h2 style={h2}>3. Dozwolony sposób korzystania</h2>
+        <p style={p}>Zobowiązujesz się, że nie będziesz:</p>
         <ul style={{ paddingLeft: 20, margin: '0 0 12px' }}>
-          <li style={li}>Reverse engineer, scrape, or attempt to circumvent access controls of the service.</li>
-          <li style={li}>Use AlertGA4 to store or process data you are not authorized to hold.</li>
-          <li style={li}>Interfere with the service&apos;s availability or abuse its automated checks (e.g. excessive manual runs intended to overload the Google APIs).</li>
+          <li style={li}>dokonywać inżynierii wstecznej, skanować ani obchodzić mechanizmów kontroli dostępu usługi,</li>
+          <li style={li}>wykorzystywać AlertGA4 do przechowywania lub przetwarzania danych, do których nie masz uprawnień,</li>
+          <li style={li}>zakłócać dostępności usługi ani nadużywać automatycznych sprawdzeń (np. nadmierne ręczne uruchamianie w celu przeciążenia API Google).</li>
         </ul>
 
-        <h2 style={h2}>4. Availability</h2>
+        <h2 style={h2}>4. Dostępność usługi</h2>
         <p style={p}>
-          AlertGA4 is provided on a best-effort basis. Daily automated checks and email alerts depend on Google&apos;s
-          APIs, our hosting and email providers, and your Google account remaining connected — we do not guarantee
-          uninterrupted availability and are not liable for missed alerts caused by factors outside our control.
+          AlertGA4 świadczone jest z dochowaniem należytej staranności. Codzienne automatyczne sprawdzenia i alerty
+          e-mail zależą od API Google, naszych dostawców hostingu i poczty oraz utrzymania połączenia z Twoim kontem
+          Google — nie gwarantujemy nieprzerwanej dostępności i nie ponosimy odpowiedzialności za pominięte alerty
+          wynikające z przyczyn od nas niezależnych.
         </p>
 
-        <h2 style={h2}>5. No warranty</h2>
+        <h2 style={h2}>5. Brak gwarancji</h2>
         <p style={p}>
-          AlertGA4 is provided &ldquo;as is&rdquo;, without warranties of any kind. Quality scores and check results are
-          informational aids, not a guarantee of GA4 data accuracy or completeness — you remain responsible for
-          verifying your own analytics implementation.
+          AlertGA4 dostarczane jest w stanie „takim, jaki jest”, bez żadnych gwarancji. Wyniki jakości i sprawdzenia
+          mają charakter pomocniczy/informacyjny i nie stanowią gwarancji poprawności ani kompletności danych GA4 —
+          za weryfikację własnej implementacji analitycznej odpowiadasz Ty.
         </p>
 
-        <h2 style={h2}>6. Limitation of liability</h2>
+        <h2 style={h2}>6. Ograniczenie odpowiedzialności</h2>
         <p style={p}>
-          To the maximum extent permitted by law, Bettersteps is not liable for indirect, incidental, or consequential
-          damages arising from your use of, or inability to use, AlertGA4, including decisions made based on its
-          check results or alerts.
+          W maksymalnym zakresie dopuszczalnym przez prawo, Bettersteps nie ponosi odpowiedzialności za szkody
+          pośrednie, uboczne ani następcze wynikające z korzystania lub niemożności korzystania z AlertGA4, w tym za
+          decyzje podjęte na podstawie wyników sprawdzeń lub alertów.
         </p>
 
-        <h2 style={h2}>7. Termination</h2>
+        <h2 style={h2}>7. Zakończenie korzystania z usługi</h2>
         <p style={p}>
-          You may stop using AlertGA4 and delete your projects at any time from the project settings page, and may
-          revoke its access to your Google account from{' '}
-          <a href="https://myaccount.google.com/permissions" style={{ color: '#16a34a' }}>Google Account permissions</a>{' '}
-          at any time. We may suspend or terminate access for accounts that violate section 3.
+          Możesz zaprzestać korzystania z AlertGA4 i usunąć swoje projekty w dowolnym momencie z poziomu ustawień
+          projektu, a dostęp AlertGA4 do konta Google odwołać w{' '}
+          <a href="https://myaccount.google.com/permissions" style={{ color: '#16a34a' }}>ustawieniach konta Google</a>{' '}
+          w dowolnym momencie. Możemy zawiesić lub zakończyć dostęp kontom naruszającym punkt 3.
         </p>
 
-        <h2 style={h2}>8. Changes to these terms</h2>
+        <h2 style={h2}>8. Zmiany regulaminu</h2>
         <p style={p}>
-          We may update these terms from time to time; we&apos;ll update the date at the top of this page when we do.
-          Continued use of AlertGA4 after a change constitutes acceptance of the updated terms.
+          Możemy okresowo aktualizować niniejszy regulamin; w takim przypadku zaktualizujemy datę na górze tej strony.
+          Dalsze korzystanie z AlertGA4 po wprowadzeniu zmian oznacza ich akceptację.
         </p>
 
-        <h2 style={h2}>9. Governing law</h2>
-        <p style={p}>These terms are governed by the laws of Poland.</p>
+        <h2 style={h2}>9. Prawo właściwe</h2>
+        <p style={p}>Niniejszy regulamin podlega prawu polskiemu.</p>
 
-        <h2 style={h2}>10. Contact</h2>
+        <h2 style={h2}>10. Kontakt</h2>
         <p style={p}>
-          Questions about these terms: <a href="mailto:kontakt@bettersteps.pl" style={{ color: '#16a34a' }}>kontakt@bettersteps.pl</a>{' '}
+          Pytania dotyczące regulaminu: <a href="mailto:kontakt@bettersteps.pl" style={{ color: '#16a34a' }}>kontakt@bettersteps.pl</a>{' '}
           · <a href="https://www.bettersteps.pl" style={{ color: '#16a34a' }}>www.bettersteps.pl</a>
         </p>
 
         <p style={{ ...p, marginTop: 24 }}>
-          See also our <Link href="/privacy" style={{ color: '#16a34a' }}>Privacy Policy</Link>.
+          Zobacz też naszą <Link href="/privacy" style={{ color: '#16a34a' }}>Politykę prywatności</Link>.
         </p>
       </main>
     </div>
