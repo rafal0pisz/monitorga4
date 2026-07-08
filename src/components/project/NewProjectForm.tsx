@@ -102,10 +102,13 @@ export default function NewProjectForm() {
     setLoading(true); setError(null)
     try {
       const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('You must be signed in to create a project.')
       const expected_events = form.expected_events.split(',').map(e => e.trim()).filter(Boolean)
       const propertyName = manualMode ? (form.name || `Property ${effectivePropertyId}`) : (form.name || selectedProperty!.displayName)
       const { error: err } = await supabase.from('projects').insert({
         org_id: '00000000-0000-0000-0000-000000000001',
+        owner_id: user.id,
         name: propertyName,
         ga4_property_id: `properties/${effectivePropertyId}`,
         own_domain: form.own_domain || null,

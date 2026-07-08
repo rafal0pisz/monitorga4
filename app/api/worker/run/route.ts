@@ -633,18 +633,6 @@ async function runWorker(projectId: string | null) {
   const supabase = createAdminClient()
   const runDate = new Date().toISOString().split('T')[0]
 
-  // Token z profiles (DB-backed access token + refresh_token).
-  // Preferuje token aktualnie zalogowanego użytkownika (klik "Run now" z UI);
-  // spada na domyślny token organizacji tylko gdy brak sesji (cron).
-  // Nie używamy session.provider_token — Supabase nie odświeża tego pola
-  // po wymianie kodu OAuth, więc po ~1h staje się nieaktualne mimo że
-  // sesja logowania w aplikacji wciąż wygląda jako aktywna.
-  const accessToken = await getGa4Token()
-
-  if (!accessToken) {
-    return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
-  }
-
   // Fetch projects — manualny run bierze konkretny projekt niezależnie od
   // auto_run; automatyczny (cron) run bierze tylko projekty z auto_run = true.
   let query = supabase.from('projects').select('*').eq('status', 'active')
@@ -660,6 +648,41 @@ async function runWorker(projectId: string | null) {
   const prevDate = prevDateObj.toISOString().split('T')[0]
 
   for (const project of (projects ?? []) as Project[]) {
+    // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
+    // per-projekt na podstawie jego właściciela — każdy projekt może
+    // należeć do innego konta Google z dostępem do innych property, więc
+    // wspólny token dla całego batcha dawałby błędne 403 dla cudzych
+    // projektów. Gdy właściciel nie ma tokenu (np. manualny run bez sesji
+    // i bez owner_id), spada na domyślne konto organizacji.
+    // Nie używamy session.provider_token — Supabase nie odświeża tego pola
+    // po wymianie kodu OAuth, więc po ~1h staje się nieaktualne mimo że
+    // sesja logowania w aplikacji wciąż wygląda jako aktywna.
+    const accessToken = await getGa4Token(project.owner_id ?? undefined)
+
+    if (!accessToken) {
+      errors[project.id] = 'No GA4 token — owner needs to sign in with Google'
+      await supabase.from('dqs_runs').upsert({
+        project_id: project.id,
+        run_date: runDate,
+        status: 'failed',
+        score_total: null,
+        error_message: errors[project.id],
+      }, { onConflict: 'project_id,run_date' })
+      digestEntries.push({
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'failed',
+        errorMessage: errors[project.id],
+        checkErrors: [],
+        scoreTotal: null,
+        prevScore: null,
+        topSignal: '',
+        belowThreshold: true,
+        alertThreshold: project.alert_threshold,
+      })
+      continue
+    }
+
     // Create / update run
     const { data: run } = await supabase.from('dqs_runs').upsert({
       project_id: project.id,

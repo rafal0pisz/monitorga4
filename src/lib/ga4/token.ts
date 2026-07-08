@@ -56,13 +56,16 @@ async function refreshAndPersist(
  * Get a valid GA4 access token.
  *
  * Resolution order:
- *  1. The currently signed-in user's OWN stored token (matched by their user id),
- *     refreshed via their own refresh_token if expired. This matters because
- *     different team members may have Google accounts with different GA4
- *     property access — using someone else's stored token can produce a
- *     misleading 403 even though the signed-in user has access.
- *  2. Falls back to the profile explicitly flagged `is_ga4_default` — used for
- *     unattended cron runs where there is no signed-in user/session at all.
+ *  1. If `ownerId` is given (worker/cron resolving a specific project's
+ *     owner), that profile's own stored token — refreshed via their own
+ *     refresh_token if expired. Each project must be checked with its
+ *     owner's Google access, not a shared account, or the check can
+ *     silently pass/fail against the wrong GA4 property permissions.
+ *  2. Otherwise, the currently signed-in user's OWN stored token (matched by
+ *     their user id), refreshed via their own refresh_token if expired.
+ *  3. Falls back to the profile explicitly flagged `is_ga4_default` — used
+ *     when neither of the above resolved a token (e.g. an owner who hasn't
+ *     connected Google, or unattended runs with no owner context at all).
  *     This is NOT "whichever account happened to log in first": an old
  *     throwaway/test login with access to only one property would silently
  *     produce a GA4 403 on every other property. The default account must be
@@ -75,32 +78,48 @@ async function refreshAndPersist(
  * Returns null if no token can be obtained (user needs to (re-)connect Google,
  * or nobody has been designated as the default GA4 account yet).
  */
-export async function getGa4Token(): Promise<string | null> {
+export async function getGa4Token(ownerId?: string): Promise<string | null> {
   const admin = createAdminClient()
 
-  try {
-    const sessionClient = await createClient()
-    const { data: { user } } = await sessionClient.auth.getUser()
-    if (user) {
-      const { data: ownProfile } = await admin
-        .from('profiles')
-        .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
-        .eq('id', user.id)
-        .maybeSingle()
+  if (ownerId) {
+    const { data: ownerProfile } = await admin
+      .from('profiles')
+      .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
+      .eq('id', ownerId)
+      .maybeSingle()
 
-      if (ownProfile?.ga4_access_token && isStillValid(ownProfile)) {
-        return ownProfile.ga4_access_token
-      }
-      if (ownProfile?.ga4_refresh_token) {
-        const token = await refreshAndPersist(admin, user.id, ownProfile.ga4_refresh_token)
-        if (token) return token
-      }
+    if (ownerProfile?.ga4_access_token && isStillValid(ownerProfile)) {
+      return ownerProfile.ga4_access_token
     }
-  } catch {
-    // No session context (e.g. cron worker) — fall through to org default
+    if (ownerProfile?.ga4_refresh_token) {
+      const token = await refreshAndPersist(admin, ownerId, ownerProfile.ga4_refresh_token)
+      if (token) return token
+    }
+  } else {
+    try {
+      const sessionClient = await createClient()
+      const { data: { user } } = await sessionClient.auth.getUser()
+      if (user) {
+        const { data: ownProfile } = await admin
+          .from('profiles')
+          .select('ga4_access_token, ga4_refresh_token, ga4_token_expiry')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (ownProfile?.ga4_access_token && isStillValid(ownProfile)) {
+          return ownProfile.ga4_access_token
+        }
+        if (ownProfile?.ga4_refresh_token) {
+          const token = await refreshAndPersist(admin, user.id, ownProfile.ga4_refresh_token)
+          if (token) return token
+        }
+      }
+    } catch {
+      // No session context (e.g. cron worker) — fall through to org default
+    }
   }
 
-  // Unattended / no per-user token available — fall back to the explicitly
+  // No per-owner/per-user token available — fall back to the explicitly
   // designated default account for this org.
   const { data: profile } = await admin
     .from('profiles')

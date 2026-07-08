@@ -1,15 +1,28 @@
-import { createAdminClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { redirect, notFound } from 'next/navigation'
 import type { Project, ChecksCatalog, ChecksConfig, CustomEventCheck, EcommerceConfig, ParameterCheck } from '@/types'
 import Link from 'next/link'
 import ProjectConfigForm from '@/components/project/ProjectConfigForm'
+import AccountMismatch from '@/components/project/AccountMismatch'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+
+  const session = await createClient()
+  const { data: authData } = await session.auth.getUser()
+  const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+  if (!bypass && !authData?.user) redirect('/login')
+
   const supabase = createAdminClient()
 
+  // Fetch (and authorize) the project before touching the RPCs below — those
+  // now reject non-owners server-side, which would otherwise throw and blow
+  // up this whole Promise.all instead of showing a friendly message.
+  const { data: project } = await supabase.from('projects').select('*').eq('id', id).single()
+  if (!project) notFound()
+  if (!bypass && project.owner_id !== authData!.user!.id) return <AccountMismatch />
+
   const [
-    { data: project },
     { data: catalog },
     { data: checksConfig },
     { data: customEventsRaw },
@@ -17,7 +30,6 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     { data: parameterChecksRaw },
     { data: sectionsRaw },
   ] = await Promise.all([
-    supabase.from('projects').select('*').eq('id', id).single(),
     supabase.from('checks_catalog').select('*').order('level').order('check_key'),
     supabase.from('checks_config').select('*').eq('project_id', id),
     supabase.rpc('get_custom_event_checks', { p_project_id: id }),
@@ -25,8 +37,6 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     supabase.rpc('get_parameter_checks', { p_project_id: id }),
     supabase.rpc('get_project_sections', { p_project_id: id }),
   ])
-
-  if (!project) notFound()
 
   // RPC returns jsonb arrays — parse if needed
   const parseRpc = (raw: any) => {

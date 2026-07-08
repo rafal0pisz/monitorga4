@@ -1,10 +1,16 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import Link from 'next/link'
 export default async function DashboardPage() {
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
+  const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+
   const supabase = createAdminClient()
-  const { data: projects } = await supabase.from('dashboard_projects').select('*').order('name')
+  let query = supabase.from('dashboard_projects').select('*').order('name')
+  if (!bypass && user) query = query.eq('owner_id', user.id)
+  const { data: projects } = await query
   const list = (projects ?? []) as DashboardProject[]
   const avgScore = list.length ? Math.round(list.reduce((s, p) => s + (p.last_score ?? 0), 0) / list.length) : null
   const critical = list.filter(p => ['critical','warning'].includes(getScoreGrade(p.last_score))).length

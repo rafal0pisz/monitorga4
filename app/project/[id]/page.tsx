@@ -7,6 +7,7 @@ import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
+import AccountMismatch from '@/components/project/AccountMismatch'
 import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 import { scoreColor } from '@/types'
@@ -78,6 +79,7 @@ export default async function ProjectPage({
 
   const { data: project } = await admin.from('projects').select('*').eq('id', id).single()
   if (!project) return notFound()
+  if (!bypass && project.owner_id !== authData!.user!.id) return <AccountMismatch />
 
   const { data: runsRaw } = await admin
     .from('dqs_runs').select('id, run_date, score_total, status')

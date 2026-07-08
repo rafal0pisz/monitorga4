@@ -1,13 +1,19 @@
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import SidebarNav from './SidebarNav'
 import LogoutButton from '@/components/ui/LogoutButton'
 
 export default async function AppSidebar() {
+  const session = await createClient()
+  const { data: { user } } = await session.auth.getUser()
+  const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+
   const supabase = createAdminClient()
-  const { data: projects } = await supabase
+  let query = supabase
     .from('dashboard_projects')
     .select('id, name, last_score, status')
     .order('name')
+  if (!bypass && user) query = query.eq('owner_id', user.id)
+  const { data: projects } = await query
 
   return (
     <>

@@ -27,6 +27,7 @@ export interface Profile {
 export interface Project {
   id: string
   org_id: string
+  owner_id: string | null
   name: string
   ga4_property_id: string
   ga4_auth_type: AuthType
@@ -105,6 +106,7 @@ export interface WeeklyReport {
 export interface DashboardProject {
   id: string
   org_id: string
+  owner_id: string | null
   name: string
   ga4_property_id: string
   status: ProjectStatus
