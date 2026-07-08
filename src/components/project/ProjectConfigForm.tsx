@@ -536,15 +536,15 @@ export default function ProjectConfigForm({ project }: Props) {
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: 380, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 14, padding: '24px 24px 20px' }}
+            style={{ width: '100%', maxWidth: 380, backgroundColor: '#ffffff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '24px 24px 20px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}
           >
-            <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: 'var(--color-text-primary)' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: '#111827' }}>
               Delete this project?
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 16px', lineHeight: 1.5 }}>
               This permanently deletes <strong>{project.name}</strong> and all of its check history. This cannot be undone.
             </p>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: 12, fontWeight: 500, color: '#111827', display: 'block', marginBottom: 6 }}>
               Type <strong>delete</strong> to confirm
             </label>
             <input
@@ -553,13 +553,13 @@ export default function ProjectConfigForm({ project }: Props) {
               onChange={e => setDeleteConfirmText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && deleteConfirmText.trim().toLowerCase() === 'delete') handleDelete() }}
               placeholder="delete"
-              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)', color: 'var(--color-text-primary)', marginBottom: 18, boxSizing: 'border-box' }}
+              style={{ width: '100%', padding: '8px 10px', borderRadius: 8, fontSize: 13, border: '1px solid #d1d5db', backgroundColor: '#ffffff', color: '#111827', marginBottom: 18, boxSizing: 'border-box' }}
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button
                 onClick={() => { setShowDeleteModal(false); setDeleteConfirmText('') }}
                 disabled={deleting}
-                style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1px solid var(--color-border-tertiary)', background: 'none', color: 'var(--color-text-primary)', cursor: 'pointer' }}
+                style={{ fontSize: 13, padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#ffffff', color: '#111827', cursor: 'pointer' }}
               >
                 Cancel
               </button>
