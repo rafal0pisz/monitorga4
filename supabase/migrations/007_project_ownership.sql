@@ -22,7 +22,14 @@ where owner_id is null;
 -- createAdminClient — service role, które i tak omija RLS na widokach/
 -- tabelach źródłowych, więc filtrowanie w kodzie aplikacji jest tu
 -- głównym mechanizmem izolacji dla tych dwóch miejsc).
-create or replace view dashboard_projects as
+--
+-- CREATE OR REPLACE VIEW nie pozwala wstawić nowej kolumny w środku listy
+-- (tylko dopisać na końcu) — owner_id wstawiony po org_id przesuwa pozycję
+-- "name" i Postgres zgłasza to jako próbę zmiany nazwy kolumny. Trzeba
+-- najpierw DROP VIEW.
+drop view if exists dashboard_projects;
+
+create view dashboard_projects as
  SELECT p.id,
     p.org_id,
     p.owner_id,
