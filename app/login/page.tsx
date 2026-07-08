@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import BrandWordmark from '@/components/ui/BrandWordmark'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -34,17 +35,9 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            backgroundColor: '#dcfce7',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px',
-          }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>QS</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+            <BrandWordmark size={26} />
           </div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>
-            AlertGA4
-          </h1>
           <p style={{ fontSize: 12, margin: 0, color: 'var(--color-text-secondary)' }}>
             Monitor jakości implementacji GA4
           </p>
