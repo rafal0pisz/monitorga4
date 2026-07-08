@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/share']
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/share', '/privacy', '/terms']
 
 // API-only path: /api/worker/run authorizes itself (session OR CRON_SECRET
 // bearer token) inside the route handler — redirecting an unauthenticated
@@ -32,7 +32,9 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.some(p => path.startsWith(p))
+  // "/" is matched exactly, not as a prefix — startsWith('/') would match
+  // every path in the app and disable the auth gate entirely.
+  const isPublic = path === '/' || PUBLIC_PATHS.some(p => path.startsWith(p))
   const isAuthExemptApi = AUTH_EXEMPT_API_PATHS.some(p => path.startsWith(p))
 
   if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true' || isAuthExemptApi) {

@@ -100,7 +100,12 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <p style={{ fontSize: 11, textAlign: 'center', margin: '16px 0 0', color: 'var(--color-text-secondary)' }}>
+        <p style={{ fontSize: 11, textAlign: 'center', margin: '16px 0 0', color: '#6b7280' }}>
+          <a href="/privacy" style={{ color: '#6b7280', textDecoration: 'none' }}>Privacy Policy</a>
+          <span style={{ margin: '0 6px' }}>·</span>
+          <a href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>Terms of Service</a>
+        </p>
+        <p style={{ fontSize: 11, textAlign: 'center', margin: '8px 0 0', color: '#6b7280' }}>
           bettersteps.pl · 2026
         </p>
       </div>
