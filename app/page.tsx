@@ -86,14 +86,23 @@ export default async function HomePage() {
         }
         .lp .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #ff8282; flex-shrink: 0; }
 
-        .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); border-bottom: 1px solid #e2e6e8; }
-        .lp-nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+        .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(35,43,49,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .lp-nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 12px; }
         .lp-nav-links { display: flex; align-items: center; gap: 30px; }
-        .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: #5b6570; }
-        .lp-nav-links a:hover { color: #232b31; }
+        .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: rgba(255,255,255,0.68); }
+        .lp-nav-links a:hover { color: #fff; }
         .lp-nav-cta { display: flex; align-items: center; gap: 18px; }
-        .lp-nav-cta .login-link { font-size: 14px; font-weight: 600; text-decoration: none; color: #232b31; white-space: nowrap; }
+        .lp-nav-cta .login-link { font-size: 14px; font-weight: 600; text-decoration: none; color: #fff; white-space: nowrap; }
+        .lp-nav-cta .btn--primary { background: #fffd73; color: #3a3800; }
+        .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }
+        .lp-nav .nav-cta-full { display: inline; }
+        .lp-nav .nav-cta-short { display: none; }
         @media (max-width: 860px) { .lp-nav-links { display: none; } }
+        @media (max-width: 480px) {
+          .lp-nav-cta .login-link { display: none; }
+          .lp-nav .nav-cta-full { display: none; }
+          .lp-nav .nav-cta-short { display: inline; }
+        }
 
         .lp .btn {
           display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -124,10 +133,10 @@ export default async function HomePage() {
         @keyframes lpRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(1.8); opacity: 0; } }
         .readout-prop-name { font-family: var(--font-mono), monospace; font-size: 13.5px; font-weight: 600; }
         .readout-status { font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; }
-        .readout-body { padding: 26px 20px 22px; display: flex; align-items: flex-end; gap: 18px; }
-        .score-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 56px; line-height: 0.9; color: #166534; }
+        .readout-body { padding: 26px 20px 22px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+        .score-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: clamp(42px, 11vw, 56px); line-height: 0.9; color: #166534; }
         .score-of { font-family: var(--font-mono), monospace; font-size: 18px; color: #8b939a; padding-bottom: 8px; }
-        .score-bar { flex: 1; padding-bottom: 12px; }
+        .score-bar { flex: 1; min-width: 140px; padding-bottom: 12px; }
         .score-track { height: 6px; border-radius: 4px; background: #eaeef0; overflow: hidden; margin-bottom: 8px; }
         .score-fill { height: 100%; width: 94%; background: linear-gradient(90deg, #16a34a, #166534); border-radius: 4px; }
         .score-caption { font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; }
@@ -143,6 +152,11 @@ export default async function HomePage() {
         .lp .section-head { max-width: 620px; margin-bottom: 40px; }
         .lp .section-head h2 { font-size: clamp(23px, 3vw, 28px); margin-top: 14px; letter-spacing: -0.01em; }
         .lp .section-head p { color: #5b6570; font-size: 15.5px; margin-top: 10px; line-height: 1.6; }
+        @media (max-width: 640px) {
+          .lp section { padding: 48px 0; }
+          .lp-hero { padding: 44px 0 40px; }
+          .lp-cta-band { padding: 52px 0; }
+        }
 
         .lp-log { display: flex; flex-direction: column; border-top: 1px solid #e2e6e8; }
         .lp-log-row { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid #e2e6e8; }
@@ -170,8 +184,9 @@ export default async function HomePage() {
         .lp-panel-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #e2e6e8; }
         .lp-panel-bar-left { display: flex; align-items: center; gap: 8px; }
         .lp-panel-dot { width: 9px; height: 9px; border-radius: 50%; }
-        .lp-panel-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-left: 6px; }
-        .lp-panel-new { font-family: var(--font-mono), monospace; font-size: 12px; color: #c23b34; }
+        .lp-panel-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lp-panel-new { font-family: var(--font-mono), monospace; font-size: 12px; color: #c23b34; flex-shrink: 0; }
+        @media (max-width: 480px) { .lp-panel-title { display: none; } }
         .lp-row { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center; padding: 15px 20px; border-bottom: 1px solid #e2e6e8; }
         .lp-row:last-child { border-bottom: none; }
         .lp-row-name { font-weight: 600; font-size: 14.5px; }
@@ -207,7 +222,7 @@ export default async function HomePage() {
       <nav className="lp-nav">
         <div className="wrap lp-nav-row">
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <BrandWordmark size={19} />
+            <BrandWordmark size={19} dark />
           </Link>
           <div className="lp-nav-links">
             <a href="#problem">Problem</a>
@@ -217,7 +232,10 @@ export default async function HomePage() {
           </div>
           <div className="lp-nav-cta">
             {secondaryCta && <Link href={secondaryCta.href} className="login-link">{secondaryCta.label}</Link>}
-            <Link href={primaryCta.href} className="btn btn--primary btn--sm">{primaryCta.label}</Link>
+            <Link href={primaryCta.href} className="btn btn--primary btn--sm">
+              <span className="nav-cta-full">{primaryCta.label}</span>
+              <span className="nav-cta-short">{user ? primaryCta.label : 'Zarejestruj się'}</span>
+            </Link>
           </div>
         </div>
       </nav>

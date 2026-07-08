@@ -1,6 +1,8 @@
-// Bettersteps-style logotype: bold italic, two-tone, with a pulsing dot —
-// mirrors the "BETTERSTEPS." wordmark (white/grey + yellow) using
-// "Alert" (dark) + "GA4" (yellow) + a live-looking blinking dot.
+// Bettersteps-style logotype — mirrors the "BETTERSTEPS." wordmark:
+// heavy black weight, slanted, uppercase, two-tone (light + yellow),
+// using "ALERT" + "GA4" + a live-looking blinking dot.
+// `dark` controls which surface it sits on: true = dark background
+// (Alert renders white), false = light background (Alert renders ink).
 export default function BrandWordmark({ size = 20, dark = false }: { size?: number; dark?: boolean }) {
   return (
     <span
@@ -8,11 +10,12 @@ export default function BrandWordmark({ size = 20, dark = false }: { size?: numb
         display: 'inline-flex',
         alignItems: 'baseline',
         fontSize: size,
-        fontWeight: 800,
-        fontStyle: 'italic',
-        letterSpacing: '-0.02em',
+        fontFamily: 'var(--font-logo), sans-serif',
+        fontWeight: 400,
+        textTransform: 'uppercase',
+        letterSpacing: '-0.01em',
         lineHeight: 1,
-        transform: 'scaleX(0.94)',
+        transform: 'skewX(-8deg)',
         transformOrigin: 'left center',
       }}
     >
