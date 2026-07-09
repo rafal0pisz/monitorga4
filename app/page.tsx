@@ -116,13 +116,6 @@ export default async function HomePage() {
         .lp a { color: inherit; }
         .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
 
-        .lp .eyebrow {
-          font-family: var(--font-mono), monospace; font-weight: 500; font-size: 12px;
-          letter-spacing: 0.09em; text-transform: uppercase; color: #c23b34;
-          display: flex; align-items: center; gap: 8px;
-        }
-        .lp .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #ff8282; flex-shrink: 0; }
-
         .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(35,43,49,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
         .lp-nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 12px; }
         .lp-nav-links { display: flex; align-items: center; gap: 30px; }
@@ -186,7 +179,7 @@ export default async function HomePage() {
         .lp section { padding: 64px 0; }
         .lp .section--dim { background: #f3f6f7; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
         .lp .section-head { max-width: 640px; margin-bottom: 40px; }
-        .lp .section-head h2 { font-size: clamp(23px, 3vw, 28px); margin-top: 14px; letter-spacing: -0.01em; }
+        .lp .section-head h2 { font-size: clamp(23px, 3vw, 28px); letter-spacing: -0.01em; }
         .lp .section-head p { color: #5b6570; font-size: 15.5px; margin-top: 10px; line-height: 1.6; }
         @media (max-width: 640px) {
           .lp section { padding: 44px 0; }
@@ -355,7 +348,6 @@ export default async function HomePage() {
         <section id="jak-to-dziala" className="section--dim">
           <div className="wrap">
             <div className="section-head">
-              <span className="eyebrow">Proces</span>
               <h2>Jak to działa</h2>
               <p>Od zalogowania do pierwszego alertu — cztery kroki, żaden z nich nie wymaga zmian po stronie GA4.</p>
             </div>
@@ -375,7 +367,6 @@ export default async function HomePage() {
         <section id="co-sprawdzamy">
           <div className="wrap">
             <div className="section-head">
-              <span className="eyebrow">Zakres</span>
               <h2>Co sprawdzamy każdego dnia</h2>
               <p>Cztery kategorie, kilkanaście sprawdzeń — każde z realnym podglądem tego, co faktycznie mierzy.</p>
             </div>
@@ -427,7 +418,6 @@ export default async function HomePage() {
         <section id="problem" className="section--dim">
           <div className="wrap wrap--narrow">
             <div className="section-head">
-              <span className="eyebrow">Problem</span>
               <h2>GA4 nie wysyła alertu, gdy coś się psuje</h2>
               <p>Popsute śledzenie nie rzuca błędem — po prostu cicho zwraca gorsze dane. Zwykle dowiadujesz się o tym od klienta, kilka tygodni za późno.</p>
             </div>
@@ -449,7 +439,6 @@ export default async function HomePage() {
         <section>
           <div className="wrap">
             <div className="section-head">
-              <span className="eyebrow">Podgląd</span>
               <h2>Wynik, trend i wszystkie projekty w jednym miejscu</h2>
               <p>Widzisz nie tylko aktualny wynik, ale i to, jak zmieniał się w czasie — oraz status każdej monitorowanej usługi naraz.</p>
             </div>
@@ -511,7 +500,6 @@ export default async function HomePage() {
         <section id="dla-kogo">
           <div className="wrap">
             <div className="section-head">
-              <span className="eyebrow">Zastosowanie</span>
               <h2>Dla kogo</h2>
             </div>
             <div className="lp-audience">
