@@ -223,11 +223,19 @@ export default async function HomePage() {
         .lp-cta-band .btn--primary { background: #fffd73; color: #3a3800; position: relative; }
         .lp-cta-band .btn--ghost { border-color: rgba(255,255,255,0.3); color: #fff; position: relative; }
 
-        .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); padding: 32px 0; }
-        .lp-footer-row { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between; font-size: 13px; }
-        .lp-footer-links { display: flex; gap: 22px; flex-wrap: wrap; }
-        .lp-footer-links a { text-decoration: none; color: inherit; }
-        .lp-footer-links a:hover { color: #fff; }
+        .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); }
+        .lp-footer-accent { height: 3px; background: linear-gradient(90deg, #ff8282, #fffd73); }
+        .lp-footer-body { padding: 48px 0 30px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
+        @media (max-width: 780px) { .lp-footer-body { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 480px) { .lp-footer-body { grid-template-columns: 1fr; } }
+        .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 30ch; margin-top: 12px; }
+        .lp-footer-addr { font-size: 12.5px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-top: 14px; }
+        .lp-footer-col h4 { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0 0 14px; }
+        .lp-footer-col a { display: block; font-size: 13.5px; color: rgba(255,255,255,0.75); text-decoration: none; margin-bottom: 10px; }
+        .lp-footer-col a:hover { color: #fff; }
+        .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
+        .lp-footer-bottom a { text-decoration: none; color: inherit; }
+        .lp-footer-bottom a:hover { color: #fff; }
       `}</style>
 
       {/* Nav */}
@@ -478,7 +486,7 @@ export default async function HomePage() {
         {/* CTA końcowe */}
         <section className="lp-cta-band">
           <div className="wrap wrap--narrow">
-            <h2>Sprawdź jakość implementacji GA4 już dziś</h2>
+            <h2>Zacznij monitorować poprawność danych w GA4</h2>
             <p>Logowanie kontem Google zajmuje mniej niż minutę.</p>
             <div className="lp-hero-ctas" style={{ justifyContent: 'center', marginBottom: 0 }}>
               <Link href={primaryCta.href} className="btn btn--primary">{primaryCta.label}</Link>
@@ -490,14 +498,35 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="lp-footer">
-        <div className="wrap lp-footer-row">
-          <span>© {new Date().getFullYear()} Bettersteps Sp. z o.o. · AlertGA4</span>
-          <div className="lp-footer-links">
+        <div className="lp-footer-accent" />
+        <div className="wrap lp-footer-body">
+          <div>
+            <BrandWordmark size={18} dark />
+            <div className="lp-footer-addr">
+              Bettersteps Sp. z o.o.<br />
+              ul. Domaniewska 47, 02-672 Warszawa<br />
+              KRS 0001011888 · NIP 5214000359
+            </div>
+          </div>
+          <div className="lp-footer-col">
+            <h4>Produkt</h4>
+            <a href="#jak-to-dziala">Jak to działa</a>
+            <a href="#co-sprawdzamy">Co sprawdzamy</a>
+            <a href="#dla-kogo">Dla kogo</a>
+          </div>
+          <div className="lp-footer-col">
+            <h4>Prawne</h4>
             <Link href="/privacy">Polityka prywatności</Link>
             <Link href="/terms">Regulamin</Link>
+          </div>
+          <div className="lp-footer-col">
+            <h4>Kontakt</h4>
             <a href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
             <a href="https://www.bettersteps.pl">www.bettersteps.pl</a>
           </div>
+        </div>
+        <div className="wrap lp-footer-bottom">
+          <span>© {new Date().getFullYear()} Bettersteps Sp. z o.o. · AlertGA4</span>
         </div>
       </footer>
     </div>
