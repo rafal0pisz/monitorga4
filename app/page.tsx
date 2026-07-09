@@ -2,6 +2,13 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 
+const STEPS = [
+  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu — jak rola „Viewer" w GA4.' },
+  { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
+  { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane — dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
+  { t: 'Dostajesz alert na czas', d: 'Wynik spada poniżej progu? Dostajesz e-mail z jasnym opisem co się popsuło — zanim trafi to do raportu.' },
+]
+
 const INCIDENTS = [
   {
     tag: 'duplikaty',
@@ -25,24 +32,6 @@ const INCIDENTS = [
   },
 ]
 
-const STEPS = [
-  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu Google Analytics — jak rola „Viewer" w GA4. Zero zmian w Twojej usłudze.' },
-  { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
-  { t: 'Dostajesz alert na czas', d: 'Wynik jakości spada poniżej progu? Dostajesz e-mail z jasnym opisem co się popsuło — zanim trafi to do raportu.' },
-]
-
-const CHECKS = [
-  { t: 'Brakujące eventy', d: 'Wykrywa, gdy skonfigurowane zdarzenia przestają się rejestrować.' },
-  { t: 'Duplikaty zakupów', d: 'Łapie podwójnie liczone eventy purchase zawyżające przychód.' },
-  { t: 'Lejek e-commerce', d: 'Pilnuje ciągłości zdarzeń od view_item po purchase.' },
-  { t: 'Ruch self-referral', d: 'Sygnalizuje, gdy własna domena staje się źródłem odesłania.' },
-  { t: 'Anomalie ruchu direct', d: 'Wychwytuje nagłe skoki ruchu bezpośredniego.' },
-  { t: 'Ruch botów w nocy', d: 'Filtruje podejrzaną aktywność spoza godzin realnego ruchu.' },
-  { t: 'Puste tytuły stron', d: 'Wskazuje strony wysyłające zdarzenia bez tytułu.' },
-  { t: 'Sesje bez zdarzeń', d: 'Wyłapuje sesje, w których nie odpaliło żadne zdarzenie.' },
-  { t: 'Pokrycie parametrów', d: 'Sprawdza, czy zdefiniowane parametry faktycznie docierają.' },
-]
-
 const DASHBOARD_ROWS = [
   { name: 'sklep-rowerowy.pl', prop: 'properties/312894701', trend: '▲ 3', up: true, score: 94, bg: '#f0fdf4', fg: '#166534' },
   { name: 'kancelaria-nowak.pl', prop: 'properties/298117440', trend: '▲ 1', up: true, score: 87, bg: '#f0fdf4', fg: '#16a34a' },
@@ -51,10 +40,12 @@ const DASHBOARD_ROWS = [
 ]
 
 const AUDIENCE = [
+  { t: 'Właściciele usług GA4', d: 'Samodzielnie zarządzasz swoją usługą GA4 i chcesz wiedzieć od razu, gdy coś przestanie działać — bez czekania do końca miesiąca na spadek w raporcie.' },
   { t: 'Agencje marketingowe', d: 'Jeden widok z wynikiem jakości dla wszystkich usług GA4 klientów, zamiast ręcznego przeglądania każdej z osobna raz na kwartał.' },
-  { t: 'E-commerce', d: 'Pilnuje lejka zakupowego i eventów ecommerce, żeby błąd w tagowaniu nie zniekształcił raportu przychodu przed spotkaniem zarządu.' },
-  { t: 'Zespoły analityczne', d: 'Wczesne ostrzeżenie o anomaliach danych, zanim trafią do dashboardów i decyzji biznesowych opartych na złych liczbach.' },
 ]
+
+const TREND_POINTS = '8,49.8 49.9,42.5 91.7,55.5 133.5,68.5 175.4,78.3 217.2,94.5 259.1,104.3 300.9,110.8 342.8,97.8 384.6,78.3 426.5,62 468.3,45.8 510.2,36 552,29.5'
+const TREND_AREA = `${TREND_POINTS} 552,140 8,140`
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -74,7 +65,7 @@ export default async function HomePage() {
         .lp * { box-sizing: border-box; }
         .lp .wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
         .lp .wrap--narrow { max-width: 760px; }
-        .lp h1, .lp h2, .lp h3 { font-family: var(--font-sans), sans-serif; font-weight: 700; text-wrap: balance; margin: 0; }
+        .lp h1, .lp h2, .lp h3, .lp h4 { font-family: var(--font-sans), sans-serif; font-weight: 700; text-wrap: balance; margin: 0; }
         .lp p { margin: 0; }
         .lp a { color: inherit; }
         .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
@@ -116,14 +107,13 @@ export default async function HomePage() {
         .lp .btn--ghost:hover { border-color: #8b939a; }
         .lp .btn--sm { padding: 9px 16px; font-size: 13.5px; border-radius: 7px; }
 
-        .lp-hero { padding: 68px 0 60px; }
+        .lp-hero { padding: 60px 0 52px; }
         .lp-hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
         @media (max-width: 940px) { .lp-hero-grid { grid-template-columns: 1fr; gap: 40px; } }
-        .lp-hero h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: -0.015em; margin: 16px 0 20px; }
+        .lp-hero h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: -0.015em; margin: 0 0 20px; }
         .lp-hero .lede { font-size: 17px; color: #5b6570; line-height: 1.6; max-width: 46ch; margin-bottom: 28px; }
         .lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
         .lp .trust-line { font-size: 12.5px; color: #8b939a; }
-        .underline-mark { background: linear-gradient(transparent 62%, #fffd73 62%); padding: 0 2px; }
 
         .readout { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; }
         .readout-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e2e6e8; }
@@ -145,18 +135,26 @@ export default async function HomePage() {
         .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .chip-dot--ok { background: #16a34a; }
         .chip-dot--warn { background: #ea580c; }
+        .chip-dot--fail { background: #dc2626; }
         .readout-foot { padding: 12px 20px; border-top: 1px solid #e2e6e8; background: #f3f6f7; font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; display: flex; justify-content: space-between; }
 
-        .lp section { padding: 68px 0; }
+        .lp section { padding: 64px 0; }
         .lp .section--dim { background: #f3f6f7; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
-        .lp .section-head { max-width: 620px; margin-bottom: 40px; }
+        .lp .section-head { max-width: 640px; margin-bottom: 40px; }
         .lp .section-head h2 { font-size: clamp(23px, 3vw, 28px); margin-top: 14px; letter-spacing: -0.01em; }
         .lp .section-head p { color: #5b6570; font-size: 15.5px; margin-top: 10px; line-height: 1.6; }
         @media (max-width: 640px) {
-          .lp section { padding: 48px 0; }
-          .lp-hero { padding: 44px 0 40px; }
+          .lp section { padding: 44px 0; }
+          .lp-hero { padding: 40px 0 36px; }
           .lp-cta-band { padding: 52px 0; }
         }
+
+        .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+        @media (max-width: 980px) { .lp-steps { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 560px) { .lp-steps { grid-template-columns: 1fr; } }
+        .lp-step-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; color: #fff; background: #232b31; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .lp-step h3 { font-size: 15.5px; margin-bottom: 8px; }
+        .lp-step p { font-size: 13.5px; color: #5b6570; line-height: 1.6; }
 
         .lp-log { display: flex; flex-direction: column; border-top: 1px solid #e2e6e8; }
         .lp-log-row { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid #e2e6e8; }
@@ -166,44 +164,56 @@ export default async function HomePage() {
         .lp-log-title { font-weight: 700; font-size: 15.5px; margin-bottom: 5px; }
         .lp-log-desc { font-size: 14px; color: #5b6570; line-height: 1.6; max-width: 60ch; }
 
-        .lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
-        @media (max-width: 800px) { .lp-steps { grid-template-columns: 1fr; gap: 30px; } }
-        .lp-step-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; color: #fff; background: #232b31; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-        .lp-step h3 { font-size: 16px; margin-bottom: 8px; }
-        .lp-step p { font-size: 14px; color: #5b6570; line-height: 1.65; }
+        .lp-feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: #e2e6e8; border: 1px solid #e2e6e8; border-radius: 14px; overflow: hidden; }
+        @media (max-width: 780px) { .lp-feature-grid { grid-template-columns: 1fr; } }
+        .lp-feature-cell { background: #fff; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px; }
+        .lp-feature-cell h4 { font-size: 15.5px; }
+        .lp-feature-cell .desc { font-size: 13px; color: #5b6570; line-height: 1.55; max-width: 42ch; }
+        .lp-feature-visual { margin-top: auto; padding-top: 6px; }
+        .mini-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .mini-funnel { display: flex; align-items: flex-end; gap: 8px; height: 60px; }
+        .mini-funnel-bar { width: 30px; border-radius: 3px 3px 0 0; position: relative; }
+        .mini-funnel-bar span { position: absolute; top: -16px; left: 0; right: 0; text-align: center; font-family: var(--font-mono), monospace; font-size: 10px; color: #8b939a; }
+        .mini-spark { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
+        .mini-spark-bar { width: 6px; border-radius: 2px 2px 0 0; background: #eaeef0; }
+        .mini-spark-bar.spike { background: #ff8282; }
+        .mini-coverage-label { display: flex; justify-content: space-between; font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; margin-bottom: 6px; }
+        .mini-coverage-track { height: 8px; border-radius: 4px; background: #eaeef0; overflow: hidden; }
+        .mini-coverage-fill { height: 100%; background: linear-gradient(90deg, #fffd73, #ea580c); border-radius: 4px; }
 
-        .lp-checks-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #e2e6e8; border: 1px solid #e2e6e8; border-radius: 14px; overflow: hidden; }
-        @media (max-width: 900px) { .lp-checks-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .lp-checks-grid { grid-template-columns: 1fr; } }
-        .lp-check-cell { background: #fff; padding: 20px 22px; }
-        .lp-check-cell .dot { width: 6px; height: 6px; border-radius: 50%; background: #fffd73; box-shadow: 0 0 0 3px rgba(255,253,115,0.35); margin-bottom: 12px; }
-        .lp-check-cell h4 { font-size: 14.5px; font-weight: 700; margin-bottom: 6px; }
-        .lp-check-cell p { font-size: 13px; color: #5b6570; line-height: 1.55; }
+        .lp-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+        @media (max-width: 880px) { .lp-preview-grid { grid-template-columns: 1fr; } }
+        .lp-card { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; display: flex; flex-direction: column; }
+        .lp-card-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #e2e6e8; }
+        .lp-card-bar-left { display: flex; align-items: center; gap: 8px; }
+        .lp-card-dot { width: 9px; height: 9px; border-radius: 50%; }
+        .lp-card-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lp-card-tag { font-family: var(--font-mono), monospace; font-size: 12px; color: #c23b34; flex-shrink: 0; }
+        @media (max-width: 480px) { .lp-card-title { display: none; } }
 
-        .lp-panel { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; }
-        .lp-panel-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #e2e6e8; }
-        .lp-panel-bar-left { display: flex; align-items: center; gap: 8px; }
-        .lp-panel-dot { width: 9px; height: 9px; border-radius: 50%; }
-        .lp-panel-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .lp-panel-new { font-family: var(--font-mono), monospace; font-size: 12px; color: #c23b34; flex-shrink: 0; }
-        @media (max-width: 480px) { .lp-panel-title { display: none; } }
-        .lp-row { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center; padding: 15px 20px; border-bottom: 1px solid #e2e6e8; }
+        .lp-trend-body { padding: 18px 20px 20px; flex: 1; display: flex; flex-direction: column; }
+        .lp-trend-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+        .lp-trend-score { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 30px; color: #166534; }
+        .lp-trend-caption { font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; }
+        .lp-trend-chart { flex: 1; margin-top: 8px; }
+
+        .lp-row { display: grid; grid-template-columns: 1fr auto auto; gap: 18px; align-items: center; padding: 14px 20px; border-bottom: 1px solid #e2e6e8; }
         .lp-row:last-child { border-bottom: none; }
-        .lp-row-name { font-weight: 600; font-size: 14.5px; }
-        .lp-row-domain { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-top: 2px; }
-        .lp-row-trend { font-family: var(--font-mono), monospace; font-size: 12.5px; }
+        .lp-row-name { font-weight: 600; font-size: 14px; }
+        .lp-row-domain { font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; margin-top: 2px; }
+        .lp-row-trend { font-family: var(--font-mono), monospace; font-size: 12px; }
         .lp-row-trend.up { color: #166534; }
         .lp-row-trend.down { color: #dc2626; }
-        .lp-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 7px; font-family: var(--font-mono), monospace; font-weight: 600; font-size: 14px; }
+        .lp-badge { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 7px; font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; }
         @media (max-width: 640px) { .lp-row { grid-template-columns: 1fr auto; } .lp-row-trend { display: none; } }
 
-        .lp-audience { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-        @media (max-width: 800px) { .lp-audience { grid-template-columns: 1fr; } }
+        .lp-audience { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; max-width: 680px; }
+        @media (max-width: 700px) { .lp-audience { grid-template-columns: 1fr; } }
         .lp-audience-card { padding: 26px 24px; border: 1px solid #e2e6e8; border-radius: 14px; background: #fff; }
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
-        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 72px 0; position: relative; overflow: hidden; }
+        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 68px 0; position: relative; overflow: hidden; }
         .lp-cta-band::before { content: ""; position: absolute; top: -60%; right: -10%; width: 480px; height: 480px; border-radius: 50%; background: radial-gradient(circle, rgba(255,253,115,0.18), transparent 70%); }
         .lp-cta-band::after { content: ""; position: absolute; bottom: -60%; left: -8%; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(255,130,130,0.22), transparent 70%); }
         .lp-cta-band h2 { font-size: clamp(21px, 3vw, 29px); margin-bottom: 12px; position: relative; }
@@ -225,7 +235,6 @@ export default async function HomePage() {
             <BrandWordmark size={19} dark />
           </Link>
           <div className="lp-nav-links">
-            <a href="#problem">Problem</a>
             <a href="#jak-to-dziala">Jak to działa</a>
             <a href="#co-sprawdzamy">Co sprawdzamy</a>
             <a href="#dla-kogo">Dla kogo</a>
@@ -244,14 +253,13 @@ export default async function HomePage() {
       <header className="lp-hero">
         <div className="wrap lp-hero-grid">
           <div>
-            <span className="eyebrow">Monitoring GA4 · codziennie</span>
-            <h1>Twoje śledzenie GA4 może być zepsute <span className="underline-mark">już teraz</span> — i wygląda dokładnie tak samo, jak wtedy, gdy działa.</h1>
-            <p className="lede">AlertGA4 codziennie prześwietla Twoją usługę Google Analytics 4 — eventy, lejek e-commerce, ruch, parametry — i wysyła alert e-mail, zanim popsute dane trafią do raportu klienta.</p>
+            <h1>Codzienny monitoring danych w Google Analytics 4</h1>
+            <p className="lede">AlertGA4 codziennie weryfikuje Twoją usługę Google Analytics 4 i sprawdza dane, zdarzenia, parametry oraz anomalie na koncie, wysyłając alert na e-mail z podsumowaniem.</p>
             <div className="lp-hero-ctas">
               <Link href={primaryCta.href} className="btn btn--primary">{primaryCta.label}</Link>
               <a href="#jak-to-dziala" className="btn btn--ghost">Zobacz jak to działa</a>
             </div>
-            <p className="trust-line">logowanie <span className="mono-inline">kontem Google</span> · dostęp tylko do odczytu · zero konfiguracji po stronie klienta</p>
+            <p className="trust-line">prosta konfiguracja · codzienna weryfikacja · weryfikacja zdarzeń i parametrów</p>
           </div>
 
           <div className="readout">
@@ -285,34 +293,13 @@ export default async function HomePage() {
       </header>
 
       <main>
-        {/* Problem */}
-        <section id="problem">
-          <div className="wrap wrap--narrow">
-            <div className="section-head">
-              <span className="eyebrow">Problem</span>
-              <h2>GA4 nie wysyła alertu, gdy coś się psuje</h2>
-              <p>Popsute śledzenie nie rzuca błędem — po prostu cicho zwraca gorsze dane. Zwykle dowiadujesz się o tym od klienta, kilka tygodni za późno. Kilka przykładów, które AlertGA4 wyłapuje tego samego dnia:</p>
-            </div>
-            <div className="lp-log">
-              {INCIDENTS.map(inc => (
-                <div className="lp-log-row" key={inc.title}>
-                  <div className="lp-log-tag"><span className="dot" />{inc.tag}</div>
-                  <div>
-                    <div className="lp-log-title">{inc.title}</div>
-                    <div className="lp-log-desc">{inc.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Jak to działa */}
         <section id="jak-to-dziala" className="section--dim">
           <div className="wrap">
             <div className="section-head">
               <span className="eyebrow">Proces</span>
               <h2>Jak to działa</h2>
+              <p>Od zalogowania do pierwszego alertu — cztery kroki, żaden z nich nie wymaga zmian po stronie GA4.</p>
             </div>
             <div className="lp-steps">
               {STEPS.map((s, i) => (
@@ -332,48 +319,138 @@ export default async function HomePage() {
             <div className="section-head">
               <span className="eyebrow">Zakres</span>
               <h2>Co sprawdzamy każdego dnia</h2>
-              <p>Kilkanaście automatycznych kontroli jakości uruchamianych codziennie dla każdej monitorowanej usługi GA4.</p>
+              <p>Cztery kategorie, kilkanaście sprawdzeń — każde z realnym podglądem tego, co faktycznie mierzy.</p>
             </div>
-            <div className="lp-checks-grid">
-              {CHECKS.map(c => (
-                <div className="lp-check-cell" key={c.t}>
-                  <span className="dot" />
-                  <h4>{c.t}</h4>
-                  <p>{c.d}</p>
+            <div className="lp-feature-grid">
+              <div className="lp-feature-cell">
+                <div>
+                  <h4>Zdarzenia i parametry</h4>
+                  <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
+                </div>
+                <div className="lp-feature-visual mini-chips">
+                  <span className="chip"><span className="chip-dot chip-dot--ok" />add_to_cart</span>
+                  <span className="chip"><span className="chip-dot chip-dot--ok" />view_item</span>
+                  <span className="chip"><span className="chip-dot chip-dot--warn" />begin_checkout</span>
+                  <span className="chip"><span className="chip-dot chip-dot--fail" />form_send</span>
+                </div>
+              </div>
+              <div className="lp-feature-cell">
+                <div>
+                  <h4>Lejek e-commerce</h4>
+                  <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu — i spadków wolumenu na każdym etapie.</p>
+                </div>
+                <div className="lp-feature-visual mini-funnel">
+                  <div className="mini-funnel-bar" style={{ height: 60, background: '#16a34a' }}><span>100%</span></div>
+                  <div className="mini-funnel-bar" style={{ height: 38, background: '#16a34a' }}><span>62%</span></div>
+                  <div className="mini-funnel-bar" style={{ height: 21, background: '#ea580c' }}><span>34%</span></div>
+                  <div className="mini-funnel-bar" style={{ height: 13, background: '#166534' }}><span>21%</span></div>
+                </div>
+              </div>
+              <div className="lp-feature-cell">
+                <div>
+                  <h4>Ruch i anomalie</h4>
+                  <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy — wykryte tego samego dnia.</p>
+                </div>
+                <div className="lp-feature-visual mini-spark">
+                  {[8, 11, 7, 9, 6, 10, 44, 38, 9, 7, 12, 8].map((h, i) => (
+                    <div key={i} className={`mini-spark-bar${h > 30 ? ' spike' : ''}`} style={{ height: h }} />
+                  ))}
+                </div>
+              </div>
+              <div className="lp-feature-cell">
+                <div>
+                  <h4>Pokrycie parametrów</h4>
+                  <p className="desc">Weryfikacja czy zdefiniowane parametry zdarzeń faktycznie docierają ze zdarzeniem i w jakim procencie.</p>
+                </div>
+                <div className="lp-feature-visual">
+                  <div className="mini-coverage-label"><span>item_category</span><span>87%</span></div>
+                  <div className="mini-coverage-track"><div className="mini-coverage-fill" style={{ width: '87%' }} /></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Problem */}
+        <section id="problem" className="section--dim">
+          <div className="wrap wrap--narrow">
+            <div className="section-head">
+              <span className="eyebrow">Problem</span>
+              <h2>GA4 nie wysyła alertu, gdy coś się psuje</h2>
+              <p>Popsute śledzenie nie rzuca błędem — po prostu cicho zwraca gorsze dane. Zwykle dowiadujesz się o tym od klienta, kilka tygodni za późno.</p>
+            </div>
+            <div className="lp-log">
+              {INCIDENTS.map(inc => (
+                <div className="lp-log-row" key={inc.title}>
+                  <div className="lp-log-tag"><span className="dot" />{inc.tag}</div>
+                  <div>
+                    <div className="lp-log-title">{inc.title}</div>
+                    <div className="lp-log-desc">{inc.desc}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Podgląd produktu */}
-        <section className="section--dim">
+        {/* Podgląd — trend + dashboard */}
+        <section>
           <div className="wrap">
             <div className="section-head">
               <span className="eyebrow">Podgląd</span>
-              <h2>Wszystkie projekty, jeden widok</h2>
-              <p>Panel pokazuje wynik jakości, trend tydzień do tygodnia i status każdej monitorowanej usługi — bez klikania po osobnych raportach.</p>
+              <h2>Wynik, trend i wszystkie projekty w jednym miejscu</h2>
+              <p>Widzisz nie tylko aktualny wynik, ale i to, jak zmieniał się w czasie — oraz status każdej monitorowanej usługi naraz.</p>
             </div>
-            <div className="lp-panel">
-              <div className="lp-panel-bar">
-                <div className="lp-panel-bar-left">
-                  <span className="lp-panel-dot" style={{ background: '#dc2626' }} />
-                  <span className="lp-panel-dot" style={{ background: '#ea580c' }} />
-                  <span className="lp-panel-dot" style={{ background: '#16a34a' }} />
-                  <span className="lp-panel-title">alertga4.bettersteps.pl/dashboard</span>
-                </div>
-                <span className="lp-panel-new">+ nowy projekt</span>
-              </div>
-              {DASHBOARD_ROWS.map(r => (
-                <div className="lp-row" key={r.name}>
-                  <div>
-                    <div className="lp-row-name">{r.name}</div>
-                    <div className="lp-row-domain">{r.prop}</div>
+            <div className="lp-preview-grid">
+              <div className="lp-card">
+                <div className="lp-card-bar">
+                  <div className="lp-card-bar-left">
+                    <span className="lp-card-dot" style={{ background: '#dc2626' }} />
+                    <span className="lp-card-dot" style={{ background: '#ea580c' }} />
+                    <span className="lp-card-dot" style={{ background: '#16a34a' }} />
+                    <span className="lp-card-title">sklep-rowerowy.pl — 14 dni</span>
                   </div>
-                  <span className={`lp-row-trend ${r.up ? 'up' : 'down'}`}>{r.trend}</span>
-                  <span className="lp-badge" style={{ background: r.bg, color: r.fg }}>{r.score}</span>
                 </div>
-              ))}
+                <div className="lp-trend-body">
+                  <div className="lp-trend-top">
+                    <span className="lp-trend-score">94</span>
+                    <span className="lp-trend-caption">próg alertu: 70</span>
+                  </div>
+                  <div className="lp-trend-chart">
+                    <svg viewBox="0 0 560 150" width="100%" height="140" preserveAspectRatio="none">
+                      <line x1="8" y1="42" x2="552" y2="42" stroke="#e2e6e8" strokeWidth="1" />
+                      <line x1="8" y1="90" x2="552" y2="90" stroke="#e2e6e8" strokeWidth="1" />
+                      <line x1="8" y1="107.5" x2="552" y2="107.5" stroke="#c23b34" strokeWidth="1" strokeDasharray="4 4" opacity="0.5" />
+                      <polygon points={TREND_AREA} fill="#16a34a" opacity="0.08" />
+                      <polyline points={TREND_POINTS} fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="552" cy="29.5" r="5" fill="#166534" />
+                      <circle cx="552" cy="29.5" r="9" fill="#166534" opacity="0.18" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="lp-card">
+                <div className="lp-card-bar">
+                  <div className="lp-card-bar-left">
+                    <span className="lp-card-dot" style={{ background: '#dc2626' }} />
+                    <span className="lp-card-dot" style={{ background: '#ea580c' }} />
+                    <span className="lp-card-dot" style={{ background: '#16a34a' }} />
+                    <span className="lp-card-title">alertga4.bettersteps.pl/dashboard</span>
+                  </div>
+                  <span className="lp-card-tag">+ nowy projekt</span>
+                </div>
+                {DASHBOARD_ROWS.map(r => (
+                  <div className="lp-row" key={r.name}>
+                    <div>
+                      <div className="lp-row-name">{r.name}</div>
+                      <div className="lp-row-domain">{r.prop}</div>
+                    </div>
+                    <span className={`lp-row-trend ${r.up ? 'up' : 'down'}`}>{r.trend}</span>
+                    <span className="lp-badge" style={{ background: r.bg, color: r.fg }}>{r.score}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
