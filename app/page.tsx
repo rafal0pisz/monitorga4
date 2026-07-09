@@ -172,15 +172,12 @@ export default async function HomePage() {
         .lp-feature-cell .desc { font-size: 13px; color: #5b6570; line-height: 1.55; max-width: 42ch; }
         .lp-feature-visual { margin-top: auto; padding-top: 6px; }
         .mini-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-        .mini-funnel { display: flex; align-items: flex-end; gap: 8px; height: 60px; }
-        .mini-funnel-bar { width: 30px; border-radius: 3px 3px 0 0; position: relative; }
-        .mini-funnel-bar span { position: absolute; top: -16px; left: 0; right: 0; text-align: center; font-family: var(--font-mono), monospace; font-size: 10px; color: #8b939a; }
         .mini-spark { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
         .mini-spark-bar { width: 6px; border-radius: 2px 2px 0 0; background: #eaeef0; }
         .mini-spark-bar.spike { background: #ff8282; }
         .mini-coverage-label { display: flex; justify-content: space-between; font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; margin-bottom: 6px; }
         .mini-coverage-track { height: 8px; border-radius: 4px; background: #eaeef0; overflow: hidden; }
-        .mini-coverage-fill { height: 100%; background: linear-gradient(90deg, #fffd73, #ea580c); border-radius: 4px; }
+        .mini-coverage-fill { height: 100%; background: linear-gradient(90deg, #86efac, #16a34a); border-radius: 4px; }
 
         .lp-preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
         @media (max-width: 880px) { .lp-preview-grid { grid-template-columns: 1fr; } }
@@ -338,7 +335,7 @@ export default async function HomePage() {
             <div className="lp-feature-grid">
               <div className="lp-feature-cell">
                 <div>
-                  <h4>Zdarzenia i parametry</h4>
+                  <h4>Zdarzenia</h4>
                   <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
                 </div>
                 <div className="lp-feature-visual mini-chips">
@@ -353,11 +350,37 @@ export default async function HomePage() {
                   <h4>Lejek e-commerce</h4>
                   <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu — i spadków wolumenu na każdym etapie.</p>
                 </div>
-                <div className="lp-feature-visual mini-funnel">
-                  <div className="mini-funnel-bar" style={{ height: 60, background: '#16a34a' }}><span>100%</span></div>
-                  <div className="mini-funnel-bar" style={{ height: 38, background: '#16a34a' }}><span>62%</span></div>
-                  <div className="mini-funnel-bar" style={{ height: 21, background: '#ea580c' }}><span>34%</span></div>
-                  <div className="mini-funnel-bar" style={{ height: 13, background: '#166534' }}><span>21%</span></div>
+                <div className="lp-feature-visual">
+                  <div style={{ padding: '10px 12px', borderRadius: 8, background: '#fff', border: '0.5px solid #e2e6e8' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 500 }}>view_item</span>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1 }}>17,781</div>
+                        <div style={{ fontSize: 10, color: '#8b939a', marginTop: 1 }}>events</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36, marginBottom: 6 }}>
+                      {[18, 20, 16, 24, 19, 26, 22, 24].map((p, i) => {
+                        const c = [24, 28, 22, 32, 26, 34, 30, 36][i]
+                        return (
+                          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
+                            <div style={{ flex: 1, height: p, background: '#e2e6e8', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
+                            <div style={{ flex: 1, height: c, background: '#16a34a', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', gap: 8, fontSize: 10, color: '#8b939a' }}>
+                        <span>Current: 17,781</span>
+                        <span>Prev: 11,964</span>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a' }}>▲ 48.6%</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="lp-feature-cell">
