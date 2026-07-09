@@ -104,14 +104,35 @@ export default async function HomePage() {
     ? null
     : { href: '/login', label: 'Zaloguj się' }
 
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'AlertGA4',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: 'https://alertga4.bettersteps.pl',
+    inLanguage: 'pl',
+    description: 'AlertGA4 codziennie weryfikuje usługę Google Analytics 4 — zdarzenia, parametry, lejek e-commerce i anomalie ruchu — i wysyła alert e-mail, zanim popsute dane trafią do raportu.',
+    provider: {
+      '@type': 'Organization',
+      name: 'Bettersteps Sp. z o.o.',
+      url: 'https://www.bettersteps.pl',
+      email: 'kontakt@bettersteps.pl',
+    },
+  }
+
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <style>{`
         .lp { background: #ffffff; color: #232b31; }
         .lp * { box-sizing: border-box; }
         .lp .wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
         .lp .wrap--narrow { max-width: 760px; }
-        .lp h1, .lp h2, .lp h3, .lp h4 { font-family: var(--font-sans), sans-serif; font-weight: 700; text-wrap: balance; margin: 0; }
+        .lp h1, .lp h2, .lp h3 { font-family: var(--font-sans), sans-serif; font-weight: 700; text-wrap: balance; margin: 0; }
         .lp p { margin: 0; }
         .lp a { color: inherit; }
         .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
@@ -204,7 +225,7 @@ export default async function HomePage() {
         .lp-feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: #e2e6e8; border: 1px solid #e2e6e8; border-radius: 14px; overflow: hidden; }
         @media (max-width: 780px) { .lp-feature-grid { grid-template-columns: 1fr; } }
         .lp-feature-cell { background: #fff; padding: 24px 26px; display: flex; flex-direction: column; gap: 16px; }
-        .lp-feature-cell h4 { font-size: 15.5px; }
+        .lp-feature-cell h3 { font-size: 15.5px; }
         .lp-feature-cell .desc { font-size: 13px; color: #5b6570; line-height: 1.55; max-width: 42ch; }
         .lp-feature-visual { margin-top: auto; padding-top: 6px; }
         .mini-spark { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
@@ -271,7 +292,7 @@ export default async function HomePage() {
         @media (max-width: 480px) { .lp-footer-body { grid-template-columns: 1fr; } }
         .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 30ch; margin-top: 12px; }
         .lp-footer-addr { font-size: 12.5px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-top: 14px; }
-        .lp-footer-col h4 { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0 0 14px; }
+        .lp-footer-col h3 { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0 0 14px; }
         .lp-footer-col a { display: block; font-size: 13.5px; color: rgba(255,255,255,0.75); text-decoration: none; margin-bottom: 10px; }
         .lp-footer-col a:hover { color: #fff; }
         .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
@@ -280,7 +301,7 @@ export default async function HomePage() {
       `}</style>
 
       {/* Nav */}
-      <nav className="lp-nav">
+      <nav className="lp-nav" aria-label="Główna">
         <div className="wrap lp-nav-row">
           <Link href="/" style={{ textDecoration: 'none' }}>
             <BrandWordmark size={19} dark />
@@ -373,7 +394,7 @@ export default async function HomePage() {
             <div className="lp-feature-grid">
               <div className="lp-feature-cell">
                 <div>
-                  <h4>Zdarzenia</h4>
+                  <h3>Zdarzenia</h3>
                   <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
                 </div>
                 <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -382,7 +403,7 @@ export default async function HomePage() {
               </div>
               <div className="lp-feature-cell">
                 <div>
-                  <h4>Lejek e-commerce</h4>
+                  <h3>Lejek e-commerce</h3>
                   <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu — i spadków wolumenu na każdym etapie.</p>
                 </div>
                 <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -391,7 +412,7 @@ export default async function HomePage() {
               </div>
               <div className="lp-feature-cell">
                 <div>
-                  <h4>Ruch i anomalie</h4>
+                  <h3>Ruch i anomalie</h3>
                   <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy — wykryte tego samego dnia.</p>
                 </div>
                 <div className="lp-feature-visual mini-spark">
@@ -402,7 +423,7 @@ export default async function HomePage() {
               </div>
               <div className="lp-feature-cell">
                 <div>
-                  <h4>Pokrycie parametrów</h4>
+                  <h3>Pokrycie parametrów</h3>
                   <p className="desc">Weryfikacja czy zdefiniowane parametry zdarzeń faktycznie docierają ze zdarzeniem i w jakim procencie.</p>
                 </div>
                 <div className="lp-feature-visual">
@@ -547,18 +568,18 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="lp-footer-col">
-            <h4>Produkt</h4>
+            <h3>Produkt</h3>
             <a href="#jak-to-dziala">Jak to działa</a>
             <a href="#co-sprawdzamy">Co sprawdzamy</a>
             <a href="#dla-kogo">Dla kogo</a>
           </div>
           <div className="lp-footer-col">
-            <h4>Prawne</h4>
+            <h3>Prawne</h3>
             <Link href="/privacy">Polityka prywatności</Link>
             <Link href="/terms">Regulamin</Link>
           </div>
           <div className="lp-footer-col">
-            <h4>Kontakt</h4>
+            <h3>Kontakt</h3>
             <a href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
             <a href="https://www.bettersteps.pl">www.bettersteps.pl</a>
           </div>

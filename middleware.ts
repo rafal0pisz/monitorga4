@@ -1,7 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/share', '/privacy', '/terms']
+const PUBLIC_PATHS = [
+  '/login', '/auth/callback', '/share', '/privacy', '/terms',
+  '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
+]
 
 // API-only path: /api/worker/run authorizes itself (session OR CRON_SECRET
 // bearer token) inside the route handler — redirecting an unauthenticated

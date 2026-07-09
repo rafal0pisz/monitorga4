@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
-export const metadata = { title: 'Regulamin — AlertGA4' }
+export const metadata = {
+  title: 'Regulamin',
+  description: 'Zasady korzystania z AlertGA4 — opis usługi, konto i dostęp, dostępność, ograniczenie odpowiedzialności.',
+}
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }
 const p: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', margin: '0 0 12px' }

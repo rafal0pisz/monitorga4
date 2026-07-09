@@ -1,0 +1,21 @@
+# AlertGA4
+
+> AlertGA4 is a daily quality-monitoring tool for Google Analytics 4 (GA4). It checks a connected GA4 property for missing events, duplicate purchases, self-referral traffic, night-time bot traffic, e-commerce funnel drop-offs, and parameter coverage, then emails an alert when a quality score drops below a configurable threshold — before broken tracking data reaches a client report.
+
+AlertGA4 is built and operated by Bettersteps Sp. z o.o. (Warsaw, Poland). It targets GA4 property owners, marketing agencies managing several clients' GA4 properties, and freelance analytics/marketing consultants.
+
+Access is via Google sign-in with the read-only `analytics.readonly` scope — AlertGA4 never modifies a connected GA4 property, its configuration, or its underlying data.
+
+## Key pages
+
+- [Homepage](https://alertga4.bettersteps.pl/): product overview, how it works, the checks it runs, and who it's for.
+- [Privacy Policy](https://alertga4.bettersteps.pl/privacy): what data is collected and how it's used.
+- [Terms of Service](https://alertga4.bettersteps.pl/terms): terms governing use of the service.
+
+## What it checks
+
+Missing/expected events, duplicate purchase events, self-referral traffic, direct-traffic anomalies, night-time bot traffic, bounce-rate anomalies, conversion-rate drops, e-commerce funnel continuity (view_item → add_to_cart → view_cart → purchase), and whether configured event parameters actually arrive with data.
+
+## Contact
+
+kontakt@bettersteps.pl · https://www.bettersteps.pl

@@ -1,6 +1,9 @@
 import Link from 'next/link'
 
-export const metadata = { title: 'Polityka prywatności — AlertGA4' }
+export const metadata = {
+  title: 'Polityka prywatności',
+  description: 'Jakie dane zbiera AlertGA4, w jakim celu i jak je przechowuje — pełna polityka prywatności zgodna z RODO.',
+}
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }
 const p: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', margin: '0 0 12px' }
