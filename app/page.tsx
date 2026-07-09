@@ -147,7 +147,7 @@ export default async function HomePage() {
         @media (max-width: 640px) {
           .lp section { padding: 44px 0; }
           .lp-hero { padding: 40px 0 36px; }
-          .lp-cta-band { padding: 52px 0; }
+          .lp-cta-band { padding: 60px 0 96px; }
         }
 
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -215,9 +215,9 @@ export default async function HomePage() {
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
-        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 68px 0; position: relative; overflow: hidden; }
-        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 150px; }
-        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 16px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 96px 0 120px; position: relative; overflow: hidden; }
+        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 190px; }
+        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 19px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
         .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
         @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
@@ -229,7 +229,6 @@ export default async function HomePage() {
         @media (prefers-reduced-motion: reduce) { .lp-cta-marker-dot::after { animation: none; } }
 
         .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); }
-        .lp-footer-accent { height: 3px; background: linear-gradient(90deg, #ff8282, #fffd73); }
         .lp-footer-body { padding: 48px 0 30px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
         @media (max-width: 780px) { .lp-footer-body { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 480px) { .lp-footer-body { grid-template-columns: 1fr; } }
@@ -490,9 +489,9 @@ export default async function HomePage() {
 
         {/* CTA końcowe */}
         <section className="lp-cta-band">
-          <svg className="lp-cta-chart" viewBox="0 0 1080 150" preserveAspectRatio="none" width="100%" height="150" aria-hidden="true">
-            <polygon points="0,60 100,58 200,64 300,54 400,60 500,52 540,56 580,135 630,130 720,100 820,78 920,64 1020,56 1080,52 1080,150 0,150" fill="#fffd73" opacity="0.04" />
-            <polyline points="0,60 100,58 200,64 300,54 400,60 500,52 540,56 580,135 630,130 720,100 820,78 920,64 1020,56 1080,52"
+          <svg className="lp-cta-chart" viewBox="0 0 1080 190" preserveAspectRatio="none" width="100%" height="190" aria-hidden="true">
+            <polygon points="0,76 100,73 200,81 300,68 400,76 500,66 540,71 580,171 630,165 720,127 820,99 920,81 1020,71 1080,66 1080,190 0,190" fill="#fffd73" opacity="0.04" />
+            <polyline points="0,76 100,73 200,81 300,68 400,76 500,66 540,71 580,171 630,165 720,127 820,99 920,81 1020,71 1080,66"
               fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="lp-cta-marker">
@@ -512,7 +511,6 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="lp-footer">
-        <div className="lp-footer-accent" />
         <div className="wrap lp-footer-body">
           <div>
             <BrandWordmark size={18} dark />
