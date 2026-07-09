@@ -6,7 +6,7 @@ const STEPS = [
   { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu — jak rola „Viewer" w GA4.' },
   { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
   { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane — dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
-  { t: 'Dostajesz alert na czas', d: 'Wynik spada poniżej progu? Dostajesz e-mail z jasnym opisem co się popsuło — zanim trafi to do raportu.' },
+  { t: 'Podsumowanie na maila', d: 'Wynik spada poniżej progu? Aplikacja poinformuje Cię mailowo z opisem kategorii, która wymaga weryfikacji.' },
 ]
 
 const INCIDENTS = [
@@ -42,6 +42,7 @@ const DASHBOARD_ROWS = [
 const AUDIENCE = [
   { t: 'Właściciele usług GA4', d: 'Samodzielnie zarządzasz swoją usługą GA4 i chcesz wiedzieć od razu, gdy coś przestanie działać — bez czekania do końca miesiąca na spadek w raporcie.' },
   { t: 'Agencje marketingowe', d: 'Jeden widok z wynikiem jakości dla wszystkich usług GA4 klientów, zamiast ręcznego przeglądania każdej z osobna raz na kwartał.' },
+  { t: 'Freelancerzy', d: 'Obsługujesz kilku klientów naraz i nie masz czasu ręcznie sprawdzać każdej usługi GA4 — AlertGA4 robi to za Ciebie każdego dnia.' },
 ]
 
 const TREND_POINTS = '8,49.8 49.9,42.5 91.7,55.5 133.5,68.5 175.4,78.3 217.2,94.5 259.1,104.3 300.9,110.8 342.8,97.8 384.6,78.3 426.5,62 468.3,45.8 510.2,36 552,29.5'
@@ -207,8 +208,9 @@ export default async function HomePage() {
         .lp-badge { display: inline-flex; align-items: center; padding: 5px 11px; border-radius: 7px; font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; }
         @media (max-width: 640px) { .lp-row { grid-template-columns: 1fr auto; } .lp-row-trend { display: none; } }
 
-        .lp-audience { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; max-width: 680px; }
-        @media (max-width: 700px) { .lp-audience { grid-template-columns: 1fr; } }
+        .lp-audience { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+        @media (max-width: 800px) { .lp-audience { grid-template-columns: 1fr; } }
+        .underline-mark { background: linear-gradient(transparent 62%, #fffd73 62%); padding: 0 2px; }
         .lp-audience-card { padding: 26px 24px; border: 1px solid #e2e6e8; border-radius: 14px; background: #fff; }
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
@@ -253,13 +255,13 @@ export default async function HomePage() {
       <header className="lp-hero">
         <div className="wrap lp-hero-grid">
           <div>
-            <h1>Codzienny monitoring danych w Google Analytics 4</h1>
+            <h1>Codzienny <span className="underline-mark">monitoring danych</span> w Google Analytics 4</h1>
             <p className="lede">AlertGA4 codziennie weryfikuje Twoją usługę Google Analytics 4 i sprawdza dane, zdarzenia, parametry oraz anomalie na koncie, wysyłając alert na e-mail z podsumowaniem.</p>
             <div className="lp-hero-ctas">
               <Link href={primaryCta.href} className="btn btn--primary">{primaryCta.label}</Link>
               <a href="#jak-to-dziala" className="btn btn--ghost">Zobacz jak to działa</a>
             </div>
-            <p className="trust-line">prosta konfiguracja · codzienna weryfikacja · weryfikacja zdarzeń i parametrów</p>
+            <p className="trust-line">prosta konfiguracja · codzienna weryfikacja · alerty i podsumowania</p>
           </div>
 
           <div className="readout">
