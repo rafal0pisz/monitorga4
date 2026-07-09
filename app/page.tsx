@@ -10,11 +10,46 @@ const STEPS = [
 ]
 
 const EVENT_EXAMPLES = [
-  { name: 'form_send', current: 342, prev: 298, delta: 14.8, days: [{ c: 9, p: 7 }, { c: 11, p: 9 }, { c: 8, p: 6 }, { c: 12, p: 10 }, { c: 10, p: 8 }] },
-  { name: 'purchase', current: 1205, prev: 1340, delta: -10.1, days: [{ c: 14, p: 16 }, { c: 12, p: 15 }, { c: 16, p: 18 }, { c: 11, p: 13 }, { c: 13, p: 15 }] },
-  { name: 'sign_up', current: 89, prev: 76, delta: 17.1, days: [{ c: 10, p: 8 }, { c: 12, p: 9 }, { c: 9, p: 7 }, { c: 13, p: 10 }, { c: 11, p: 9 }] },
-  { name: 'article_read', current: 4532, prev: 4210, delta: 7.6, days: [{ c: 15, p: 14 }, { c: 17, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 16 }, { c: 16, p: 15 }] },
+  { name: 'form_send', current: 3420, prev: 2980, delta: 14.8, days: [{ c: 9, p: 7 }, { c: 11, p: 9 }, { c: 8, p: 6 }, { c: 12, p: 10 }, { c: 10, p: 8 }] },
+  { name: 'login', current: 12050, prev: 13400, delta: -10.1, days: [{ c: 14, p: 16 }, { c: 12, p: 15 }, { c: 16, p: 18 }, { c: 11, p: 13 }, { c: 13, p: 15 }] },
+  { name: 'sign_up', current: 890, prev: 760, delta: 17.1, days: [{ c: 10, p: 8 }, { c: 12, p: 9 }, { c: 9, p: 7 }, { c: 13, p: 10 }, { c: 11, p: 9 }] },
+  { name: 'article_read', current: 45320, prev: 42100, delta: 7.6, days: [{ c: 15, p: 14 }, { c: 17, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 16 }, { c: 16, p: 15 }] },
 ]
+
+const ECOMMERCE_EXAMPLES = [
+  { name: 'view_item', current: 8200, prev: 7900, delta: 3.8, days: [{ c: 16, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 17 }, { c: 15, p: 14 }, { c: 17, p: 16 }] },
+  { name: 'add_to_cart', current: 12, prev: 1450, delta: -99.2, days: [{ c: 1, p: 14 }, { c: 1, p: 16 }, { c: 2, p: 13 }, { c: 1, p: 15 }, { c: 1, p: 14 }] },
+  { name: 'view_cart', current: 615, prev: 598, delta: 2.8, days: [{ c: 12, p: 11 }, { c: 10, p: 9 }, { c: 13, p: 12 }, { c: 11, p: 10 }, { c: 12, p: 11 }] },
+  { name: 'purchase', current: 214, prev: 198, delta: 8.1, days: [{ c: 9, p: 8 }, { c: 8, p: 7 }, { c: 10, p: 9 }, { c: 9, p: 8 }, { c: 10, p: 9 }] },
+]
+
+type EventExample = (typeof EVENT_EXAMPLES)[number]
+
+function EventMiniCard({ ev }: { ev: EventExample }) {
+  const color = ev.delta >= 0 ? '#16a34a' : '#dc2626'
+  return (
+    <div style={{ padding: '7px 8px', borderRadius: 7, background: '#fff', border: '0.5px solid #e2e6e8' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 5 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{ev.current.toLocaleString('en')}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', height: 20, marginBottom: 4 }}>
+        {ev.days.map((d, i) => (
+          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
+            <div style={{ flex: 1, height: d.p, background: '#e2e6e8', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
+            <div style={{ flex: 1, height: d.c, background: color, borderRadius: '1px 1px 0 0', minWidth: 2 }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 9, fontWeight: 600, color }}>
+        {ev.delta >= 0 ? '▲' : '▼'} {Math.abs(ev.delta).toFixed(1)}%
+      </div>
+    </div>
+  )
+}
 
 const INCIDENTS = [
   {
@@ -153,7 +188,7 @@ export default async function HomePage() {
         @media (max-width: 640px) {
           .lp section { padding: 44px 0; }
           .lp-hero { padding: 40px 0 36px; }
-          .lp-cta-band { padding: 78px 0 125px; }
+          .lp-cta-band { padding: 100px 0 260px; }
         }
 
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -217,9 +252,9 @@ export default async function HomePage() {
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
-        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 125px 0 156px; position: relative; overflow: hidden; }
-        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 190px; }
-        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 19px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 150px 0 320px; position: relative; overflow: hidden; }
+        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 230px; }
+        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 23px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
         .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
         @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
@@ -344,28 +379,7 @@ export default async function HomePage() {
                   <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
                 </div>
                 <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  {EVENT_EXAMPLES.map(ev => (
-                    <div key={ev.name} style={{ padding: '7px 8px', borderRadius: 7, background: '#fff', border: '0.5px solid #e2e6e8' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: ev.delta >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }} />
-                          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
-                        </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{ev.current.toLocaleString('en')}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', height: 20, marginBottom: 4 }}>
-                        {ev.days.map((d, i) => (
-                          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
-                            <div style={{ flex: 1, height: d.p, background: '#e2e6e8', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
-                            <div style={{ flex: 1, height: d.c, background: ev.delta >= 0 ? '#16a34a' : '#dc2626', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ fontSize: 9, fontWeight: 600, color: ev.delta >= 0 ? '#16a34a' : '#dc2626' }}>
-                        {ev.delta >= 0 ? '▲' : '▼'} {Math.abs(ev.delta).toFixed(1)}%
-                      </div>
-                    </div>
-                  ))}
+                  {EVENT_EXAMPLES.map(ev => <EventMiniCard key={ev.name} ev={ev} />)}
                 </div>
               </div>
               <div className="lp-feature-cell">
@@ -373,37 +387,8 @@ export default async function HomePage() {
                   <h4>Lejek e-commerce</h4>
                   <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu — i spadków wolumenu na każdym etapie.</p>
                 </div>
-                <div className="lp-feature-visual">
-                  <div style={{ padding: '10px 12px', borderRadius: 8, background: '#fff', border: '0.5px solid #e2e6e8' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 500 }}>view_item</span>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 16, fontWeight: 600, lineHeight: 1 }}>17,781</div>
-                        <div style={{ fontSize: 10, color: '#8b939a', marginTop: 1 }}>events</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36, marginBottom: 6 }}>
-                      {[18, 20, 16, 24, 19, 26, 22, 24].map((p, i) => {
-                        const c = [24, 28, 22, 32, 26, 34, 30, 36][i]
-                        return (
-                          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
-                            <div style={{ flex: 1, height: p, background: '#e2e6e8', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
-                            <div style={{ flex: 1, height: c, background: '#16a34a', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', gap: 8, fontSize: 10, color: '#8b939a' }}>
-                        <span>Current: 17,781</span>
-                        <span>Prev: 11,964</span>
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#16a34a' }}>▲ 48.6%</span>
-                    </div>
-                  </div>
+                <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {ECOMMERCE_EXAMPLES.map(ev => <EventMiniCard key={ev.name} ev={ev} />)}
                 </div>
               </div>
               <div className="lp-feature-cell">
@@ -535,9 +520,9 @@ export default async function HomePage() {
 
         {/* CTA końcowe */}
         <section className="lp-cta-band">
-          <svg className="lp-cta-chart" viewBox="0 0 1080 190" preserveAspectRatio="none" width="100%" height="190" aria-hidden="true">
-            <polygon points="0,76 100,73 200,81 300,68 400,76 500,66 540,71 580,171 630,165 720,127 820,99 920,81 1020,71 1080,66 1080,190 0,190" fill="#fffd73" opacity="0.04" />
-            <polyline points="0,76 100,73 200,81 300,68 400,76 500,66 540,71 580,171 630,165 720,127 820,99 920,81 1020,71 1080,66"
+          <svg className="lp-cta-chart" viewBox="0 0 1080 230" preserveAspectRatio="none" width="100%" height="230" aria-hidden="true">
+            <polygon points="0,92 100,88 200,98 300,82 400,92 500,80 540,86 580,207 630,200 720,154 820,120 920,98 1020,86 1080,80 1080,230 0,230" fill="#fffd73" opacity="0.04" />
+            <polyline points="0,92 100,88 200,98 300,82 400,92 500,80 540,86 580,207 630,200 720,154 820,120 920,98 1020,86 1080,80"
               fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="lp-cta-marker">
