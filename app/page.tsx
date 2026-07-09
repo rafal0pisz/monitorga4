@@ -258,10 +258,10 @@ export default async function HomePage() {
            to ".lp section" (0,1,1) above, since this class sits on an actual
            <section> — every previous padding bump here was a no-op. Scoping
            under ".lp" brings it to (0,2,0), which wins outright. */
-        .lp .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 64px 0 190px; position: relative; overflow: hidden; }
-        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 130px; }
-        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 13px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        @media (max-width: 640px) { .lp .lp-cta-band { padding: 44px 0 150px; } }
+        .lp .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 58px 0 171px; position: relative; overflow: hidden; }
+        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 117px; }
+        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        @media (max-width: 640px) { .lp .lp-cta-band { padding: 40px 0 135px; } }
         .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
         .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
         @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
@@ -527,9 +527,9 @@ export default async function HomePage() {
 
         {/* CTA końcowe */}
         <section className="lp-cta-band">
-          <svg className="lp-cta-chart" viewBox="0 0 1080 130" preserveAspectRatio="none" width="100%" height="130" aria-hidden="true">
-            <polygon points="0,52 100,50 200,56 300,47 400,52 500,45 540,49 580,117 630,113 720,87 820,68 920,56 1020,49 1080,45 1080,130 0,130" fill="#fffd73" opacity="0.04" />
-            <polyline points="0,52 100,50 200,56 300,47 400,52 500,45 540,49 580,117 630,113 720,87 820,68 920,56 1020,49 1080,45"
+          <svg className="lp-cta-chart" viewBox="0 0 1080 117" preserveAspectRatio="none" width="100%" height="117" aria-hidden="true">
+            <polygon points="0,47 100,45 200,50 300,42 400,47 500,41 540,44 580,105 630,102 720,78 820,61 920,50 1020,44 1080,41 1080,117 0,117" fill="#fffd73" opacity="0.04" />
+            <polyline points="0,47 100,45 200,50 300,42 400,47 500,41 540,44 580,105 630,102 720,78 820,61 920,50 1020,44 1080,41"
               fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="lp-cta-marker">
