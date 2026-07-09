@@ -11,14 +11,14 @@ const STEPS = [
 
 const EVENT_EXAMPLES = [
   { name: 'form_send', current: 3420, prev: 2980, delta: 14.8, days: [{ c: 9, p: 7 }, { c: 11, p: 9 }, { c: 8, p: 6 }, { c: 12, p: 10 }, { c: 10, p: 8 }] },
-  { name: 'login', current: 12050, prev: 13400, delta: -10.1, days: [{ c: 14, p: 16 }, { c: 12, p: 15 }, { c: 16, p: 18 }, { c: 11, p: 13 }, { c: 13, p: 15 }] },
+  { name: 'login', current: 7772, prev: 13400, delta: -42.0, days: [{ c: 15, p: 16 }, { c: 13, p: 15 }, { c: 17, p: 18 }, { c: 12, p: 13 }, { c: 2, p: 15 }] },
   { name: 'sign_up', current: 890, prev: 760, delta: 17.1, days: [{ c: 10, p: 8 }, { c: 12, p: 9 }, { c: 9, p: 7 }, { c: 13, p: 10 }, { c: 11, p: 9 }] },
   { name: 'article_read', current: 45320, prev: 42100, delta: 7.6, days: [{ c: 15, p: 14 }, { c: 17, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 16 }, { c: 16, p: 15 }] },
 ]
 
 const ECOMMERCE_EXAMPLES = [
   { name: 'view_item', current: 8200, prev: 7900, delta: 3.8, days: [{ c: 16, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 17 }, { c: 15, p: 14 }, { c: 17, p: 16 }] },
-  { name: 'add_to_cart', current: 12, prev: 1450, delta: -99.2, days: [{ c: 1, p: 14 }, { c: 1, p: 16 }, { c: 2, p: 13 }, { c: 1, p: 15 }, { c: 1, p: 14 }] },
+  { name: 'add_to_cart', current: 12, prev: 1450, delta: -99.2, days: [{ c: 13, p: 14 }, { c: 15, p: 16 }, { c: 12, p: 13 }, { c: 14, p: 15 }, { c: 1, p: 14 }] },
   { name: 'view_cart', current: 615, prev: 598, delta: 2.8, days: [{ c: 12, p: 11 }, { c: 10, p: 9 }, { c: 13, p: 12 }, { c: 11, p: 10 }, { c: 12, p: 11 }] },
   { name: 'purchase', current: 214, prev: 198, delta: 8.1, days: [{ c: 9, p: 8 }, { c: 8, p: 7 }, { c: 10, p: 9 }, { c: 9, p: 8 }, { c: 10, p: 9 }] },
 ]
@@ -26,12 +26,15 @@ const ECOMMERCE_EXAMPLES = [
 type EventExample = (typeof EVENT_EXAMPLES)[number]
 
 function EventMiniCard({ ev }: { ev: EventExample }) {
-  const color = ev.delta >= 0 ? '#16a34a' : '#dc2626'
+  // Status color (dot + delta) reflects the trend direction, but the bars
+  // themselves stay green regardless — a decline reads as a drop in the
+  // most recent bar's height, not as the whole chart turning red.
+  const statusColor = ev.delta >= 0 ? '#16a34a' : '#dc2626'
   return (
     <div style={{ padding: '7px 8px', borderRadius: 7, background: '#fff', border: '0.5px solid #e2e6e8' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 5 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, flexShrink: 0 }} />
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
           <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
         </div>
         <span style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{ev.current.toLocaleString('en')}</span>
@@ -40,11 +43,11 @@ function EventMiniCard({ ev }: { ev: EventExample }) {
         {ev.days.map((d, i) => (
           <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
             <div style={{ flex: 1, height: d.p, background: '#e2e6e8', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
-            <div style={{ flex: 1, height: d.c, background: color, borderRadius: '1px 1px 0 0', minWidth: 2 }} />
+            <div style={{ flex: 1, height: d.c, background: '#16a34a', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 9, fontWeight: 600, color }}>
+      <div style={{ fontSize: 9, fontWeight: 600, color: statusColor }}>
         {ev.delta >= 0 ? '▲' : '▼'} {Math.abs(ev.delta).toFixed(1)}%
       </div>
     </div>
@@ -188,7 +191,6 @@ export default async function HomePage() {
         @media (max-width: 640px) {
           .lp section { padding: 44px 0; }
           .lp-hero { padding: 40px 0 36px; }
-          .lp-cta-band { padding: 100px 0 260px; }
         }
 
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -252,9 +254,14 @@ export default async function HomePage() {
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
-        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 150px 0 320px; position: relative; overflow: hidden; }
-        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 230px; }
-        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 23px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        /* Specificity note: plain ".lp-cta-band" (0,1,0) was silently losing
+           to ".lp section" (0,1,1) above, since this class sits on an actual
+           <section> — every previous padding bump here was a no-op. Scoping
+           under ".lp" brings it to (0,2,0), which wins outright. */
+        .lp .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 180px 0 380px; position: relative; overflow: hidden; }
+        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 260px; }
+        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 26px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        @media (max-width: 640px) { .lp .lp-cta-band { padding: 110px 0 300px; } }
         .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
         .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
         @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
@@ -520,9 +527,9 @@ export default async function HomePage() {
 
         {/* CTA końcowe */}
         <section className="lp-cta-band">
-          <svg className="lp-cta-chart" viewBox="0 0 1080 230" preserveAspectRatio="none" width="100%" height="230" aria-hidden="true">
-            <polygon points="0,92 100,88 200,98 300,82 400,92 500,80 540,86 580,207 630,200 720,154 820,120 920,98 1020,86 1080,80 1080,230 0,230" fill="#fffd73" opacity="0.04" />
-            <polyline points="0,92 100,88 200,98 300,82 400,92 500,80 540,86 580,207 630,200 720,154 820,120 920,98 1020,86 1080,80"
+          <svg className="lp-cta-chart" viewBox="0 0 1080 260" preserveAspectRatio="none" width="100%" height="260" aria-hidden="true">
+            <polygon points="0,104 100,100 200,111 300,93 400,104 500,90 540,97 580,234 630,226 720,174 820,136 920,111 1020,97 1080,90 1080,260 0,260" fill="#fffd73" opacity="0.04" />
+            <polyline points="0,104 100,100 200,111 300,93 400,104 500,90 540,97 580,234 630,226 720,174 820,136 920,111 1020,97 1080,90"
               fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <div className="lp-cta-marker">
