@@ -9,6 +9,13 @@ const STEPS = [
   { t: 'Podsumowanie na maila', d: 'Wynik spada poniżej progu? Aplikacja poinformuje Cię mailowo z opisem kategorii, która wymaga weryfikacji.' },
 ]
 
+const EVENT_EXAMPLES = [
+  { name: 'form_send', current: 342, prev: 298, delta: 14.8, days: [{ c: 9, p: 7 }, { c: 11, p: 9 }, { c: 8, p: 6 }, { c: 12, p: 10 }, { c: 10, p: 8 }] },
+  { name: 'purchase', current: 1205, prev: 1340, delta: -10.1, days: [{ c: 14, p: 16 }, { c: 12, p: 15 }, { c: 16, p: 18 }, { c: 11, p: 13 }, { c: 13, p: 15 }] },
+  { name: 'sign_up', current: 89, prev: 76, delta: 17.1, days: [{ c: 10, p: 8 }, { c: 12, p: 9 }, { c: 9, p: 7 }, { c: 13, p: 10 }, { c: 11, p: 9 }] },
+  { name: 'article_read', current: 4532, prev: 4210, delta: 7.6, days: [{ c: 15, p: 14 }, { c: 17, p: 15 }, { c: 14, p: 13 }, { c: 18, p: 16 }, { c: 16, p: 15 }] },
+]
+
 const INCIDENTS = [
   {
     tag: 'duplikaty',
@@ -136,7 +143,6 @@ export default async function HomePage() {
         .chip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
         .chip-dot--ok { background: #16a34a; }
         .chip-dot--warn { background: #ea580c; }
-        .chip-dot--fail { background: #dc2626; }
         .readout-foot { padding: 12px 20px; border-top: 1px solid #e2e6e8; background: #f3f6f7; font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; display: flex; justify-content: space-between; }
 
         .lp section { padding: 64px 0; }
@@ -147,7 +153,7 @@ export default async function HomePage() {
         @media (max-width: 640px) {
           .lp section { padding: 44px 0; }
           .lp-hero { padding: 40px 0 36px; }
-          .lp-cta-band { padding: 60px 0 96px; }
+          .lp-cta-band { padding: 78px 0 125px; }
         }
 
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
@@ -171,7 +177,6 @@ export default async function HomePage() {
         .lp-feature-cell h4 { font-size: 15.5px; }
         .lp-feature-cell .desc { font-size: 13px; color: #5b6570; line-height: 1.55; max-width: 42ch; }
         .lp-feature-visual { margin-top: auto; padding-top: 6px; }
-        .mini-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .mini-spark { display: flex; align-items: flex-end; gap: 3px; height: 46px; }
         .mini-spark-bar { width: 6px; border-radius: 2px 2px 0 0; background: #eaeef0; }
         .mini-spark-bar.spike { background: #ff8282; }
@@ -212,7 +217,7 @@ export default async function HomePage() {
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
-        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 96px 0 120px; position: relative; overflow: hidden; }
+        .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 125px 0 156px; position: relative; overflow: hidden; }
         .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 190px; }
         .lp-cta-marker { position: absolute; left: 53.7%; bottom: 19px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
@@ -338,11 +343,29 @@ export default async function HomePage() {
                   <h4>Zdarzenia</h4>
                   <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
                 </div>
-                <div className="lp-feature-visual mini-chips">
-                  <span className="chip"><span className="chip-dot chip-dot--ok" />add_to_cart</span>
-                  <span className="chip"><span className="chip-dot chip-dot--ok" />view_item</span>
-                  <span className="chip"><span className="chip-dot chip-dot--warn" />begin_checkout</span>
-                  <span className="chip"><span className="chip-dot chip-dot--fail" />form_send</span>
+                <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {EVENT_EXAMPLES.map(ev => (
+                    <div key={ev.name} style={{ padding: '7px 8px', borderRadius: 7, background: '#fff', border: '0.5px solid #e2e6e8' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 5 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: ev.delta >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }} />
+                          <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</span>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{ev.current.toLocaleString('en')}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', height: 20, marginBottom: 4 }}>
+                        {ev.days.map((d, i) => (
+                          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
+                            <div style={{ flex: 1, height: d.p, background: '#e2e6e8', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
+                            <div style={{ flex: 1, height: d.c, background: ev.delta >= 0 ? '#16a34a' : '#dc2626', borderRadius: '1px 1px 0 0', minWidth: 2 }} />
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 9, fontWeight: 600, color: ev.delta >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {ev.delta >= 0 ? '▲' : '▼'} {Math.abs(ev.delta).toFixed(1)}%
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
               <div className="lp-feature-cell">
