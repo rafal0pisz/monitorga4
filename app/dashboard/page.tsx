@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
+import { planLimit } from '@/lib/billing/plans'
 import Link from 'next/link'
 export default async function DashboardPage() {
   const session = await createClient()
@@ -14,6 +15,13 @@ export default async function DashboardPage() {
   const list = (projects ?? []) as DashboardProject[]
   const avgScore = list.length ? Math.round(list.reduce((s, p) => s + (p.last_score ?? 0), 0) / list.length) : null
   const critical = list.filter(p => ['critical','warning'].includes(getScoreGrade(p.last_score))).length
+
+  let limit: number | null = null
+  if (!bypass && user) {
+    const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    limit = planLimit(profile?.plan_id)
+  }
+  const atLimit = limit != null && list.length >= limit
   return (
     <div style={{ maxWidth: 700 }}>
       <div style={{ marginBottom: 28 }}>
@@ -21,14 +29,24 @@ export default async function DashboardPage() {
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>{list.length} monitored GA4 properties</p>
       </div>
       {list.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
-          {[{ label: 'Projects', value: list.length, sub: 'monitored' }, { label: 'Avg score', value: avgScore ?? '–', sub: 'all projects' }, { label: 'Need attention', value: critical, sub: 'warning or critical' }].map(card => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
+          {[
+            { label: 'Projects', value: limit != null && limit < Number.MAX_SAFE_INTEGER ? `${list.length} / ${limit}` : list.length, sub: 'monitored' },
+            { label: 'Avg score', value: avgScore ?? '–', sub: 'all projects' },
+            { label: 'Need attention', value: critical, sub: 'warning or critical' },
+          ].map(card => (
             <div key={card.label} style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: '14px 16px' }}>
               <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>{card.label}</p>
               <p style={{ fontSize: 28, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 2px', lineHeight: 1 }}>{card.value}</p>
               <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>{card.sub}</p>
             </div>
           ))}
+        </div>
+      )}
+      {atLimit && (
+        <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>You&apos;ve reached your plan&apos;s project limit ({limit}). Upgrade to add more.</p>
+          <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
         </div>
       )}
       {list.length === 0 ? (

@@ -301,20 +301,27 @@ export default function NewProjectForm() {
       if (!user) throw new Error('You must be signed in to create a project.')
       const propertyName = manualMode ? (form.name || `Property ${effectivePropertyId}`) : (form.name || selectedProperty!.displayName)
 
-      const { data: inserted, error: projErr } = await supabase.from('projects').insert({
-        org_id: '00000000-0000-0000-0000-000000000001',
-        owner_id: user.id,
-        name: propertyName,
-        ga4_property_id: `properties/${effectivePropertyId}`,
-        own_domain: form.own_domain || null,
-        expected_events: customEvents.map(e => e.event_name),
-        alert_threshold: parseInt(form.alert_threshold),
-        alert_email: form.alert_email || null,
-        ga4_auth_type: 'oauth',
-      }).select('id').single()
-      if (projErr) throw new Error(projErr.message)
+      // Goes through the create_project RPC (not a raw insert) so the
+      // caller's plan project-limit is enforced server-side, not just in
+      // the UI — see plan_project_limit()/create_project() in
+      // supabase/migrations/011_billing.sql.
+      const { data: projectRow, error: projErr } = await supabase.rpc('create_project', {
+        p_owner_id: user.id,
+        p_name: propertyName,
+        p_ga4_property_id: `properties/${effectivePropertyId}`,
+        p_own_domain: form.own_domain || null,
+        p_expected_events: customEvents.map(e => e.event_name),
+        p_alert_threshold: parseInt(form.alert_threshold),
+        p_alert_email: form.alert_email || null,
+      })
+      if (projErr) {
+        if (projErr.message.includes('PLAN_LIMIT_REACHED')) {
+          throw new Error("You've reached your plan's project limit. Upgrade to add more projects.")
+        }
+        throw new Error(projErr.message)
+      }
 
-      const projectId = inserted.id
+      const projectId = projectRow.id
       if (customEvents.length > 0) {
         const { error: ceErr } = await supabase.rpc('save_custom_event_checks', {
           p_project_id: projectId,
