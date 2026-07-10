@@ -2,8 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
-  '/login', '/auth/callback', '/share', '/privacy', '/terms',
+  '/login', '/auth/callback', '/share', '/privacy', '/terms', '/funkcje', '/kontakt',
   '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
+  '/api/contact',
 ]
 
 // API-only path: /api/worker/run authorizes itself (session OR CRON_SECRET

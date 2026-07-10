@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import BrandWordmark from '@/components/ui/BrandWordmark'
+import LandingNav from '@/components/marketing/LandingNav'
+import LandingFooter from '@/components/marketing/LandingFooter'
+import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const STEPS = [
   { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu, jak rola „Viewer" w GA4.' },
@@ -135,44 +137,7 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <style>{`
-        .lp { background: #ffffff; color: #232b31; }
-        .lp * { box-sizing: border-box; }
-        .lp .wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-        .lp .wrap--narrow { max-width: 760px; }
-        .lp h1, .lp h2, .lp h3 { font-family: var(--font-sans), sans-serif; font-weight: 700; text-wrap: balance; margin: 0; }
-        .lp p { margin: 0; }
-        .lp a { color: inherit; }
-        .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
-
-        .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(35,43,49,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .lp-nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 12px; }
-        .lp-nav-links { display: flex; align-items: center; gap: 30px; }
-        .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: rgba(255,255,255,0.68); }
-        .lp-nav-links a:hover { color: #fff; }
-        .lp-nav-cta { display: flex; align-items: center; gap: 18px; }
-        .lp-nav-cta .login-link { font-size: 14px; font-weight: 600; text-decoration: none; color: #fff; white-space: nowrap; }
-        .lp-nav-cta .btn--primary { background: #fffd73; color: #3a3800; }
-        .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }
-        .lp-nav .nav-cta-full { display: inline; }
-        .lp-nav .nav-cta-short { display: none; }
-        @media (max-width: 860px) { .lp-nav-links { display: none; } }
-        @media (max-width: 480px) {
-          .lp-nav-cta .login-link { display: none; }
-          .lp-nav .nav-cta-full { display: none; }
-          .lp-nav .nav-cta-short { display: inline; }
-        }
-
-        .lp .btn {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          font-family: var(--font-sans), sans-serif; font-weight: 600; font-size: 14.5px;
-          padding: 13px 24px; border-radius: 8px; text-decoration: none; white-space: nowrap;
-          border: 1.5px solid transparent; cursor: pointer; transition: box-shadow 0.15s;
-        }
-        .lp .btn--primary { background: #232b31; color: #fff; }
-        .lp .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(35,43,49,0.55); }
-        .lp .btn--ghost { background: transparent; color: #232b31; border-color: #e2e6e8; }
-        .lp .btn--ghost:hover { border-color: #8b939a; }
-        .lp .btn--sm { padding: 9px 16px; font-size: 13.5px; border-radius: 7px; }
+        ${LANDING_BASE_STYLES}
 
         .lp-hero { padding: 60px 0 52px; }
         .lp-hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
@@ -204,15 +169,7 @@ export default async function HomePage() {
         .chip-dot--warn { background: #ea580c; }
         .readout-foot { padding: 12px 20px; border-top: 1px solid #e2e6e8; background: #f3f6f7; font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; display: flex; justify-content: space-between; }
 
-        .lp section { padding: 64px 0; }
-        .lp .section--dim { background: #f3f6f7; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
-        .lp .section-head { max-width: 640px; margin-bottom: 40px; }
-        .lp .section-head h2 { font-size: clamp(23px, 3vw, 28px); letter-spacing: -0.01em; }
-        .lp .section-head p { color: #5b6570; font-size: 15.5px; margin-top: 10px; line-height: 1.6; }
-        @media (max-width: 640px) {
-          .lp section { padding: 44px 0; }
-          .lp-hero { padding: 40px 0 36px; }
-        }
+        @media (max-width: 640px) { .lp-hero { padding: 40px 0 36px; } }
 
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
         @media (max-width: 980px) { .lp-steps { grid-template-columns: repeat(2, 1fr); } }
@@ -300,41 +257,9 @@ export default async function HomePage() {
         .lp-cta-band .btn--primary { background: #fffd73; color: #3a3800; position: relative; }
         .lp-cta-band .btn--ghost { border-color: rgba(255,255,255,0.3); color: #fff; position: relative; }
         @media (prefers-reduced-motion: reduce) { .lp-cta-marker-dot::after { animation: none; } }
-
-        .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); }
-        .lp-footer-body { padding: 48px 0 30px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
-        @media (max-width: 780px) { .lp-footer-body { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 480px) { .lp-footer-body { grid-template-columns: 1fr; } }
-        .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 30ch; margin-top: 12px; }
-        .lp-footer-addr { font-size: 12.5px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-top: 14px; }
-        .lp-footer-col h3 { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0 0 14px; }
-        .lp-footer-col a { display: block; font-size: 13.5px; color: rgba(255,255,255,0.75); text-decoration: none; margin-bottom: 10px; }
-        .lp-footer-col a:hover { color: #fff; }
-        .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
-        .lp-footer-bottom a { text-decoration: none; color: inherit; }
-        .lp-footer-bottom a:hover { color: #fff; }
       `}</style>
 
-      {/* Nav */}
-      <nav className="lp-nav" aria-label="Główna">
-        <div className="wrap lp-nav-row">
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <BrandWordmark size={19} dark />
-          </Link>
-          <div className="lp-nav-links">
-            <a href="#jak-to-dziala">Proces</a>
-            <a href="#co-sprawdzamy">Monitoring</a>
-            <a href="#dla-kogo">Dla kogo</a>
-          </div>
-          <div className="lp-nav-cta">
-            {secondaryCta && <Link href={secondaryCta.href} className="login-link">{secondaryCta.label}</Link>}
-            <Link href={primaryCta.href} className="btn btn--primary btn--sm">
-              <span className="nav-cta-full">{primaryCta.label}</span>
-              <span className="nav-cta-short">{user ? primaryCta.label : 'Zarejestruj się'}</span>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
 
       {/* Hero */}
       <header className="lp-hero">
@@ -588,38 +513,7 @@ export default async function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="lp-footer">
-        <div className="wrap lp-footer-body">
-          <div>
-            <BrandWordmark size={18} dark />
-            <div className="lp-footer-addr">
-              Bettersteps Sp. z o.o.<br />
-              ul. Domaniewska 47, 02-672 Warszawa<br />
-              KRS 0001011888 · NIP 5214000359
-            </div>
-          </div>
-          <div className="lp-footer-col">
-            <h3>Produkt</h3>
-            <a href="#jak-to-dziala">Proces</a>
-            <a href="#co-sprawdzamy">Monitoring</a>
-            <a href="#dla-kogo">Dla kogo</a>
-          </div>
-          <div className="lp-footer-col">
-            <h3>Prawne</h3>
-            <Link href="/privacy">Polityka prywatności</Link>
-            <Link href="/terms">Regulamin</Link>
-          </div>
-          <div className="lp-footer-col">
-            <h3>Kontakt</h3>
-            <a href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
-            <a href="https://www.bettersteps.pl">www.bettersteps.pl</a>
-          </div>
-        </div>
-        <div className="wrap lp-footer-bottom">
-          <span>© {new Date().getFullYear()} Bettersteps Sp. z o.o. · AlertGA4</span>
-        </div>
-      </footer>
+      <LandingFooter />
     </div>
   )
 }

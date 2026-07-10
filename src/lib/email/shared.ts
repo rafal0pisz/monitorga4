@@ -101,3 +101,15 @@ export function barChartHtml(bars: { heightPx: number; color: string; title: str
 export function fmtDate(d: string | Date): string {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
+
+// Escapes text interpolated into email HTML. Required for any field that
+// can come from a public, unauthenticated form (e.g. the contact form) —
+// every other template here only interpolates server-controlled data.
+export function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}

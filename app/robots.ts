@@ -10,18 +10,18 @@ export default function robots(): MetadataRoute.Robots {
         // Google account, so there's nothing useful for a crawler beyond
         // login/auth/API routes and a signed-in user's own dashboard.
         userAgent: '*',
-        allow: ['/', '/privacy', '/terms'],
+        allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'],
         disallow: ['/dashboard', '/project', '/login', '/auth', '/api', '/share'],
       },
       // Explicitly welcome AI/LLM crawlers on the public marketing pages —
       // default '*' already allows them, but naming them avoids any doubt
       // and matches how these bots are commonly identified.
-      { userAgent: 'GPTBot', allow: ['/', '/privacy', '/terms'] },
-      { userAgent: 'ChatGPT-User', allow: ['/', '/privacy', '/terms'] },
-      { userAgent: 'ClaudeBot', allow: ['/', '/privacy', '/terms'] },
-      { userAgent: 'anthropic-ai', allow: ['/', '/privacy', '/terms'] },
-      { userAgent: 'PerplexityBot', allow: ['/', '/privacy', '/terms'] },
-      { userAgent: 'Google-Extended', allow: ['/', '/privacy', '/terms'] },
+      { userAgent: 'GPTBot', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
+      { userAgent: 'ChatGPT-User', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
+      { userAgent: 'ClaudeBot', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
+      { userAgent: 'anthropic-ai', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
+      { userAgent: 'PerplexityBot', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
+      { userAgent: 'Google-Extended', allow: ['/', '/privacy', '/terms', '/funkcje', '/kontakt'] },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
   }
