@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { ga4Report } from '@/lib/ga4/report'
 
 // GA4 dimension name for a custom event parameter
 // Standard item dimensions use camelCase (itemName, transactionId)
@@ -17,18 +18,6 @@ const STANDARD_ITEM_DIMS: Record<string, string> = {
 
 function ga4DimName(parameterName: string): string {
   return STANDARD_ITEM_DIMS[parameterName] ?? `customEvent:${parameterName}`
-}
-
-async function ga4Report(propertyId: string, token: string, body: object) {
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`,
-    { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  )
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}))
-    throw new Error(`GA4 ${res.status}: ${err.error?.message ?? res.statusText}`)
-  }
-  return res.json()
 }
 
 interface CoverageResult {

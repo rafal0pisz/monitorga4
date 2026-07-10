@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { ga4Report as ga4Post } from '@/lib/ga4/report'
 
 export const runtime = 'nodejs'
 
@@ -43,22 +44,6 @@ function buildRanges(period: Period): Ranges {
     prev:    { startDate: fmt(startP), endDate: fmt(endP) },
     label: `vs prev ${period}d`,
   }
-}
-
-async function ga4Post(propertyId: string, token: string, body: object): Promise<any> {
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }
-  )
-  if (!res.ok) {
-    const e = await res.json().catch(() => ({}))
-    throw new Error(`GA4 ${res.status}: ${e.error?.message ?? res.statusText}`)
-  }
-  return res.json()
 }
 
 // Single-period row helpers

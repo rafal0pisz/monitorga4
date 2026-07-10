@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
-
-async function ga4Report(propertyId: string, token: string, body: object) {
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`,
-    { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  )
-  if (!res.ok) throw new Error(`GA4 ${res.status}`)
-  return res.json()
-}
+import { ga4Report } from '@/lib/ga4/report'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

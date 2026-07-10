@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { ga4Report } from '@/lib/ga4/report'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
 import type { Project, CheckResult } from '@/types'
+
+// Default serverless timeout is far too short once this loops over dozens
+// of projects sequentially (each doing ~a dozen GA4 calls) — 300s is the
+// Vercel Pro plan ceiling; raise further (Enterprise: up to 900s) or lower
+// to 60s (Hobby ceiling) to match your actual plan.
+export const maxDuration = 300
 
 // ============================================================
 // Autoryzacja
@@ -51,25 +58,6 @@ const WEIGHTS: Record<string, number> = {
 // ============================================================
 // GA4 Data API helper
 // ============================================================
-async function ga4Report(propertyId: string, token: string, body: object) {
-  const res = await fetch(
-    `https://analyticsdata.googleapis.com/v1beta/${propertyId}:runReport`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    }
-  )
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(`GA4 API ${res.status}: ${err.error?.message ?? res.statusText}`)
-  }
-  return res.json()
-}
-
 // ============================================================
 // Zakresy dat WoW
 // ============================================================
