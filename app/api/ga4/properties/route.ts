@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const token = await getGa4Token()
 
   if (!token) {
-    return NextResponse.json({ error: 'Brak tokena Google — zaloguj się ponownie' }, { status: 401 })
+    return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
   }
 
   try {

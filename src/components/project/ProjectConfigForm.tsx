@@ -4,16 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
+import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 
-const ECOM_EVENTS = [
-  'purchase', 'add_to_cart', 'remove_from_cart', 'view_item',
-  'view_item_list', 'begin_checkout', 'add_payment_info',
-  'add_shipping_info', 'view_cart', 'refund', 'select_item',
-  'select_promotion', 'view_promotion', 'generate_lead',
-]
+const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
 
 interface CustomEvent { event_name: string; check_type: string; is_enabled: boolean }
 interface ParamCheck  { event_name: string; parameter_name: string }
+interface DiscoveredEvent { name: string; count: number; isStandard: boolean }
 
 interface Props {
   project: {
@@ -63,6 +60,14 @@ export default function ProjectConfigForm({ project }: Props) {
   const [paramWarning,      setParamWarning]      = useState<string | null>(null)
   const [pendingParam,      setPendingParam]      = useState<ParamCheck | null>(null)
 
+  // Custom events not seen in GA4 recently, and the "add from suggestions" panel
+  const [staleEvents,     setStaleEvents]     = useState<Set<string>>(new Set())
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [discovered,      setDiscovered]      = useState<DiscoveredEvent[] | null>(null)
+  const [discoverLoading, setDiscoverLoading] = useState(false)
+  const [discoverError,   setDiscoverError]   = useState<string | null>(null)
+  const [suggestSelected, setSuggestSelected] = useState<Set<string>>(new Set())
+
   const [openSection, setOpenSection] = useState<string | null>(null)
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
@@ -83,7 +88,21 @@ export default function ProjectConfigForm({ project }: Props) {
       ])
       if (ceRes.data) {
         const raw = Array.isArray(ceRes.data) ? ceRes.data : []
-        setCustomEvents(raw.map((e: any) => ({ event_name: e.event_name, check_type: e.check_type ?? 'presence', is_enabled: e.is_enabled !== false })))
+        const events = raw.map((e: any) => ({ event_name: e.event_name, check_type: e.check_type ?? 'presence', is_enabled: e.is_enabled !== false }))
+        setCustomEvents(events)
+        if (events.length > 0 && project.ga4_property_id) {
+          fetch(`/api/ga4/events?propertyId=${encodeURIComponent(project.ga4_property_id)}&events=${encodeURIComponent(events.map((e: CustomEvent) => e.event_name).join(','))}&periodDays=14`)
+            .then(r => r.json())
+            .then(data => {
+              if (!data?.events) return
+              const stale = new Set<string>()
+              for (const name of Object.keys(data.events)) {
+                if (data.events[name].totalCurrent === 0) stale.add(name)
+              }
+              setStaleEvents(stale)
+            })
+            .catch(e => console.error('[stale-check] fetch failed:', e.message))
+        }
       }
       if (ecRes.data) {
         const raw = Array.isArray(ecRes.data) ? ecRes.data : []
@@ -127,6 +146,38 @@ export default function ProjectConfigForm({ project }: Props) {
     if (!n || customEvents.some(e => e.event_name === n)) return
     setCustomEvents(prev => [...prev, { event_name: n, check_type: 'presence', is_enabled: true }])
     setNewEvent('')
+  }
+
+  async function openSuggestions() {
+    setShowSuggestions(true)
+    if (discovered !== null || discoverLoading || !project.ga4_property_id) return
+    setDiscoverLoading(true)
+    try {
+      const res = await fetch(`/api/ga4/discover-events?propertyId=${encodeURIComponent(project.ga4_property_id)}`)
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
+      setDiscovered(data.events ?? [])
+    } catch (e: any) {
+      setDiscoverError(e.message)
+      setDiscovered([])
+    } finally {
+      setDiscoverLoading(false)
+    }
+  }
+
+  function toggleSuggestSelected(name: string) {
+    setSuggestSelected(prev => {
+      const next = new Set(prev)
+      next.has(name) ? next.delete(name) : next.add(name)
+      return next
+    })
+  }
+
+  function addSelectedSuggestions() {
+    const toAdd = [...suggestSelected].filter(n => !customEvents.some(e => e.event_name === n))
+    setCustomEvents(prev => [...prev, ...toAdd.map(n => ({ event_name: n, check_type: 'presence', is_enabled: true }))])
+    setSuggestSelected(new Set())
+    setShowSuggestions(false)
   }
 
   function toggleEcom(ev: string) {
@@ -352,14 +403,28 @@ export default function ProjectConfigForm({ project }: Props) {
         {openSection === 'custom_events' && (
           <div style={{ padding: 18 }}>
             {customEvents.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                {customEvents.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 8, backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                    <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 500 }}>{e.event_name}</span>
-                    <button onClick={() => setCustomEvents(prev => prev.filter((_, j) => j !== i))}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 15, lineHeight: 1, padding: '0 2px' }}>×</button>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+                {customEvents.map((e, i) => {
+                  const stale = staleEvents.has(e.event_name)
+                  return (
+                    <div key={i} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8,
+                      border: `0.5px solid ${stale ? '#fed7aa' : 'var(--color-border-tertiary)'}`,
+                      backgroundColor: stale ? '#fff7ed' : 'var(--color-background-secondary)',
+                    }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 12.5, fontWeight: 500, color: 'var(--color-text-primary)' }}>{e.event_name}</span>
+                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, backgroundColor: 'var(--color-background-tertiary)', border: '0.5px solid var(--color-border-tertiary)', color: 'var(--color-text-secondary)' }}>
+                        {e.check_type}
+                      </span>
+                      <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: stale ? '#c2410c' : '#16a34a', flexShrink: 0 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: stale ? '#ea580c' : '#16a34a', flexShrink: 0 }} />
+                        {stale ? 'Not seen in GA4 in the last 14 days' : 'Monitored'}
+                      </span>
+                      <button onClick={() => setCustomEvents(prev => prev.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, padding: '0 0 0 4px', flexShrink: 0 }}>×</button>
+                    </div>
+                  )
+                })}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
@@ -367,10 +432,65 @@ export default function ProjectConfigForm({ project }: Props) {
                 onKeyDown={e => e.key === 'Enter' && addCustomEvent()}
                 placeholder="event_name" style={{ ...inp, flex: 1 }} />
               <button onClick={addCustomEvent}
-                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: '#16a34a', color: '#fff', border: 'none', flexShrink: 0 }}>
-                Add
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
+                Add manually
+              </button>
+              <button onClick={openSuggestions}
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', flexShrink: 0 }}>
+                ✨ Add from suggestions
               </button>
             </div>
+
+            {showSuggestions && (
+              <div style={{ border: '1px solid #bbf7d0', backgroundColor: '#f0fdf4', borderRadius: 10, padding: '14px 16px', marginTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', margin: 0 }}>Detected in GA4, not yet configured</p>
+                  <button onClick={() => setShowSuggestions(false)} style={{ background: 'none', border: 'none', color: 'var(--color-text-secondary)', fontSize: 15, cursor: 'pointer' }}>×</button>
+                </div>
+                {discoverLoading && (
+                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Reading events from GA4…</div>
+                )}
+                {discoverError && (
+                  <div style={{ fontSize: 11.5, color: '#c2410c' }}>Couldn't read events from GA4 ({discoverError}).</div>
+                )}
+                {!discoverLoading && discovered && (() => {
+                  const notConfigured = discovered.filter(d => !customEvents.some(e => e.event_name === d.name) && !ECOM_EVENTS.includes(d.name))
+                  if (notConfigured.length === 0) {
+                    return <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>No additional events detected on this property.</div>
+                  }
+                  return (
+                    <>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        {notConfigured.map(ev => {
+                          const checked = suggestSelected.has(ev.name)
+                          return (
+                            <label key={ev.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 7, backgroundColor: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', cursor: 'pointer' }}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleSuggestSelected(ev.name)} style={{ accentColor: '#16a34a' }} />
+                              <span style={{ fontFamily: 'monospace', fontSize: 12.5, color: 'var(--color-text-primary)' }}>{ev.name}</span>
+                              <span style={{
+                                fontSize: 9.5, padding: '1.5px 6px', borderRadius: 999, fontWeight: 500,
+                                background: ev.isStandard ? '#dbeafe' : '#ede9fe', color: ev.isStandard ? '#1d4ed8' : '#6d28d9',
+                              }}>
+                                {ev.isStandard ? 'standard' : 'custom'}
+                              </span>
+                              <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 11.5, color: 'var(--color-text-secondary)' }}>
+                                {ev.count.toLocaleString()} / 30 days
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                        <button onClick={addSelectedSuggestions} disabled={suggestSelected.size === 0}
+                          style={{ padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: suggestSelected.size === 0 ? 'not-allowed' : 'pointer', backgroundColor: suggestSelected.size === 0 ? '#86efac' : '#16a34a', color: '#fff', border: 'none' }}>
+                          Add selected ({suggestSelected.size})
+                        </button>
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
+            )}
           </div>
         )}
       </div>
