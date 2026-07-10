@@ -594,6 +594,253 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
 }
 
 // ============================================================
+// Concurrency-limited project processing
+// ============================================================
+// Projects used to be processed one at a time in a plain for-loop — each
+// project's full pipeline (~20+ sequential GA4 calls) had to finish before
+// the next one started. At dozens of projects that easily runs past any
+// serverless maxDuration. This keeps WORKER_CONCURRENCY projects in flight
+// at once instead, pulling the next one as soon as a slot frees up.
+const WORKER_CONCURRENCY = 8
+
+async function runWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let next = 0
+  async function worker() {
+    while (next < items.length) {
+      const i = next++
+      results[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return results
+}
+
+interface ProjectRunOutcome {
+  projectId: string
+  processed: boolean
+  errorMessage?: string
+  digestEntry: DigestEntry
+}
+
+// One project's full check pipeline — extracted from the worker loop so it
+// can run concurrently across projects instead of every project waiting on
+// the one before it.
+async function processProject(
+  supabase: ReturnType<typeof createAdminClient>,
+  project: Project,
+  runDate: string,
+  prevDate: string
+): Promise<ProjectRunOutcome | null> {
+  // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
+  // per-projekt na podstawie jego właściciela — każdy projekt może
+  // należeć do innego konta Google z dostępem do innych property, więc
+  // wspólny token dla całego batcha dawałby błędne 403 dla cudzych
+  // projektów. Gdy właściciel nie ma tokenu (np. manualny run bez sesji
+  // i bez owner_id), spada na domyślne konto organizacji.
+  // Nie używamy session.provider_token — Supabase nie odświeża tego pola
+  // po wymianie kodu OAuth, więc po ~1h staje się nieaktualne mimo że
+  // sesja logowania w aplikacji wciąż wygląda jako aktywna.
+  const accessToken = await getGa4Token(project.owner_id ?? undefined)
+
+  if (!accessToken) {
+    const errorMessage = 'No GA4 token — owner needs to sign in with Google'
+    await supabase.from('dqs_runs').upsert({
+      project_id: project.id,
+      run_date: runDate,
+      status: 'failed',
+      score_total: null,
+      error_message: errorMessage,
+    }, { onConflict: 'project_id,run_date' })
+    return {
+      projectId: project.id,
+      processed: false,
+      errorMessage,
+      digestEntry: {
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'failed',
+        errorMessage,
+        checkErrors: [],
+        scoreTotal: null,
+        prevScore: null,
+        topSignal: '',
+        belowThreshold: true,
+        alertThreshold: project.alert_threshold,
+      },
+    }
+  }
+
+  // Create / update run
+  const { data: run } = await supabase.from('dqs_runs').upsert({
+    project_id: project.id,
+    run_date: runDate,
+    status: 'running',
+    score_total: null,
+    error_message: null,
+  }, { onConflict: 'project_id,run_date' }).select().single()
+
+  if (!run) return null
+
+  try {
+    // Check if we already have a better score today — skip if so
+    const { data: existingRun } = await supabase
+      .from('dqs_runs')
+      .select('id, score_total')
+      .eq('project_id', project.id)
+      .eq('run_date', runDate)
+      .eq('status', 'completed')
+      .single()
+
+    // Fetch ecommerce + custom events via RPC (bypasses schema cache)
+    const [{ data: ecomRaw }, { data: customRaw }, { data: paramRaw }] = await Promise.all([
+      supabase.rpc('get_ecommerce_config', { p_project_id: project.id }),
+      supabase.rpc('get_custom_event_checks', { p_project_id: project.id }),
+      supabase.rpc('get_parameter_checks',    { p_project_id: project.id }),
+    ])
+    const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : (typeof ecomRaw === 'string' ? JSON.parse(ecomRaw) : [])
+    const ecomEvents = ecomArr.filter((e: any) => e.is_enabled).map((e: any) => e.event_name as string)
+    const customArr = Array.isArray(customRaw) ? customRaw : (typeof customRaw === 'string' ? JSON.parse(customRaw) : [])
+    const customEventChecks = customArr.filter((e: any) => e.is_enabled !== false)
+    const paramArr    = Array.isArray(paramRaw) ? paramRaw : (typeof paramRaw === 'string' ? JSON.parse(paramRaw) : [])
+    const paramChecks = paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
+
+    const [results, paramResults] = await Promise.all([
+      runAllChecks(project, accessToken, ecomEvents, customEventChecks),
+      checkParameters(project, accessToken, paramChecks, (() => {
+        const _today = new Date()
+        const _fmt = (d: Date) => d.toISOString().split('T')[0]
+        const _endC = new Date(_today); _endC.setDate(_today.getDate() - 1)
+        const _startC = new Date(_endC); _startC.setDate(_endC.getDate() - 6)
+        const _endP = new Date(_startC); _endP.setDate(_startC.getDate() - 1)
+        const _startP = new Date(_endP); _startP.setDate(_endP.getDate() - 6)
+        return { current: { startDate: _fmt(_startC), endDate: _fmt(_endC) }, prev: { startDate: _fmt(_startP), endDate: _fmt(_endP) } }
+      })()),
+    ])
+    const allResults = [...results, ...paramResults]
+    // Normalizacja do rzeczywistej sumy wag checków, które się wykonały
+    // w tym przebiegu — 10 zawsze aktywnych checków sumuje się do 100,
+    // ale Ecommerce/Custom events/Parameter checks są doliczane tylko
+    // gdy dany projekt ma je skonfigurowane, więc "100%" musi być liczone
+    // względem tego, co faktycznie brało udział w tym przebiegu, a nie
+    // względem sztywnej sumy — inaczej wynik przekraczałby 100.
+    const totalWeight = allResults.reduce((s, r) => s + r.weight, 0)
+    const rawScore = allResults.reduce((s, r) => s + r.score, 0)
+    const scoreTotal = totalWeight > 0 ? +((rawScore / totalWeight) * 100).toFixed(2) : 0
+
+    // Keep best score of the day
+    const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
+    const finalScore = isBetter ? scoreTotal : (existingRun!.score_total ?? scoreTotal)
+    if (isBetter) {
+      await supabase.from('dqs_results').delete().eq('run_id', run.id)
+      await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
+      await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
+    } else {
+      // Score not better — mark run as completed but keep old results
+      await supabase.from('dqs_runs').update({ status: 'completed', score_total: existingRun!.score_total }).eq('id', run.id)
+    }
+
+    // Yesterday's score, for the WoW delta shown in both email types
+    const { data: prevRun } = await supabase
+      .from('dqs_runs')
+      .select('score_total')
+      .eq('project_id', project.id)
+      .eq('run_date', prevDate)
+      .eq('status', 'completed')
+      .maybeSingle()
+
+    const coreResults = allResults.filter(r => r.check_level === 'core')
+    const checkErrors = allResults
+      .filter(r => r.value && typeof r.value === 'object' && 'error' in (r.value as Record<string, unknown>))
+      .map(r => ({ checkKey: r.check_key, message: String((r.value as Record<string, unknown>).error) }))
+    const worstFail = coreResults.find(r => r.status === 'fail')
+    const worstWarn = coreResults.find(r => r.status === 'warn')
+    const topSignal = worstFail?.message ?? worstWarn?.message ?? 'All core checks passing'
+
+    // Per-project client alert — separate from the owner digest, only to
+    // the address configured on this specific project, only about this
+    // one project's data.
+    if (scoreTotal < project.alert_threshold && project.alert_email) {
+      const { data: lastAlert } = await supabase.from('alert_log')
+        .select('sent_at').eq('project_id', project.id)
+        .order('sent_at', { ascending: false }).limit(1).single()
+      const lastDate = lastAlert?.sent_at ? new Date(lastAlert.sent_at).toISOString().split('T')[0] : null
+      if (lastDate !== runDate) {
+        await supabase.from('alert_log').insert({ project_id: project.id, run_id: run.id, score: scoreTotal })
+
+        const { data: trendRaw } = await supabase
+          .from('dqs_runs')
+          .select('run_date, score_total')
+          .eq('project_id', project.id)
+          .eq('status', 'completed')
+          .order('run_date', { ascending: false })
+          .limit(10)
+        const trend = (trendRaw ?? [])
+          .filter((r: { run_date: string; score_total: number | null }) => r.score_total != null)
+          .reverse()
+          .map((r: { run_date: string; score_total: number }) => ({ runDate: r.run_date, score: r.score_total }))
+
+        const failing = allResults.filter(r => r.status === 'fail').map(r => ({ checkKey: r.check_key, message: r.message }))
+        const warning = allResults.filter(r => r.status === 'warn').map(r => ({ checkKey: r.check_key, message: r.message }))
+        const passing = allResults.filter(r => r.status === 'pass')
+
+        await sendEmail({
+          to: project.alert_email,
+          ...renderClientAlertEmail({
+            projectId: project.id,
+            projectName: project.name,
+            shareToken: project.share_token,
+            scoreTotal: finalScore,
+            prevScore: prevRun?.score_total ?? null,
+            alertThreshold: project.alert_threshold,
+            trend,
+            failing,
+            warning,
+            passingCount: passing.length,
+            passingLabels: passing.slice(0, 10).map(r => r.check_key),
+          }),
+        })
+      }
+    }
+
+    return {
+      projectId: project.id,
+      processed: true,
+      digestEntry: {
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'completed',
+        checkErrors,
+        scoreTotal: finalScore,
+        prevScore: prevRun?.score_total ?? null,
+        topSignal,
+        belowThreshold: finalScore < project.alert_threshold,
+        alertThreshold: project.alert_threshold,
+      },
+    }
+  } catch (e: any) {
+    await supabase.from('dqs_runs').update({ status: 'failed', error_message: e.message }).eq('id', run.id)
+    return {
+      projectId: project.id,
+      processed: false,
+      errorMessage: e.message,
+      digestEntry: {
+        projectId: project.id,
+        name: project.name,
+        runStatus: 'failed',
+        errorMessage: e.message,
+        checkErrors: [],
+        scoreTotal: null,
+        prevScore: null,
+        topSignal: '',
+        belowThreshold: true,
+        alertThreshold: project.alert_threshold,
+      },
+    }
+  }
+}
+
+// ============================================================
 // ROUTE HANDLERS
 // ============================================================
 // GET — wywoływany przez Vercel Cron (codziennie 23:00 UTC, bez body).
@@ -635,203 +882,17 @@ async function runWorker(projectId: string | null) {
   prevDateObj.setDate(prevDateObj.getDate() - 1)
   const prevDate = prevDateObj.toISOString().split('T')[0]
 
-  for (const project of (projects ?? []) as Project[]) {
-    // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
-    // per-projekt na podstawie jego właściciela — każdy projekt może
-    // należeć do innego konta Google z dostępem do innych property, więc
-    // wspólny token dla całego batcha dawałby błędne 403 dla cudzych
-    // projektów. Gdy właściciel nie ma tokenu (np. manualny run bez sesji
-    // i bez owner_id), spada na domyślne konto organizacji.
-    // Nie używamy session.provider_token — Supabase nie odświeża tego pola
-    // po wymianie kodu OAuth, więc po ~1h staje się nieaktualne mimo że
-    // sesja logowania w aplikacji wciąż wygląda jako aktywna.
-    const accessToken = await getGa4Token(project.owner_id ?? undefined)
+  const outcomes = await runWithConcurrency(
+    (projects ?? []) as Project[],
+    WORKER_CONCURRENCY,
+    project => processProject(supabase, project, runDate, prevDate)
+  )
 
-    if (!accessToken) {
-      errors[project.id] = 'No GA4 token — owner needs to sign in with Google'
-      await supabase.from('dqs_runs').upsert({
-        project_id: project.id,
-        run_date: runDate,
-        status: 'failed',
-        score_total: null,
-        error_message: errors[project.id],
-      }, { onConflict: 'project_id,run_date' })
-      digestEntries.push({
-        projectId: project.id,
-        name: project.name,
-        runStatus: 'failed',
-        errorMessage: errors[project.id],
-        checkErrors: [],
-        scoreTotal: null,
-        prevScore: null,
-        topSignal: '',
-        belowThreshold: true,
-        alertThreshold: project.alert_threshold,
-      })
-      continue
-    }
-
-    // Create / update run
-    const { data: run } = await supabase.from('dqs_runs').upsert({
-      project_id: project.id,
-      run_date: runDate,
-      status: 'running',
-      score_total: null,
-      error_message: null,
-    }, { onConflict: 'project_id,run_date' }).select().single()
-
-    if (!run) continue
-
-    try {
-      // Check if we already have a better score today — skip if so
-      const { data: existingRun } = await supabase
-        .from('dqs_runs')
-        .select('id, score_total')
-        .eq('project_id', project.id)
-        .eq('run_date', runDate)
-        .eq('status', 'completed')
-        .single()
-
-      // Fetch ecommerce + custom events via RPC (bypasses schema cache)
-      const [{ data: ecomRaw }, { data: customRaw }, { data: paramRaw }] = await Promise.all([
-        supabase.rpc('get_ecommerce_config', { p_project_id: project.id }),
-        supabase.rpc('get_custom_event_checks', { p_project_id: project.id }),
-        supabase.rpc('get_parameter_checks',    { p_project_id: project.id }),
-      ])
-      const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : (typeof ecomRaw === 'string' ? JSON.parse(ecomRaw) : [])
-      const ecomEvents = ecomArr.filter((e: any) => e.is_enabled).map((e: any) => e.event_name as string)
-      const customArr = Array.isArray(customRaw) ? customRaw : (typeof customRaw === 'string' ? JSON.parse(customRaw) : [])
-      const customEventChecks = customArr.filter((e: any) => e.is_enabled !== false)
-      const paramArr    = Array.isArray(paramRaw) ? paramRaw : (typeof paramRaw === 'string' ? JSON.parse(paramRaw) : [])
-      const paramChecks = paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
-
-      const [results, paramResults] = await Promise.all([
-        runAllChecks(project, accessToken, ecomEvents, customEventChecks),
-        checkParameters(project, accessToken, paramChecks, (() => {
-          const _today = new Date()
-          const _fmt = (d: Date) => d.toISOString().split('T')[0]
-          const _endC = new Date(_today); _endC.setDate(_today.getDate() - 1)
-          const _startC = new Date(_endC); _startC.setDate(_endC.getDate() - 6)
-          const _endP = new Date(_startC); _endP.setDate(_startC.getDate() - 1)
-          const _startP = new Date(_endP); _startP.setDate(_endP.getDate() - 6)
-          return { current: { startDate: _fmt(_startC), endDate: _fmt(_endC) }, prev: { startDate: _fmt(_startP), endDate: _fmt(_endP) } }
-        })()),
-      ])
-      const allResults = [...results, ...paramResults]
-      // Normalizacja do rzeczywistej sumy wag checków, które się wykonały
-      // w tym przebiegu — 10 zawsze aktywnych checków sumuje się do 100,
-      // ale Ecommerce/Custom events/Parameter checks są doliczane tylko
-      // gdy dany projekt ma je skonfigurowane, więc "100%" musi być liczone
-      // względem tego, co faktycznie brało udział w tym przebiegu, a nie
-      // względem sztywnej sumy — inaczej wynik przekraczałby 100.
-      const totalWeight = allResults.reduce((s, r) => s + r.weight, 0)
-      const rawScore = allResults.reduce((s, r) => s + r.score, 0)
-      const scoreTotal = totalWeight > 0 ? +((rawScore / totalWeight) * 100).toFixed(2) : 0
-
-      // Keep best score of the day
-      const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
-      const finalScore = isBetter ? scoreTotal : (existingRun!.score_total ?? scoreTotal)
-      if (isBetter) {
-        await supabase.from('dqs_results').delete().eq('run_id', run.id)
-        await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
-        await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
-      } else {
-        // Score not better — mark run as completed but keep old results
-        await supabase.from('dqs_runs').update({ status: 'completed', score_total: existingRun!.score_total }).eq('id', run.id)
-      }
-
-      processed.push(project.id)
-
-      // Yesterday's score, for the WoW delta shown in both email types
-      const { data: prevRun } = await supabase
-        .from('dqs_runs')
-        .select('score_total')
-        .eq('project_id', project.id)
-        .eq('run_date', prevDate)
-        .eq('status', 'completed')
-        .maybeSingle()
-
-      const coreResults = allResults.filter(r => r.check_level === 'core')
-      const checkErrors = allResults
-        .filter(r => r.value && typeof r.value === 'object' && 'error' in (r.value as Record<string, unknown>))
-        .map(r => ({ checkKey: r.check_key, message: String((r.value as Record<string, unknown>).error) }))
-      const worstFail = coreResults.find(r => r.status === 'fail')
-      const worstWarn = coreResults.find(r => r.status === 'warn')
-      const topSignal = worstFail?.message ?? worstWarn?.message ?? 'All core checks passing'
-
-      digestEntries.push({
-        projectId: project.id,
-        name: project.name,
-        runStatus: 'completed',
-        checkErrors,
-        scoreTotal: finalScore,
-        prevScore: prevRun?.score_total ?? null,
-        topSignal,
-        belowThreshold: finalScore < project.alert_threshold,
-        alertThreshold: project.alert_threshold,
-      })
-
-      // Per-project client alert — separate from the owner digest, only to
-      // the address configured on this specific project, only about this
-      // one project's data.
-      if (scoreTotal < project.alert_threshold && project.alert_email) {
-        const { data: lastAlert } = await supabase.from('alert_log')
-          .select('sent_at').eq('project_id', project.id)
-          .order('sent_at', { ascending: false }).limit(1).single()
-        const lastDate = lastAlert?.sent_at ? new Date(lastAlert.sent_at).toISOString().split('T')[0] : null
-        if (lastDate !== runDate) {
-          await supabase.from('alert_log').insert({ project_id: project.id, run_id: run.id, score: scoreTotal })
-
-          const { data: trendRaw } = await supabase
-            .from('dqs_runs')
-            .select('run_date, score_total')
-            .eq('project_id', project.id)
-            .eq('status', 'completed')
-            .order('run_date', { ascending: false })
-            .limit(10)
-          const trend = (trendRaw ?? [])
-            .filter((r: { run_date: string; score_total: number | null }) => r.score_total != null)
-            .reverse()
-            .map((r: { run_date: string; score_total: number }) => ({ runDate: r.run_date, score: r.score_total }))
-
-          const failing = allResults.filter(r => r.status === 'fail').map(r => ({ checkKey: r.check_key, message: r.message }))
-          const warning = allResults.filter(r => r.status === 'warn').map(r => ({ checkKey: r.check_key, message: r.message }))
-          const passing = allResults.filter(r => r.status === 'pass')
-
-          await sendEmail({
-            to: project.alert_email,
-            ...renderClientAlertEmail({
-              projectId: project.id,
-              projectName: project.name,
-              shareToken: project.share_token,
-              scoreTotal: finalScore,
-              prevScore: prevRun?.score_total ?? null,
-              alertThreshold: project.alert_threshold,
-              trend,
-              failing,
-              warning,
-              passingCount: passing.length,
-              passingLabels: passing.slice(0, 10).map(r => r.check_key),
-            }),
-          })
-        }
-      }
-    } catch (e: any) {
-      await supabase.from('dqs_runs').update({ status: 'failed', error_message: e.message }).eq('id', run.id)
-      errors[project.id] = e.message
-      digestEntries.push({
-        projectId: project.id,
-        name: project.name,
-        runStatus: 'failed',
-        errorMessage: e.message,
-        checkErrors: [],
-        scoreTotal: null,
-        prevScore: null,
-        topSignal: '',
-        belowThreshold: true,
-        alertThreshold: project.alert_threshold,
-      })
-    }
+  for (const outcome of outcomes) {
+    if (!outcome) continue
+    if (outcome.processed) processed.push(outcome.projectId)
+    if (outcome.errorMessage) errors[outcome.projectId] = outcome.errorMessage
+    digestEntries.push(outcome.digestEntry)
   }
 
   // Owner digest — only for the automatic (cron) pass across all projects,
