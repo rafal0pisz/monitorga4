@@ -14,11 +14,11 @@ export const LANDING_BASE_STYLES = `
   .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
 
   .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(35,43,49,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .lp-nav-row { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 12px; }
-  .lp-nav-links { display: flex; align-items: center; gap: 30px; }
-  .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: rgba(255,255,255,0.68); }
-  .lp-nav-links a:hover { color: #fff; }
-  .lp-nav-cta { display: flex; align-items: center; gap: 18px; }
+  .lp-nav-row { display: flex; align-items: center; height: 68px; gap: 12px; }
+  .lp-nav-links { display: flex; align-items: center; gap: 30px; margin-left: 40px; }
+  .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: #fff; }
+  .lp-nav-links a:hover { color: rgba(255,255,255,0.8); }
+  .lp-nav-cta { display: flex; align-items: center; gap: 18px; margin-left: auto; }
   .lp-nav-cta .login-link { font-size: 14px; font-weight: 600; text-decoration: none; color: #fff; white-space: nowrap; }
   .lp-nav-cta .btn--primary { background: #fffd73; color: #3a3800; }
   .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }

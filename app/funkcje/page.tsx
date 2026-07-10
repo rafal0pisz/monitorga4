@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
+import FeatureSubnav from '@/components/marketing/FeatureSubnav'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 export const metadata = {
@@ -41,10 +42,31 @@ export default async function FunkcjePage() {
         .fx-hero p { font-size: 15.5px; color: #5b6570; max-width: 540px; margin: 0 auto; line-height: 1.6; }
 
         .fx-subnav { position: sticky; top: 68px; z-index: 20; background: rgba(255,255,255,0.94); backdrop-filter: blur(6px); border-bottom: 1px solid #e2e6e8; }
-        .fx-subnav-row { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0; scrollbar-width: none; }
+        .fx-subnav-wrap { position: relative; }
+        .fx-subnav-row { display: flex; gap: 6px; overflow-x: auto; padding: 12px 24px; scrollbar-width: none; }
         .fx-subnav-row::-webkit-scrollbar { display: none; }
         .fx-subnav a { flex-shrink: 0; font-size: 13px; font-weight: 500; color: #5b6570; text-decoration: none; padding: 7px 14px; border-radius: 999px; border: 1px solid #e2e6e8; white-space: nowrap; }
         .fx-subnav a:hover { border-color: #232b31; color: #232b31; }
+
+        .fx-subnav-wrap::before, .fx-subnav-wrap::after {
+          content: ''; position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none;
+          opacity: 0; transition: opacity 0.2s; z-index: 1;
+        }
+        .fx-subnav-wrap::before { left: 0; background: linear-gradient(90deg, #fdfdfd, rgba(253,253,253,0)); }
+        .fx-subnav-wrap::after { right: 0; background: linear-gradient(270deg, #fdfdfd, rgba(253,253,253,0)); }
+        .fx-subnav-wrap.can-left::before { opacity: 1; }
+        .fx-subnav-wrap.can-right::after { opacity: 1; }
+
+        .fx-subnav-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+          width: 26px; height: 26px; border-radius: 50%; border: 1px solid #e2e6e8;
+          background: #fff; color: #5b6570; font-size: 14px; line-height: 1;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          box-shadow: 0 1px 4px rgba(35,43,49,0.14); padding: 0;
+        }
+        .fx-subnav-arrow:hover { border-color: #232b31; color: #232b31; }
+        .fx-subnav-arrow--left { left: 6px; }
+        .fx-subnav-arrow--right { right: 6px; }
 
         .fx-feature { padding: 76px 0; border-bottom: 1px solid #e2e6e8; }
         .fx-feature:nth-child(even) { background: #f3f6f7; }
@@ -125,9 +147,7 @@ export default async function FunkcjePage() {
 
         <div className="fx-subnav">
           <div className="wrap">
-            <div className="fx-subnav-row">
-              {SUBNAV.map(s => <a key={s.href} href={s.href}>{s.label}</a>)}
-            </div>
+            <FeatureSubnav items={SUBNAV} />
           </div>
         </div>
 
