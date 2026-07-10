@@ -1,7 +1,17 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { planLimit, planName, planById } from '@/lib/billing/plans'
+import { getStripe } from '@/lib/stripe/client'
 import BillingActions from '@/components/billing/BillingActions'
 import Link from 'next/link'
+
+interface InvoiceRow {
+  id: string
+  number: string | null
+  date: string
+  amount: string
+  status: string
+  pdfUrl: string | null
+}
 
 export default async function BillingPage() {
   const session = await createClient()
@@ -13,6 +23,7 @@ export default async function BillingPage() {
   let subscriptionStatus: string | null = null
   let currentPeriodEnd: string | null = null
   let projectCount = 0
+  let invoices: InvoiceRow[] = []
 
   if (!bypass && user) {
     const { data: profile } = await supabase
@@ -26,6 +37,23 @@ export default async function BillingPage() {
 
     const { count } = await supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id)
     projectCount = count ?? 0
+
+    if (profile?.stripe_customer_id) {
+      try {
+        const list = await getStripe().invoices.list({ customer: profile.stripe_customer_id, limit: 12 })
+        invoices = list.data.map(inv => ({
+          id: inv.id ?? '',
+          number: inv.number,
+          date: new Date(inv.created * 1000).toLocaleDateString('pl-PL'),
+          amount: `${(inv.total / 100).toFixed(2)} ${inv.currency.toUpperCase()}`,
+          status: inv.status ?? 'unknown',
+          pdfUrl: inv.invoice_pdf ?? null,
+        }))
+      } catch {
+        // Brak faktur lub chwilowy problem z API Stripe — sekcja po prostu
+        // pokaże się jako pusta, nie blokujemy renderowania reszty strony.
+      }
+    }
   }
 
   const limit = planLimit(planId)
@@ -62,6 +90,25 @@ export default async function BillingPage() {
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 16 }}>
           Nie masz jeszcze wykupionego planu. <Link href="/cennik" style={{ color: '#16a34a', fontWeight: 500 }}>Zobacz cennik</Link>
         </p>
+      )}
+
+      {invoices.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, margin: '0 0 12px', color: 'var(--color-text-primary)' }}>Faktury</h2>
+          <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
+            {invoices.map((inv, i) => (
+              <div key={inv.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '11px 20px', borderBottom: i < invoices.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                <span style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', width: 90, flexShrink: 0 }}>{inv.date}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-primary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.number ?? inv.id}</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', flexShrink: 0 }}>{inv.amount}</span>
+                <span style={{ fontSize: 11, color: inv.status === 'paid' ? '#16a34a' : 'var(--color-text-secondary)', flexShrink: 0, width: 60 }}>{inv.status}</span>
+                {inv.pdfUrl ? (
+                  <a href={inv.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: '#16a34a', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>Pobierz ↓</a>
+                ) : <span style={{ width: 60, flexShrink: 0 }} />}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )

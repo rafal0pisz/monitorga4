@@ -36,9 +36,15 @@ export async function POST(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
+      // Pozwala kupującemu wpisać nazwę firmy, adres i NIP/VAT ID podczas
+      // płatności — bez tego Stripe generuje fakturę tylko na e-mail, bez
+      // możliwości wystawienia jej na firmę.
+      customer_update: { name: 'auto', address: 'auto' },
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/dashboard/billing?checkout=success`,
+      success_url: `${appUrl}/dashboard/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/cennik?checkout=cancelled`,
       client_reference_id: user.id,
       metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
