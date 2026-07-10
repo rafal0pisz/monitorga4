@@ -18,7 +18,7 @@ export default function PrivacyPage() {
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Polityka prywatności</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 8 lipca 2026</p>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 10 lipca 2026</p>
 
         <h2 style={h2}>1. Administrator danych</h2>
         <p style={p}>
@@ -90,6 +90,19 @@ export default function PrivacyPage() {
           <li style={li}><strong>Resend</strong> — dostarczanie wiadomości e-mail (alerty, podsumowania) wysyłanych przez AlertGA4.</li>
         </ul>
         <p style={p}>Żaden z tych dostawców nie jest uprawniony do wykorzystywania Twoich danych na własne potrzeby. Dane mogą być przetwarzane na serwerach zlokalizowanych poza Europejskim Obszarem Gospodarczym przez wyżej wymienionych dostawców, w oparciu o mechanizmy zgodne z RODO (m.in. standardowe klauzule umowne).</p>
+        <p style={p}>
+          Nasze wykorzystanie i przekazywanie informacji uzyskanych za pośrednictwem Google API jest zgodne z{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" style={{ color: '#16a34a' }}>Google API Services User Data Policy</a>,
+          w tym z wymogami Limited Use. Oznacza to w szczególności, że dane odczytane z Twojej usługi GA4 wykorzystujemy
+          wyłącznie do funkcji opisanych w niniejszej polityce, nie wykorzystujemy ich do trenowania modeli uczenia
+          maszynowego ani do celów reklamowych, nie sprzedajemy ich ani nie udostępniamy nieuprawnionym stronom
+          trzecim, a dostęp do nich mają wyłącznie osoby, którym jest to niezbędne do utrzymania usługi.
+        </p>
+        <p style={{ ...p, fontStyle: 'italic', color: '#6b7280' }}>
+          Our use and transfer of information received from Google APIs to any other app will adhere to the{' '}
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" style={{ color: '#16a34a' }}>Google API Services User Data Policy</a>,
+          including the Limited Use requirements.
+        </p>
 
         <h2 style={h2}>6. Okres przechowywania i usuwanie danych</h2>
         <p style={p}>
