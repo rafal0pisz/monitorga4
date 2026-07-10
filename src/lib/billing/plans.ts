@@ -18,8 +18,8 @@ export const PLANS: Plan[] = [
     id: 'individual',
     name: 'Individual',
     projectLimit: 3,
-    priceMonthlyPLN: 49,
-    priceYearlyPLN: 490,
+    priceMonthlyPLN: 29,
+    priceYearlyPLN: 290,
     stripePriceId: {
       monthly: process.env.STRIPE_PRICE_INDIVIDUAL_MONTHLY,
       yearly: process.env.STRIPE_PRICE_INDIVIDUAL_YEARLY,
@@ -29,8 +29,8 @@ export const PLANS: Plan[] = [
     id: 'pro',
     name: 'Pro',
     projectLimit: 10,
-    priceMonthlyPLN: 149,
-    priceYearlyPLN: 1490,
+    priceMonthlyPLN: 99,
+    priceYearlyPLN: 990,
     stripePriceId: {
       monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
       yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
