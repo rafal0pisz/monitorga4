@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
+import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const STEPS = [
@@ -144,7 +145,6 @@ export default async function HomePage() {
         @media (max-width: 940px) { .lp-hero-grid { grid-template-columns: 1fr; gap: 40px; } }
         .lp-hero h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.16; letter-spacing: -0.015em; margin: 0 0 20px; }
         .lp-hero .lede { font-size: 17px; color: #5b6570; line-height: 1.6; max-width: 46ch; margin-bottom: 28px; }
-        .lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
         .lp .trust-line { font-size: 12.5px; color: #8b939a; }
 
         .readout { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; }
@@ -239,24 +239,6 @@ export default async function HomePage() {
         .lp-faq-item summary::after { content: '+'; font-size: 20px; font-weight: 400; color: #8b939a; flex-shrink: 0; }
         .lp-faq-item[open] summary::after { content: '\\2212'; }
         .lp-faq-item p { color: #5b6570; font-size: 14.5px; line-height: 1.65; margin: 0 0 22px; max-width: 62ch; }
-
-        /* Specificity note: plain ".lp-cta-band" (0,1,0) was silently losing
-           to ".lp section" (0,1,1) above, since this class sits on an actual
-           <section> — every previous padding bump here was a no-op. Scoping
-           under ".lp" brings it to (0,2,0), which wins outright. */
-        .lp .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 58px 0 171px; position: relative; overflow: hidden; }
-        .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 117px; }
-        .lp-cta-marker { position: absolute; left: 53.7%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        @media (max-width: 640px) { .lp .lp-cta-band { padding: 40px 0 135px; } }
-        .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
-        .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
-        @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
-        .lp-cta-marker-label { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; color: #ffcccc; background: rgba(255,90,90,0.15); border: 1px solid rgba(255,90,90,0.35); padding: 3px 9px; border-radius: 5px; white-space: nowrap; }
-        .lp-cta-band h2 { font-size: clamp(21px, 3vw, 29px); margin-bottom: 12px; position: relative; }
-        .lp-cta-band p { color: rgba(255,255,255,0.65); margin-bottom: 26px; font-size: 15px; position: relative; }
-        .lp-cta-band .btn--primary { background: #fffd73; color: #3a3800; position: relative; }
-        .lp-cta-band .btn--ghost { border-color: rgba(255,255,255,0.3); color: #fff; position: relative; }
-        @media (prefers-reduced-motion: reduce) { .lp-cta-marker-dot::after { animation: none; } }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
@@ -491,26 +473,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* CTA końcowe */}
-        <section className="lp-cta-band">
-          <svg className="lp-cta-chart" viewBox="0 0 1080 117" preserveAspectRatio="none" width="100%" height="117" aria-hidden="true">
-            <polygon points="0,47 100,45 200,50 300,42 400,47 500,41 540,44 580,105 630,102 720,78 820,61 920,50 1020,44 1080,41 1080,117 0,117" fill="#fffd73" opacity="0.04" />
-            <polyline points="0,47 100,45 200,50 300,42 400,47 500,41 540,44 580,105 630,102 720,78 820,61 920,50 1020,44 1080,41"
-              fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div className="lp-cta-marker">
-            <span className="lp-cta-marker-label">AlertGA4</span>
-            <span className="lp-cta-marker-dot" />
-          </div>
-          <div className="wrap wrap--narrow">
-            <h2>Zacznij monitorować poprawność danych w GA4</h2>
-            <p>Logowanie kontem Google zajmuje mniej niż minutę.</p>
-            <div className="lp-hero-ctas" style={{ justifyContent: 'center', marginBottom: 0 }}>
-              <Link href={primaryCta.href} className="btn btn--primary">{primaryCta.label}</Link>
-              {secondaryCta && <Link href={secondaryCta.href} className="btn btn--ghost">{secondaryCta.label}</Link>}
-            </div>
-          </div>
-        </section>
+        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
       </main>
 
       <LandingFooter />

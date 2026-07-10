@@ -67,7 +67,6 @@ export default async function KontaktPage() {
         <div className="wrap kontakt-grid">
           <div className="kontakt-info-card">
             <h3>Napisz bezpośrednio</h3>
-            <p>Odpowiadamy zwykle w ciągu jednego dnia roboczego.</p>
             <a className="email" href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
             <div className="kontakt-info-addr">
               Bettersteps Sp. z o.o.<br />

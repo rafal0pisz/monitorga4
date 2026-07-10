@@ -17,8 +17,9 @@ export default function LandingFooter() {
           <h3>Produkt</h3>
           <a href="/#jak-to-dziala">Proces</a>
           <a href="/#co-sprawdzamy">Monitoring</a>
-          <Link href="/funkcje">Funkcje</Link>
           <a href="/#dla-kogo">Dla kogo</a>
+          <Link href="/funkcje">Funkcje</Link>
+          <Link href="/kontakt">Kontakt</Link>
         </div>
         <div className="lp-footer-col">
           <h3>Prawne</h3>

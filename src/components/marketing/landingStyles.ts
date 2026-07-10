@@ -50,6 +50,26 @@ export const LANDING_BASE_STYLES = `
   .lp .section-head p { color: #5b6570; font-size: 15.5px; margin-top: 10px; line-height: 1.6; }
   @media (max-width: 640px) { .lp section { padding: 44px 0; } }
 
+  .lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  /* Specificity note: plain ".lp-cta-band" (0,1,0) was silently losing to
+     ".lp section" (0,1,1), since this class sits on an actual <section> —
+     every previous padding bump here was a no-op. Scoping under ".lp"
+     brings it to (0,2,0), which wins outright. */
+  .lp .lp-cta-band { background: #232b31; color: #fff; text-align: center; padding: 58px 0 171px; position: relative; overflow: hidden; }
+  .lp-cta-chart { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 117px; }
+  .lp-cta-marker { position: absolute; left: 53.7%; bottom: 12px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  @media (max-width: 640px) { .lp .lp-cta-band { padding: 40px 0 135px; } }
+  .lp-cta-marker-dot { width: 9px; height: 9px; border-radius: 50%; background: #ff5a5a; position: relative; }
+  .lp-cta-marker-dot::after { content: ""; position: absolute; inset: -7px; border-radius: 50%; border: 1.5px solid #ff5a5a; opacity: 0.6; animation: lpCtaRing 1.6s ease-out infinite; }
+  @keyframes lpCtaRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(2.2); opacity: 0; } }
+  .lp-cta-marker-label { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; color: #ffcccc; background: rgba(255,90,90,0.15); border: 1px solid rgba(255,90,90,0.35); padding: 3px 9px; border-radius: 5px; white-space: nowrap; }
+  .lp-cta-band h2 { font-size: clamp(21px, 3vw, 29px); margin-bottom: 12px; position: relative; }
+  .lp-cta-band p { color: rgba(255,255,255,0.65); margin-bottom: 26px; font-size: 15px; position: relative; }
+  .lp-cta-band .btn--primary { background: #fffd73; color: #3a3800; position: relative; }
+  .lp-cta-band .btn--ghost { border-color: rgba(255,255,255,0.3); color: #fff; position: relative; }
+  @media (prefers-reduced-motion: reduce) { .lp-cta-marker-dot::after { animation: none; } }
+
   .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); }
   .lp-footer-body { padding: 48px 0 30px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
   @media (max-width: 780px) { .lp-footer-body { grid-template-columns: 1fr 1fr; } }

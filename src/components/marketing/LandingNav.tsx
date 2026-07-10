@@ -19,8 +19,9 @@ export default function LandingNav({
         <div className="lp-nav-links">
           <a href="/#jak-to-dziala">Proces</a>
           <a href="/#co-sprawdzamy">Monitoring</a>
-          <Link href="/funkcje">Funkcje</Link>
           <a href="/#dla-kogo">Dla kogo</a>
+          <Link href="/funkcje">Funkcje</Link>
+          <Link href="/kontakt">Kontakt</Link>
         </div>
         <div className="lp-nav-cta">
           {secondaryCta && <Link href={secondaryCta.href} className="login-link">{secondaryCta.label}</Link>}

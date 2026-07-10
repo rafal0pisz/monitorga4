@@ -1,7 +1,7 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
+import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 export const metadata = {
@@ -110,9 +110,6 @@ export default async function FunkcjePage() {
         .wiz-tag { font-size: 9.5px; padding: 1px 6px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-weight: 500; }
         .wiz-vol { margin-left: auto; font-family: var(--font-mono), monospace; font-size: 11px; color: #8b939a; }
 
-        .fx-cta { padding: 64px 0; text-align: center; background: #232b31; }
-        .fx-cta h2 { color: #fff; font-size: clamp(21px, 3vw, 28px); margin-bottom: 10px; }
-        .fx-cta p { color: rgba(255,255,255,0.6); font-size: 14.5px; margin-bottom: 24px; }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
@@ -347,13 +344,7 @@ export default async function FunkcjePage() {
           </div>
         </section>
 
-        <section className="fx-cta">
-          <div className="wrap wrap--narrow">
-            <h2>Zacznij monitorować poprawność danych w GA4</h2>
-            <p>Logowanie kontem Google zajmuje mniej niż minutę.</p>
-            <Link href={primaryCta.href} className="btn btn--primary" style={{ background: '#fffd73', color: '#3a3800' }}>{primaryCta.label}</Link>
-          </div>
-        </section>
+        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
       </main>
 
       <LandingFooter />
