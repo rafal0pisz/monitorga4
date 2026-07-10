@@ -90,6 +90,13 @@ const AUDIENCE = [
   { t: 'Freelancerzy', d: 'Obsługujesz kilku klientów naraz i nie masz czasu ręcznie sprawdzać każdej usługi GA4. AlertGA4 robi to za Ciebie każdego dnia.' },
 ]
 
+const FAQ_ITEMS = [
+  { q: 'Czy AlertGA4 może zmienić coś w mojej usłudze GA4?', a: 'Nie. Dostęp jest wyłącznie do odczytu, dokładnie jak rola „Viewer" w GA4. AlertGA4 nigdy nie modyfikuje konfiguracji, zdarzeń ani danych źródłowych.' },
+  { q: 'Ile trwa wdrożenie?', a: 'Logujesz się kontem Google, wybierasz usługę GA4, do której masz dostęp, i od razu widzisz pierwszy zestaw sprawdzeń. Bez zmian w kodzie strony czy w GTM.' },
+  { q: 'Czy to działa dla stron bez sprzedaży online?', a: 'Tak. Poza lejkiem e-commerce sprawdzamy też zdarzenia leadowe, ruch, self-referral i anomalie botów, niezależnie od tego, czy usługa sprzedaje coś bezpośrednio.' },
+  { q: 'Co się stanie, gdy stracę dostęp do konta Google?', a: 'Jeśli automatyczne sprawdzenia są włączone, a połączenie z Google wygaśnie lub zostanie cofnięte, dostaniesz e-mail z prośbą o ponowne zalogowanie, zanim zorientujesz się, że coś przestało działać.' },
+]
+
 const TREND_POINTS = '8,49.8 49.9,42.5 91.7,55.5 133.5,68.5 175.4,78.3 217.2,94.5 259.1,104.3 300.9,110.8 342.8,97.8 384.6,78.3 426.5,62 468.3,45.8 510.2,36 552,29.5'
 const TREND_AREA = `${TREND_POINTS} 552,140 8,140`
 
@@ -268,6 +275,14 @@ export default async function HomePage() {
         .lp-audience-card h3 { font-size: 15.5px; margin-bottom: 10px; }
         .lp-audience-card p { font-size: 13.5px; color: #5b6570; line-height: 1.65; }
 
+        .lp-faq-list { max-width: 720px; }
+        .lp-faq-item { border-bottom: 1px solid #e2e6e8; }
+        .lp-faq-item summary { cursor: pointer; list-style: none; padding: 20px 0; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .lp-faq-item summary::-webkit-details-marker { display: none; }
+        .lp-faq-item summary::after { content: '+'; font-size: 20px; font-weight: 400; color: #8b939a; flex-shrink: 0; }
+        .lp-faq-item[open] summary::after { content: '\\2212'; }
+        .lp-faq-item p { color: #5b6570; font-size: 14.5px; line-height: 1.65; margin: 0 0 22px; max-width: 62ch; }
+
         /* Specificity note: plain ".lp-cta-band" (0,1,0) was silently losing
            to ".lp section" (0,1,1) above, since this class sits on an actual
            <section> — every previous padding bump here was a no-op. Scoping
@@ -440,7 +455,7 @@ export default async function HomePage() {
           <div className="wrap wrap--narrow">
             <div className="section-head">
               <h2>Alerty, które dbają o kondycję danych</h2>
-              <p>Reaguj od razu na możliwe błędy na koncie. Bądź na bieżąco z alarmującymi zmianami w danych i reaguj od razu.</p>
+              <p>Śledź na bieżąco wszelkie niepokojące zmiany w danych i niezwłocznie reaguj na potencjalne błędy na koncie.</p>
             </div>
             <div className="lp-log">
               {INCIDENTS.map(inc => (
@@ -529,6 +544,23 @@ export default async function HomePage() {
                   <h3>{a.t}</h3>
                   <p>{a.d}</p>
                 </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section id="faq" className="section--dim">
+          <div className="wrap wrap--narrow">
+            <div className="section-head">
+              <h2>Najczęstsze pytania</h2>
+            </div>
+            <div className="lp-faq-list">
+              {FAQ_ITEMS.map((f, i) => (
+                <details className="lp-faq-item" key={f.q} open={i === 0}>
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
               ))}
             </div>
           </div>
