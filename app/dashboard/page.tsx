@@ -18,8 +18,8 @@ export default async function DashboardPage() {
 
   let limit: number | null = null
   if (!bypass && user) {
-    const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
-    limit = planLimit(profile?.plan_id)
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    if (!profileErr) limit = planLimit(profile?.plan_id)
   }
   const atLimit = limit != null && list.length >= limit
   return (
