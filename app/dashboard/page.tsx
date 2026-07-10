@@ -1,7 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
-import { planLimit } from '@/lib/billing/plans'
+import { planLimit, planName } from '@/lib/billing/plans'
 import Link from 'next/link'
 export default async function DashboardPage() {
   const session = await createClient()
@@ -17,16 +17,25 @@ export default async function DashboardPage() {
   const critical = list.filter(p => ['critical','warning'].includes(getScoreGrade(p.last_score))).length
 
   let limit: number | null = null
+  let plan: string | null = null
   if (!bypass && user) {
     const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
-    if (!profileErr) limit = planLimit(profile?.plan_id)
+    if (!profileErr) {
+      limit = planLimit(profile?.plan_id)
+      plan = planName(profile?.plan_id)
+    }
   }
   const atLimit = limit != null && list.length >= limit
   return (
     <div style={{ maxWidth: 700 }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Overview</h1>
-        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>{list.length} monitored GA4 properties</p>
+      <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Overview</h1>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>{list.length} monitored GA4 properties</p>
+        </div>
+        {plan && (
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 6, padding: '4px 10px', whiteSpace: 'nowrap' }}>Plan: {plan}</span>
+        )}
       </div>
       {list.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
