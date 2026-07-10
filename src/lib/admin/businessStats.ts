@@ -1,19 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/server'
 
-export interface BelowThresholdProject {
-  id: string
-  name: string
-  score: number
-  threshold: number
-}
-
 export interface AdminStats {
   workerRunsCompleted30d: number
   workerRunsFailed30d: number
   disconnectedOwners: number
   avgScore: number | null
   medianScore: number | null
-  belowThreshold: BelowThresholdProject[]
   autoRunEnabled: number
   autoRunDisabled: number
   customEventsAdoption: number
@@ -40,7 +32,7 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
     { data: alertsRaw },
   ] = await Promise.all([
     admin.from('dqs_runs').select('status').gte('run_date', thirtyDaysAgo),
-    admin.from('projects').select('id, name, owner_id, status, auto_run, alert_threshold'),
+    admin.from('projects').select('id, owner_id, status, auto_run'),
     admin.from('custom_event_checks').select('project_id'),
     admin.from('ecommerce_config').select('project_id'),
     admin.from('parameter_checks').select('project_id'),
@@ -51,7 +43,7 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
   const workerRunsCompleted30d = runs.filter(r => r.status === 'completed').length
   const workerRunsFailed30d = runs.filter(r => r.status === 'failed').length
 
-  const projects = (allProjects ?? []) as { id: string; name: string; owner_id: string | null; status: string; auto_run: boolean | null; alert_threshold: number }[]
+  const projects = (allProjects ?? []) as { id: string; owner_id: string | null; status: string; auto_run: boolean | null }[]
   const ownerIds = [...new Set(projects.map(p => p.owner_id).filter((id): id is string => !!id))]
 
   let disconnectedOwners = 0
@@ -66,7 +58,6 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
 
   let avgScore: number | null = null
   let medianScore: number | null = null
-  const belowThreshold: BelowThresholdProject[] = []
 
   if (activeIds.length > 0) {
     const { data: runsForActive } = await admin
@@ -90,14 +81,6 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
       const mid = Math.floor(sorted.length / 2)
       medianScore = sorted.length % 2 !== 0 ? sorted[mid] : +((sorted[mid - 1] + sorted[mid]) / 2).toFixed(1)
     }
-
-    for (const p of activeProjects) {
-      const score = latestByProject.get(p.id)
-      if (score != null && score < p.alert_threshold) {
-        belowThreshold.push({ id: p.id, name: p.name, score, threshold: p.alert_threshold })
-      }
-    }
-    belowThreshold.sort((a, b) => a.score - b.score)
   }
 
   const autoRunEnabled = activeProjects.filter(p => p.auto_run === true).length
@@ -113,7 +96,6 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
     disconnectedOwners,
     avgScore,
     medianScore,
-    belowThreshold,
     autoRunEnabled,
     autoRunDisabled,
     customEventsAdoption,

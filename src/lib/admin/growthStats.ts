@@ -1,20 +1,26 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import type { GrowthPoint } from '@/components/admin/AdminGrowthChart'
 
+export interface RegisteredUser {
+  id: string
+  email: string | null
+  created_at: string
+}
+
 // auth.admin.listUsers() is paginated — loop until a page comes back
 // shorter than requested, rather than assuming everyone fits on page 1.
-export async function fetchAllUserCreatedDates(admin: ReturnType<typeof createAdminClient>): Promise<Date[]> {
-  const dates: Date[] = []
+export async function fetchAllUsers(admin: ReturnType<typeof createAdminClient>): Promise<RegisteredUser[]> {
+  const users: RegisteredUser[] = []
   const perPage = 1000
   let page = 1
   while (true) {
     const { data, error } = await admin.auth.admin.listUsers({ page, perPage })
     if (error || !data) break
-    for (const user of data.users) dates.push(new Date(user.created_at))
+    for (const user of data.users) users.push({ id: user.id, email: user.email ?? null, created_at: user.created_at })
     if (data.users.length < perPage) break
     page++
   }
-  return dates
+  return users
 }
 
 function dayKey(d: Date): string {

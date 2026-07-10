@@ -6,6 +6,7 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
+import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import type { Project, CheckResult } from '@/types'
 
 // Default serverless timeout is far too short once this loops over dozens
@@ -630,7 +631,8 @@ async function processProject(
   supabase: ReturnType<typeof createAdminClient>,
   project: Project,
   runDate: string,
-  prevDate: string
+  prevDate: string,
+  isAutoRunPass: boolean
 ): Promise<ProjectRunOutcome | null> {
   // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
   // per-projekt na podstawie jego właściciela — każdy projekt może
@@ -652,6 +654,26 @@ async function processProject(
       score_total: null,
       error_message: errorMessage,
     }, { onConflict: 'project_id,run_date' })
+
+    // Only the unattended auto_run pass silently fails without anyone
+    // watching — a manual "Run now" failure is already visible to whoever
+    // clicked it. Notify the owner directly (not project.alert_email, which
+    // may be a client stakeholder who can't reconnect anything) so a dead
+    // connection doesn't go unnoticed indefinitely. Deduped against
+    // yesterday's stored error so this fires once, not every day.
+    if (isAutoRunPass && project.owner_id) {
+      const { data: prevRunRow } = await supabase
+        .from('dqs_runs').select('error_message')
+        .eq('project_id', project.id).eq('run_date', prevDate).maybeSingle()
+      const alreadyNotified = prevRunRow?.error_message === errorMessage
+      if (!alreadyNotified) {
+        const { data: ownerUser } = await supabase.auth.admin.getUserById(project.owner_id)
+        if (ownerUser?.user?.email) {
+          await sendEmail({ to: ownerUser.user.email, ...renderReconnectNoticeEmail(project.name) })
+        }
+      }
+    }
+
     return {
       projectId: project.id,
       processed: false,
@@ -882,10 +904,11 @@ async function runWorker(projectId: string | null) {
   prevDateObj.setDate(prevDateObj.getDate() - 1)
   const prevDate = prevDateObj.toISOString().split('T')[0]
 
+  const isAutoRunPass = projectId === null
   const outcomes = await runWithConcurrency(
     (projects ?? []) as Project[],
     WORKER_CONCURRENCY,
-    project => processProject(supabase, project, runDate, prevDate)
+    project => processProject(supabase, project, runDate, prevDate, isAutoRunPass)
   )
 
   for (const outcome of outcomes) {

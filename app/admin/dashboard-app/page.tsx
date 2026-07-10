@@ -2,8 +2,10 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AdminGrowthChart from '@/components/admin/AdminGrowthChart'
-import { fetchAllUserCreatedDates, buildGrowthSeries } from '@/lib/admin/growthStats'
+import { fetchAllUsers, buildGrowthSeries } from '@/lib/admin/growthStats'
 import { fetchAdminStats } from '@/lib/admin/businessStats'
+
+const MAX_USERS_SHOWN = 50
 
 function isAdminEmail(email: string | undefined | null): boolean {
   if (!email) return false
@@ -35,6 +37,10 @@ function AdoptionRow({ label, count, total }: { label: string; count: number; to
   )
 }
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default async function AdminDashboardPage() {
   const session = await createClient()
   const { data: authData } = await session.auth.getUser()
@@ -53,22 +59,26 @@ export default async function AdminDashboardPage() {
 
   const admin = createAdminClient()
 
-  const [userDates, { data: projectsRaw }, stats] = await Promise.all([
-    fetchAllUserCreatedDates(admin),
-    admin.from('projects').select('created_at, status'),
+  const [users, { data: projectsRaw }, stats] = await Promise.all([
+    fetchAllUsers(admin),
+    admin.from('projects').select('created_at, status, owner_id'),
     fetchAdminStats(admin),
   ])
 
-  const projects = (projectsRaw ?? []) as { created_at: string; status: string }[]
+  const projects = (projectsRaw ?? []) as { created_at: string; status: string; owner_id: string | null }[]
   const projectDates = projects.map(p => new Date(p.created_at))
   const activeCount = projects.filter(p => p.status === 'active').length
   const pausedCount = projects.filter(p => p.status === 'paused').length
+  const ownerIdsWithProject = new Set(projects.map(p => p.owner_id).filter((id): id is string => !!id))
 
+  const userDates = users.map(u => new Date(u.created_at))
   const growth = buildGrowthSeries(userDates, projectDates)
-  const totalUsers = userDates.length
+  const totalUsers = users.length
   const activationPct = totalUsers > 0 ? Math.round((stats.usersWithProject / totalUsers) * 100) : 0
   const totalRuns30d = stats.workerRunsCompleted30d + stats.workerRunsFailed30d
   const successRatePct = totalRuns30d > 0 ? Math.round((stats.workerRunsCompleted30d / totalRuns30d) * 100) : null
+
+  const usersByNewest = [...users].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)' }}>
@@ -106,31 +116,41 @@ export default async function AdminDashboardPage() {
           <AdminGrowthChart data={growth} />
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 20 }}>
-          <div style={{ flex: '1 1 320px', backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Configuration adoption</div>
-            <AdoptionRow label="Auto-run enabled" count={stats.autoRunEnabled} total={stats.totalActiveProjects} />
-            <AdoptionRow label="Custom events" count={stats.customEventsAdoption} total={stats.totalActiveProjects} />
-            <AdoptionRow label="Ecommerce checks" count={stats.ecommerceAdoption} total={stats.totalActiveProjects} />
-            <AdoptionRow label="Parameter checks" count={stats.parametersAdoption} total={stats.totalActiveProjects} />
-          </div>
+        <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Configuration adoption</div>
+          <AdoptionRow label="Auto-run enabled" count={stats.autoRunEnabled} total={stats.totalActiveProjects} />
+          <AdoptionRow label="Custom events" count={stats.customEventsAdoption} total={stats.totalActiveProjects} />
+          <AdoptionRow label="Ecommerce checks" count={stats.ecommerceAdoption} total={stats.totalActiveProjects} />
+          <AdoptionRow label="Parameter checks" count={stats.parametersAdoption} total={stats.totalActiveProjects} />
+        </div>
 
-          <div style={{ flex: '1 1 320px', backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Needs attention</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>Active projects currently below their own alert threshold</div>
-            {stats.belowThreshold.length === 0 ? (
-              <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Nothing below threshold right now.</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {stats.belowThreshold.slice(0, 10).map(p => (
-                  <Link key={p.id} href={`/project/${p.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, border: '1px solid #fecaca', backgroundColor: '#fef2f2', textDecoration: 'none' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', fontWeight: 500 }}>{p.name}</span>
-                    <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>{Math.round(p.score)} <span style={{ color: 'var(--color-text-secondary)', fontWeight: 400 }}>/ {p.threshold}</span></span>
-                  </Link>
-                ))}
-              </div>
-            )}
+        <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Registered users</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+            Newest first{usersByNewest.length > MAX_USERS_SHOWN ? ` — showing ${MAX_USERS_SHOWN} of ${usersByNewest.length}` : ''}
           </div>
+          {usersByNewest.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>No registered users yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
+                const hasProject = u.id ? ownerIdsWithProject.has(u.id) : false
+                return (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                    <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>{u.email ?? '—'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {hasProject && (
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                          project
+                        </span>
+                      )}
+                      <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
