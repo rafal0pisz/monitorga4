@@ -114,8 +114,10 @@ export default async function AppSidebar() {
         {plan && (
           <div style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{plan}</span>
-            {limit != null && limit < Number.MAX_SAFE_INTEGER && (
-              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{(projects ?? []).length} / {limit}</span>
+            {limit != null && (
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                {(projects ?? []).length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
+              </span>
             )}
           </div>
         )}
