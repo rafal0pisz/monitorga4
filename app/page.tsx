@@ -3,9 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 
 const STEPS = [
-  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu — jak rola „Viewer" w GA4.' },
+  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu, jak rola „Viewer" w GA4.' },
   { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
-  { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane — dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
+  { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane. Dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
   { t: 'Podsumowanie na maila', d: 'Wynik spada poniżej progu? Aplikacja poinformuje Cię mailowo z opisem kategorii, która wymaga weryfikacji.' },
 ]
 
@@ -58,7 +58,7 @@ const INCIDENTS = [
   {
     tag: 'duplikaty',
     title: 'Zdublowany event purchase',
-    desc: <>Nowy skrypt wdrożenia zaczyna wysyłać <code className="mono-inline">purchase</code> dwukrotnie. Przychód w raportach rośnie o 40% — i nikt tego nie zauważa przez trzy tygodnie.</>,
+    desc: <>Nowy skrypt wdrożenia zaczyna wysyłać <code className="mono-inline">purchase</code> dwukrotnie. Przychód w raportach rośnie o 40% i nikt tego nie zauważa przez trzy tygodnie.</>,
   },
   {
     tag: 'self-referral',
@@ -68,7 +68,7 @@ const INCIDENTS = [
   {
     tag: 'brakujący event',
     title: 'Cichy spadek zdarzeń',
-    desc: <>Redesign jednej podstrony usuwa tag menedżera zdarzeń. <code className="mono-inline">add_to_cart</code> znika z 30% katalogu — lejek wciąż „działa", tylko gorzej.</>,
+    desc: <>Redesign jednej podstrony usuwa tag menedżera zdarzeń. <code className="mono-inline">add_to_cart</code> znika z 30% katalogu, a lejek wciąż „działa", tylko gorzej.</>,
   },
   {
     tag: 'ruch botów',
@@ -85,9 +85,9 @@ const DASHBOARD_ROWS = [
 ]
 
 const AUDIENCE = [
-  { t: 'Właściciele usług GA4', d: 'Samodzielnie zarządzasz swoją usługą GA4 i chcesz wiedzieć od razu, gdy coś przestanie działać — bez czekania do końca miesiąca na spadek w raporcie.' },
+  { t: 'Właściciele usług GA4', d: 'Samodzielnie zarządzasz swoją usługą GA4 i chcesz wiedzieć od razu, gdy coś przestanie działać, zamiast czekać do końca miesiąca na spadek w raporcie.' },
   { t: 'Agencje marketingowe', d: 'Jeden widok z wynikiem jakości dla wszystkich usług GA4 klientów, zamiast ręcznego przeglądania każdej z osobna raz na kwartał.' },
-  { t: 'Freelancerzy', d: 'Obsługujesz kilku klientów naraz i nie masz czasu ręcznie sprawdzać każdej usługi GA4 — AlertGA4 robi to za Ciebie każdego dnia.' },
+  { t: 'Freelancerzy', d: 'Obsługujesz kilku klientów naraz i nie masz czasu ręcznie sprawdzać każdej usługi GA4. AlertGA4 robi to za Ciebie każdego dnia.' },
 ]
 
 const TREND_POINTS = '8,49.8 49.9,42.5 91.7,55.5 133.5,68.5 175.4,78.3 217.2,94.5 259.1,104.3 300.9,110.8 342.8,97.8 384.6,78.3 426.5,62 468.3,45.8 510.2,36 552,29.5'
@@ -112,7 +112,7 @@ export default async function HomePage() {
     operatingSystem: 'Web',
     url: 'https://alertga4.bettersteps.pl',
     inLanguage: 'pl',
-    description: 'AlertGA4 codziennie weryfikuje usługę Google Analytics 4 — zdarzenia, parametry, lejek e-commerce i anomalie ruchu — i wysyła alert e-mail, zanim popsute dane trafią do raportu.',
+    description: 'AlertGA4 codziennie weryfikuje usługę Google Analytics 4: zdarzenia, parametry, lejek e-commerce i anomalie ruchu, oraz wysyła alert e-mail, zanim popsute dane trafią do raportu.',
     provider: {
       '@type': 'Organization',
       name: 'Bettersteps Sp. z o.o.',
@@ -370,7 +370,7 @@ export default async function HomePage() {
           <div className="wrap">
             <div className="section-head">
               <h2>Jak to działa</h2>
-              <p>Od zalogowania do pierwszego alertu — cztery kroki, żaden z nich nie wymaga zmian po stronie GA4.</p>
+              <p>Od zalogowania do pierwszego alertu: cztery kroki, żaden z nich nie wymaga zmian po stronie GA4.</p>
             </div>
             <div className="lp-steps">
               {STEPS.map((s, i) => (
@@ -389,13 +389,13 @@ export default async function HomePage() {
           <div className="wrap">
             <div className="section-head">
               <h2>Co sprawdzamy każdego dnia</h2>
-              <p>Cztery kategorie, kilkanaście sprawdzeń — każde z realnym podglądem tego, co faktycznie mierzy.</p>
+              <p>Cztery kategorie, kilkanaście sprawdzeń, każde z realnym podglądem tego, co faktycznie mierzy.</p>
             </div>
             <div className="lp-feature-grid">
               <div className="lp-feature-cell">
                 <div>
                   <h3>Zdarzenia</h3>
-                  <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia — zanim zauważysz to w raporcie.</p>
+                  <p className="desc">Wykrywa brakujące eventy i sesje bez żadnego zdarzenia, zanim zauważysz to w raporcie.</p>
                 </div>
                 <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {EVENT_EXAMPLES.map(ev => <EventMiniCard key={ev.name} ev={ev} />)}
@@ -404,7 +404,7 @@ export default async function HomePage() {
               <div className="lp-feature-cell">
                 <div>
                   <h3>Lejek e-commerce</h3>
-                  <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu — i spadków wolumenu na każdym etapie.</p>
+                  <p className="desc">Pilnuje ciągłości zdarzeń od pierwszego wejścia na produkt do zakupu i spadków wolumenu na każdym etapie.</p>
                 </div>
                 <div className="lp-feature-visual" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {ECOMMERCE_EXAMPLES.map(ev => <EventMiniCard key={ev.name} ev={ev} />)}
@@ -413,7 +413,7 @@ export default async function HomePage() {
               <div className="lp-feature-cell">
                 <div>
                   <h3>Ruch i anomalie</h3>
-                  <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy — wykryte tego samego dnia.</p>
+                  <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy, wykryte tego samego dnia.</p>
                 </div>
                 <div className="lp-feature-visual mini-spark">
                   {[8, 11, 7, 9, 6, 10, 44, 38, 9, 7, 12, 8].map((h, i) => (
@@ -439,8 +439,8 @@ export default async function HomePage() {
         <section id="problem" className="section--dim">
           <div className="wrap wrap--narrow">
             <div className="section-head">
-              <h2>GA4 nie wysyła alertu, gdy coś się psuje</h2>
-              <p>Popsute śledzenie nie rzuca błędem — po prostu cicho zwraca gorsze dane. Zwykle dowiadujesz się o tym od klienta, kilka tygodni za późno.</p>
+              <h2>Alerty, które dbają o kondycję danych</h2>
+              <p>Reaguj od razu na możliwe błędy na koncie. Bądź na bieżąco z alarmującymi zmianami w danych i reaguj od razu.</p>
             </div>
             <div className="lp-log">
               {INCIDENTS.map(inc => (
@@ -461,7 +461,7 @@ export default async function HomePage() {
           <div className="wrap">
             <div className="section-head">
               <h2>Wynik, trend i wszystkie projekty w jednym miejscu</h2>
-              <p>Widzisz nie tylko aktualny wynik, ale i to, jak zmieniał się w czasie — oraz status każdej monitorowanej usługi naraz.</p>
+              <p>Widzisz nie tylko aktualny wynik, ale i to, jak zmieniał się w czasie, oraz status każdej monitorowanej usługi naraz.</p>
             </div>
             <div className="lp-preview-grid">
               <div className="lp-card">
@@ -470,7 +470,7 @@ export default async function HomePage() {
                     <span className="lp-card-dot" style={{ background: '#dc2626' }} />
                     <span className="lp-card-dot" style={{ background: '#ea580c' }} />
                     <span className="lp-card-dot" style={{ background: '#16a34a' }} />
-                    <span className="lp-card-title">sklep-rowerowy.pl — 14 dni</span>
+                    <span className="lp-card-title">sklep-rowerowy.pl · 14 dni</span>
                   </div>
                 </div>
                 <div className="lp-trend-body">
