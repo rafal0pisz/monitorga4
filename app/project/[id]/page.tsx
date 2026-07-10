@@ -8,6 +8,7 @@ import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import AccountMismatch from '@/components/project/AccountMismatch'
+import ShareEmbedPanel from '@/components/project/ShareEmbedPanel'
 import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 import { scoreColor } from '@/types'
@@ -155,6 +156,8 @@ export default async function ProjectPage({
 
         {/* Score sparkline */}
         {runs.length > 1 && <ScoreSparkline runs={runs} />}
+
+        <ShareEmbedPanel shareToken={project.share_token} />
 
         {/* Traffic Source / Engagement / Users — live on-demand checks plus
             the 9 always-on checks from the last daily run, merged into the
