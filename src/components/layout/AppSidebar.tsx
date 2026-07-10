@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import SidebarNav from './SidebarNav'
 import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
+import { planLimit, planName } from '@/lib/billing/plans'
 
 export default async function AppSidebar() {
   const session = await createClient()
@@ -15,6 +16,16 @@ export default async function AppSidebar() {
     .order('name')
   if (!bypass && user) query = query.eq('owner_id', user.id)
   const { data: projects } = await query
+
+  let plan: string | null = null
+  let limit: number | null = null
+  if (!bypass && user) {
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    if (!profileErr) {
+      plan = planName(profile?.plan_id)
+      limit = planLimit(profile?.plan_id)
+    }
+  }
 
   return (
     <>
@@ -98,6 +109,16 @@ export default async function AppSidebar() {
             <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '2px 0 0', lineHeight: 1.3 }}>alertga4.bettersteps.pl</p>
           </div>
         </div>
+
+        {/* Plan */}
+        {plan && (
+          <div style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>{plan}</span>
+            {limit != null && limit < Number.MAX_SAFE_INTEGER && (
+              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{(projects ?? []).length} / {limit}</span>
+            )}
+          </div>
+        )}
 
         {/* Nav */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
