@@ -21,6 +21,7 @@ export default function LandingNav({
           <a href="/#co-sprawdzamy">Monitoring</a>
           <a href="/#dla-kogo">Dla kogo</a>
           <Link href="/funkcje">Funkcje</Link>
+          <Link href="/cennik">Cennik</Link>
           <Link href="/kontakt">Kontakt</Link>
         </div>
         <div className="lp-nav-cta">

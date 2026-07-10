@@ -121,8 +121,9 @@ export default function SidebarNav({ projects }: { projects: Project[] }) {
             Tools
           </p>
           {[
-            { href: '/dashboard/new', icon: '＋', label: 'New project' },
-            { href: '/dashboard',     icon: '⊞', label: 'All projects' },
+            { href: '/dashboard/new',     icon: '＋', label: 'New project' },
+            { href: '/dashboard',         icon: '⊞', label: 'All projects' },
+            { href: '/dashboard/billing', icon: '◈', label: 'Billing' },
           ].map(item => {
             const active = pathname === item.href
             return (
