@@ -22,26 +22,34 @@ export async function POST(request: NextRequest) {
   if (!priceId) return NextResponse.json({ error: 'Ten plan nie jest jeszcze dostępny do zakupu' }, { status: 500 })
 
   const supabase = createAdminClient()
-  const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
 
-  let customerId = profile?.stripe_customer_id as string | undefined
-  if (!customerId) {
-    const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } })
-    customerId = customer.id
-    await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+  try {
+    const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
+
+    let customerId = profile?.stripe_customer_id as string | undefined
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } })
+      customerId = customer.id
+      await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl}/dashboard/billing?checkout=success`,
+      cancel_url: `${appUrl}/cennik?checkout=cancelled`,
+      client_reference_id: user.id,
+      metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
+      subscription_data: { metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle } },
+    })
+
+    return NextResponse.json({ url: checkoutSession.url })
+  } catch (err) {
+    // Surfaced to the caller (Stripe SDK errors are safe to show — messages
+    // like "No such price" contain no secrets) instead of a bare 500 that
+    // hides the actual cause behind a generic "coś poszło nie tak".
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 })
   }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard/billing?checkout=success`,
-    cancel_url: `${appUrl}/cennik?checkout=cancelled`,
-    client_reference_id: user.id,
-    metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
-    subscription_data: { metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle } },
-  })
-
-  return NextResponse.json({ url: checkoutSession.url })
 }

@@ -14,11 +14,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Brak aktywnej subskrypcji' }, { status: 400 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: profile.stripe_customer_id,
-    return_url: `${appUrl}/dashboard/billing`,
-  })
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const portalSession = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${appUrl}/dashboard/billing`,
+    })
 
-  return NextResponse.json({ url: portalSession.url })
+    return NextResponse.json({ url: portalSession.url })
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+  }
 }
