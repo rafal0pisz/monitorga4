@@ -91,7 +91,7 @@ const AUDIENCE = [
 ]
 
 const FAQ_ITEMS = [
-  { q: 'Czy AlertGA4 może zmienić coś w mojej usłudze GA4?', a: 'Nie. Dostęp jest wyłącznie do odczytu, dokładnie jak rola „Viewer" w GA4. AlertGA4 nigdy nie modyfikuje konfiguracji, zdarzeń ani danych źródłowych.' },
+  { q: 'Czy AlertGA4 może zmienić coś w mojej usłudze GA4?', a: 'Nie. Dostęp jest wyłącznie do odczytu. AlertGA4 nigdy nie modyfikuje konfiguracji, zdarzeń ani danych źródłowych.' },
   { q: 'Ile trwa wdrożenie?', a: 'Logujesz się kontem Google, wybierasz usługę GA4, do której masz dostęp, i od razu widzisz pierwszy zestaw sprawdzeń. Bez zmian w kodzie strony czy w GTM.' },
   { q: 'Czy to działa dla stron bez sprzedaży online?', a: 'Tak. Poza lejkiem e-commerce sprawdzamy też zdarzenia leadowe, ruch, self-referral i anomalie botów, niezależnie od tego, czy usługa sprzedaje coś bezpośrednio.' },
   { q: 'Co się stanie, gdy stracę dostęp do konta Google?', a: 'Jeśli automatyczne sprawdzenia są włączone, a połączenie z Google wygaśnie lub zostanie cofnięte, dostaniesz e-mail z prośbą o ponowne zalogowanie, zanim zorientujesz się, że coś przestało działać.' },
@@ -322,8 +322,8 @@ export default async function HomePage() {
             <BrandWordmark size={19} dark />
           </Link>
           <div className="lp-nav-links">
-            <a href="#jak-to-dziala">Jak to działa</a>
-            <a href="#co-sprawdzamy">Co sprawdzamy</a>
+            <a href="#jak-to-dziala">Proces</a>
+            <a href="#co-sprawdzamy">Monitoring</a>
             <a href="#dla-kogo">Dla kogo</a>
           </div>
           <div className="lp-nav-cta">
@@ -556,8 +556,8 @@ export default async function HomePage() {
               <h2>Najczęstsze pytania</h2>
             </div>
             <div className="lp-faq-list">
-              {FAQ_ITEMS.map((f, i) => (
-                <details className="lp-faq-item" key={f.q} open={i === 0}>
+              {FAQ_ITEMS.map(f => (
+                <details className="lp-faq-item" key={f.q}>
                   <summary>{f.q}</summary>
                   <p>{f.a}</p>
                 </details>
@@ -601,8 +601,8 @@ export default async function HomePage() {
           </div>
           <div className="lp-footer-col">
             <h3>Produkt</h3>
-            <a href="#jak-to-dziala">Jak to działa</a>
-            <a href="#co-sprawdzamy">Co sprawdzamy</a>
+            <a href="#jak-to-dziala">Proces</a>
+            <a href="#co-sprawdzamy">Monitoring</a>
             <a href="#dla-kogo">Dla kogo</a>
           </div>
           <div className="lp-footer-col">
