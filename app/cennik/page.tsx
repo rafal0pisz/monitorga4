@@ -82,31 +82,34 @@ export default async function CennikPage() {
         .plan-table tbody td[data-check="true"] { color: #16a34a; font-weight: 600; }
         .plan-table tbody tr:last-child th, .plan-table tbody tr:last-child td { border-bottom: none; }
 
-        /* Below 640px the 4-column table becomes unreadably cramped (or
-           needs horizontal scrolling to use at all) — instead, each feature
-           row turns into its own card, with the 3 plan values stacked and
-           labeled via their own data-label attribute. */
+        /* Desktop shows the full table; mobile shows the swipeable carousel
+           (one plan fully in view at a time) — never both. */
+        .plan-table-mobile { display: none; }
         @media (max-width: 640px) {
-          .plan-table-wrap { overflow-x: visible; }
-          .plan-table { min-width: 0; }
-          .plan-table thead { display: none; }
-          .plan-table, .plan-table tbody, .plan-table tr, .plan-table th, .plan-table td { display: block; width: 100%; }
-          .plan-table tbody tr {
-            margin-bottom: 14px; border: 1px solid #e2e6e8; border-radius: 10px; overflow: hidden;
-          }
-          .plan-table tbody tr:last-child { margin-bottom: 0; }
-          .plan-table tbody th {
-            background: #f3f6f7; padding: 10px 14px; border-bottom: 1px solid #e2e6e8; white-space: normal;
-          }
-          .plan-table tbody td {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 9px 14px; border-bottom: 1px solid #eef1f2; text-align: right;
-          }
-          .plan-table tbody td:last-child { border-bottom: none; }
-          .plan-table tbody td::before {
-            content: attr(data-label); font-weight: 600; color: #232b31; text-align: left;
-          }
+          .plan-table-desktop { display: none; }
+          .plan-table-mobile { display: block; }
         }
+
+        .plan-carousel-swipe { display: flex; align-items: center; gap: 8px; touch-action: pan-y; }
+        .plan-carousel-arrow {
+          width: 30px; height: 30px; border-radius: 50%; border: 1px solid #e2e6e8; background: #fff;
+          color: #5b6570; font-size: 15px; line-height: 1; flex-shrink: 0; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .plan-carousel-arrow:disabled { opacity: 0.35; cursor: default; }
+        .plan-carousel-card { flex: 1; min-width: 0; background: #fff; border: 1px solid #e2e6e8; border-radius: 12px; overflow: hidden; }
+        .plan-carousel-head { padding: 14px 16px; background: #f3f6f7; display: flex; align-items: baseline; justify-content: space-between; }
+        .plan-carousel-head .name { font-size: 15px; font-weight: 700; color: #232b31; }
+        .plan-carousel-head .price { font-size: 12px; color: #5b6570; }
+        .plan-carousel-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #eef1f2; font-size: 12.5px; }
+        .plan-carousel-row:last-child { border-bottom: none; }
+        .plan-carousel-row .k { color: #232b31; }
+        .plan-carousel-row .v { font-family: var(--font-mono), monospace; color: #5b6570; font-weight: 600; text-align: right; }
+        .plan-carousel-row .v.check { color: #16a34a; }
+        .plan-carousel-row .v.dash { color: #c7ccd2; }
+        .plan-carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
+        .plan-carousel-dot { width: 6px; height: 6px; padding: 0; border-radius: 999px; border: none; background: #d7dadc; cursor: pointer; }
+        .plan-carousel-dot.active { background: #16a34a; width: 18px; }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
