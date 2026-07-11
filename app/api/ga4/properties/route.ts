@@ -5,7 +5,15 @@ async function fetchGA4Accounts(token: string) {
   const res = await fetch('https://analyticsadmin.googleapis.com/v1beta/accounts', {
     headers: { Authorization: `Bearer ${token}` }
   })
-  if (!res.ok) throw new Error(`Accounts API ${res.status}`)
+  if (!res.ok) {
+    // Google's actual error body (e.g. "Admin API has not been used in
+    // project ... before or it is disabled") is the only way to tell a
+    // disabled-API/permission problem apart from a token issue — losing it
+    // and just throwing the status code makes this undiagnosable from the
+    // client.
+    const body = await res.text().catch(() => '')
+    throw new Error(`Accounts API ${res.status}: ${body.slice(0, 500)}`)
+  }
   const data = await res.json()
   return data.accounts ?? []
 }

@@ -154,6 +154,10 @@ export default function NewProjectForm() {
         setProperties(flat)
         if (flat.length === 0) setManualMode(true)
       } catch (e: any) {
+        // The UI only shows a generic fallback message — full detail (e.g.
+        // Google reporting the Admin API is disabled for this project) goes
+        // to the console so it's diagnosable without guessing.
+        console.error('[ga4/properties] fetch failed:', e.message)
         setPropertiesError(e.message)
         setManualMode(true) // automatic fallback to manual entry
       } finally {
