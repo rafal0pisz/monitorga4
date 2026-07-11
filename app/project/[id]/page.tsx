@@ -7,6 +7,7 @@ import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
+import ScoreTrendChart from '@/components/project/ScoreTrendChart'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
@@ -83,7 +84,7 @@ export default async function ProjectPage({
 
   const { data: runsRaw } = await admin
     .from('dqs_runs').select('id, run_date, score_total, status')
-    .eq('project_id', id).order('run_date', { ascending: false }).limit(10)
+    .eq('project_id', id).order('run_date', { ascending: false }).limit(30)
   const runs = (runsRaw ?? []) as RunRow[]
   const latestRun = runs[0] ?? null
 
@@ -154,7 +155,7 @@ export default async function ProjectPage({
         </div>
 
         {/* Score sparkline */}
-        {runs.length > 1 && <ScoreSparkline runs={runs} />}
+        {runs.length > 1 && <ScoreTrendChart runs={runs} alertThreshold={project.alert_threshold} />}
 
         {/* Traffic Source / Engagement / Users — live on-demand checks plus
             the 9 always-on checks from the last daily run, merged into the
@@ -206,91 +207,6 @@ export default async function ProjectPage({
   )
 }
 
-
-function ScoreSparkline({ runs }: { runs: RunRow[] }) {
-  const filtered = runs.filter(r => r.score_total != null).reverse() // oldest → newest
-  const pts   = filtered.map(r => r.score_total!)
-  const dates = filtered.map(r => {
-    const d = new Date(r.run_date)
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  })
-
-  if (pts.length < 2) return null
-
-  const W = 160, H = 36, pad = 4, dateH = 12
-  const toX = (i: number) => pad + (i / (pts.length - 1)) * (W - pad * 2)
-  const toY = (v: number) => H - pad - (v / 100) * (H - pad * 2)
-
-  const polyline = pts.map((v, i) => `${toX(i)},${toY(v)}`).join(' ')
-  const latestScore = pts[pts.length - 1]
-  const col = scoreColor(latestScore)
-  const areaPath = [
-    `M ${toX(0)},${H - pad}`,
-    ...pts.map((v, i) => `L ${toX(i)},${toY(v)}`),
-    `L ${toX(pts.length - 1)},${H - pad}`, 'Z',
-  ].join(' ')
-
-  const latestRun = runs[0]
-  const delta = runs.length > 1 && runs[0].score_total != null && runs[1].score_total != null
-    ? Math.round(runs[0].score_total - runs[1].score_total) : null
-
-  return (
-    <div style={{
-      padding: '10px 16px 8px', marginBottom: 16,
-      backgroundColor: 'var(--color-background-primary)',
-      border: '1px solid var(--color-border-tertiary)',
-      borderRadius: 10,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          Score trend · {pts.length} runs
-        </div>
-        {delta != null && (
-          <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
-            {delta >= 0 ? '+' : ''}{delta} vs prev
-          </div>
-        )}
-      </div>
-
-      {/* Chart */}
-      <svg width={W} height={H + dateH} viewBox={`0 0 ${W} ${H + dateH}`} style={{ display: 'block', overflow: 'visible' }}>
-        {/* Area fill */}
-        <path d={areaPath} fill={col} fillOpacity={0.1} />
-        {/* Line */}
-        <polyline points={polyline} fill="none" stroke={col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        {/* Dots + score labels */}
-        {pts.map((v, i) => (
-          <g key={i}>
-            <circle cx={toX(i)} cy={toY(v)} r={i === pts.length - 1 ? 3 : 2} fill={col} />
-            {(i === 0 || i === pts.length - 1) && (
-              <text
-                x={toX(i)} y={toY(v) - 5}
-                fontSize={8} fill={col} textAnchor="middle"
-                fontWeight={i === pts.length - 1 ? '700' : '400'}
-              >{Math.round(v)}</text>
-            )}
-          </g>
-        ))}
-        {/* Date labels on x-axis */}
-        {pts.map((_, i) => {
-          // Show all dates if ≤7 runs, otherwise only first and last
-          const showLabel = pts.length <= 7 || i === 0 || i === pts.length - 1
-          if (!showLabel) return null
-          return (
-            <text
-              key={`d${i}`}
-              x={toX(i)} y={H + dateH - 2}
-              fontSize={7} fill="var(--color-text-secondary)"
-              textAnchor={i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}
-            >{dates[i]}</text>
-          )
-        })}
-        {/* Baseline */}
-        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="var(--color-border-tertiary)" strokeWidth={0.5} />
-      </svg>
-    </div>
-  )
-}
 
 function StoredCheckCard({ check }: { check: any }) {
   const st    = STATUS[check.status ?? 'skip'] ?? STATUS.skip

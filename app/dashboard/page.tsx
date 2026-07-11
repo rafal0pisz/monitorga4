@@ -1,7 +1,8 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
-import { planLimit, planName } from '@/lib/billing/plans'
+import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
+import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import Link from 'next/link'
 export default async function DashboardPage() {
   const session = await createClient()
@@ -18,14 +19,28 @@ export default async function DashboardPage() {
 
   let limit: number | null = null
   let plan: string | null = null
+  let onboardingDismissed = false
+  let hasAlertEmail = false
   if (!bypass && user) {
-    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', user.id).single()
     if (!profileErr) {
-      limit = planLimit(profile?.plan_id)
-      plan = planName(profile?.plan_id)
+      const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
+      limit = planLimit(effective)
+      plan = planName(effective)
+      onboardingDismissed = !!profile?.onboarding_dismissed_at
     }
+
+    const { data: emailRows } = await supabase.from('projects').select('alert_email').eq('owner_id', user.id)
+    hasAlertEmail = (emailRows ?? []).some((r: { alert_email: string | null }) => !!r.alert_email)
   }
   const atLimit = limit != null && list.length >= limit
+
+  const onboardingSteps = [
+    { label: 'Add your first GA4 property', done: list.length > 0, href: '/dashboard/new' },
+    { label: 'Set an alert email for it', done: hasAlertEmail, href: list[0] ? `/project/${list[0].id}/config` : undefined },
+    { label: 'Get your first automated check', done: list.some(p => p.last_score != null) },
+  ]
+  const showOnboarding = !bypass && !!user && !onboardingDismissed && onboardingSteps.some(s => !s.done)
   return (
     <div style={{ maxWidth: 700 }}>
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -37,6 +52,7 @@ export default async function DashboardPage() {
           <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 6, padding: '4px 10px', whiteSpace: 'nowrap' }}>Plan: {plan}</span>
         )}
       </div>
+      {showOnboarding && <OnboardingChecklist steps={onboardingSteps} />}
       {list.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
           {[
