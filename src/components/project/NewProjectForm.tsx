@@ -174,11 +174,18 @@ export default function NewProjectForm() {
 
   const canSubmitProperty = manualMode ? !!manualPropertyId : !!selectedProperty
 
-  // Pull real event volume + registered custom dimensions from GA4 once a
-  // property is chosen, so steps 2–4 can suggest instead of asking for
-  // blind text entry.
+  // Pull real event volume + registered custom dimensions from GA4 whenever
+  // the chosen property changes, so steps 2–4 can suggest instead of asking
+  // for blind text entry. Previously guarded on `discovered !== null`, which
+  // meant that once ANY property's discovery succeeded, this never ran
+  // again — going back to step 1 and picking a different property left
+  // steps 2–4 permanently showing the first property's data.
   useEffect(() => {
-    if (!effectivePropertyId || discovered !== null || discoverLoading) return
+    if (!effectivePropertyId) return
+    let cancelled = false
+    setDiscovered(null)
+    setCustomDimensions(null)
+    setDiscoverError(null)
     setDiscoverLoading(true)
     const propertyName = `properties/${effectivePropertyId}`
     Promise.all([
@@ -194,16 +201,19 @@ export default function NewProjectForm() {
       }),
     ])
       .then(([eventsData, dimsData]) => {
+        if (cancelled) return
         setDiscovered(eventsData.events ?? [])
         if (dimsData?.parameterNames) setCustomDimensions(new Set(dimsData.parameterNames))
       })
       .catch(e => {
+        if (cancelled) return
         console.error('[discover] fetch failed:', e.message)
         setDiscoverError(e.message)
         setDiscovered([]) // don't block the wizard — fall back to manual entry
       })
-      .finally(() => setDiscoverLoading(false))
-  }, [effectivePropertyId, discovered, discoverLoading])
+      .finally(() => { if (!cancelled) setDiscoverLoading(false) })
+    return () => { cancelled = true }
+  }, [effectivePropertyId])
 
   const ecommerceEventNames = useMemo(() => new Set(ECOMMERCE_CATALOG.map(c => c.event_name)), [])
   const nonEcommerceDiscovered = useMemo(

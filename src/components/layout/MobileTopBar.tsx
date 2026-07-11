@@ -24,20 +24,27 @@ export default function MobileTopBar() {
   }, [open])
 
   return (
-    <div className="mobile-topbar">
-      <button
-        type="button"
-        className="mobile-topbar-hamburger"
-        onClick={() => setOpen(o => !o)}
-        aria-label={open ? 'Close menu' : 'Open menu'}
-        aria-expanded={open}
-      >
-        <span style={{ transform: open ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
-        <span style={{ opacity: open ? 0 : 1 }} />
-        <span style={{ transform: open ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
-      </button>
-      <BrandWordmark size={16} mono />
+    <>
+      {/* NOT nested inside .mobile-topbar — a position:fixed descendant of a
+          higher z-index ancestor paints (and hit-tests) as part of that
+          ancestor's stacking context, not at its own z-index. Nested here,
+          the overlay was rendering above .app-sidebar despite its lower
+          z-index, silently swallowing every tap meant for a nav link. */}
+      <div className="mobile-topbar">
+        <button
+          type="button"
+          className="mobile-topbar-hamburger"
+          onClick={() => setOpen(o => !o)}
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          aria-expanded={open}
+        >
+          <span style={{ transform: open ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
+          <span style={{ opacity: open ? 0 : 1 }} />
+          <span style={{ transform: open ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
+        </button>
+        <BrandWordmark size={16} mono />
+      </div>
       <div id="sidebar-overlay" className="sidebar-overlay" onClick={() => setOpen(false)} />
-    </div>
+    </>
   )
 }
