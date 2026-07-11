@@ -1,9 +1,37 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import type { CSSProperties } from 'react'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import Link from 'next/link'
+
+// Small on/off status chip used in the "All projects" list (e.g. Email,
+// Daily) — green when on, muted when off.
+function statusChipStyle(on: boolean): CSSProperties {
+  return {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: 10.5, fontWeight: 500, borderRadius: 20, padding: '2.5px 9px 2.5px 7px', whiteSpace: 'nowrap',
+    border: `0.5px solid ${on ? '#86efac' : 'var(--color-border-tertiary)'}`,
+    background: on ? '#f0fdf4' : 'var(--color-background-tertiary)',
+    color: on ? '#166534' : 'var(--color-text-secondary)',
+  }
+}
+function chipDotStyle(on: boolean): CSSProperties {
+  return { width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: on ? '#16a34a' : 'var(--color-text-tertiary)' }
+}
+// Small count chip (E-com / Events / Params) — same neutral shape for all three.
+function countChipStyle(): CSSProperties {
+  return {
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    fontSize: 10.5, fontWeight: 500, borderRadius: 20, padding: '2.5px 9px', whiteSpace: 'nowrap',
+    border: '0.5px solid var(--color-border-tertiary)',
+    background: 'var(--color-background-tertiary)',
+    color: 'var(--color-text-secondary)',
+  }
+}
+const countValueStyle: CSSProperties = { fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-text-primary)' }
+
 export default async function DashboardPage() {
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
@@ -16,11 +44,13 @@ export default async function DashboardPage() {
   const list = (projects ?? []) as DashboardProject[]
   const avgScore = list.length ? Math.round(list.reduce((s, p) => s + (p.last_score ?? 0), 0) / list.length) : null
   const critical = list.filter(p => ['critical','warning'].includes(getScoreGrade(p.last_score))).length
+  const dailyCheckCount = list.filter(p => p.status === 'active' && !!p.auto_run).length
+  const emailAlertCount = list.filter(p => !!p.alert_email).length
+  const hasAlertEmail = emailAlertCount > 0
 
   let limit: number | null = null
   let plan: string | null = null
   let onboardingDismissed = false
-  let hasAlertEmail = false
   if (!bypass && user) {
     const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', user.id).single()
     if (!profileErr) {
@@ -29,9 +59,6 @@ export default async function DashboardPage() {
       plan = planName(effective)
       onboardingDismissed = !!profile?.onboarding_dismissed_at
     }
-
-    const { data: emailRows } = await supabase.from('projects').select('alert_email').eq('owner_id', user.id)
-    hasAlertEmail = (emailRows ?? []).some((r: { alert_email: string | null }) => !!r.alert_email)
   }
   const atLimit = limit != null && list.length >= limit
 
@@ -59,11 +86,13 @@ export default async function DashboardPage() {
       </div>
       {showOnboarding && <OnboardingChecklist steps={onboardingSteps} />}
       {list.length > 0 && (
-        <div className="dashboard-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
+        <div className="dashboard-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
           {[
             { label: 'Projects', value: limit != null && limit < Number.MAX_SAFE_INTEGER ? `${list.length} / ${limit}` : list.length, sub: 'monitored' },
             { label: 'Avg score', value: avgScore ?? '–', sub: 'all projects' },
             { label: 'Need attention', value: critical, sub: 'warning or critical' },
+            { label: 'Daily check', value: `${dailyCheckCount} / ${list.length}`, sub: 'enabled' },
+            { label: 'Email alerts', value: `${emailAlertCount} / ${list.length}`, sub: 'configured' },
           ].map(card => (
             <div key={card.label} style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: '14px 16px' }}>
               <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>{card.label}</p>
@@ -95,9 +124,11 @@ export default async function DashboardPage() {
           {list.map((p, i) => {
             const grade = getScoreGrade(p.last_score)
             const diff = p.last_score != null && p.prev_week_score != null ? Math.round(p.last_score - p.prev_week_score) : null
+            const emailOn = !!p.alert_email
+            const dailyOn = p.status === 'active' && !!p.auto_run
             return (
-              <Link key={p.id} href={`/project/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px', borderBottom: i < list.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+              <Link key={p.id} href={`/project/${p.id}`} style={{ textDecoration: 'none', display: 'block', borderBottom: i < list.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px 4px' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: G[grade].color }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 13, fontWeight: 500, margin: '0 0 1px', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</p>
@@ -110,6 +141,13 @@ export default async function DashboardPage() {
                       <span style={{ fontSize: 11, color: G[grade].color }}>{G[grade].label}</span>
                     </div>
                   </div>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '0 20px 12px 42px' }}>
+                  <span style={statusChipStyle(emailOn)}><span style={chipDotStyle(emailOn)} />Email</span>
+                  <span style={statusChipStyle(dailyOn)}><span style={chipDotStyle(dailyOn)} />Daily</span>
+                  <span style={countChipStyle()}>E-com <b style={countValueStyle}>{p.ecommerce_events_count}</b></span>
+                  <span style={countChipStyle()}>Events <b style={countValueStyle}>{p.custom_events_count}</b></span>
+                  <span style={countChipStyle()}>Params <b style={countValueStyle}>{p.parameter_checks_count}</b></span>
                 </div>
               </Link>
             )

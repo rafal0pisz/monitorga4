@@ -116,6 +116,11 @@ export interface DashboardProject {
   last_score: number | null
   run_status: RunStatus | null
   prev_week_score: number | null
+  alert_email: string | null
+  auto_run: boolean | null
+  custom_events_count: number
+  ecommerce_events_count: number
+  parameter_checks_count: number
 }
 
 export interface ScoreHistory {
