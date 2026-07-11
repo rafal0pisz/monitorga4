@@ -7,13 +7,14 @@ const PUBLIC_PATHS = [
   '/api/contact',
 ]
 
-// API-only paths: /api/worker/run authorizes itself (session OR CRON_SECRET
-// bearer token) inside the route handler — redirecting an unauthenticated
-// API/cron request to the HTML /login page would be wrong regardless, and
-// would break Vercel Cron (which never carries a session cookie). Same
-// reasoning for /api/stripe/webhook: Stripe never carries a session cookie,
-// it self-authorizes via the stripe-signature header instead.
-const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/stripe/webhook']
+// API-only paths: /api/worker/run and /api/worker/trial-reminders authorize
+// themselves (session OR CRON_SECRET bearer token) inside the route handler
+// — redirecting an unauthenticated API/cron request to the HTML /login page
+// would be wrong regardless, and would break Vercel Cron (which never
+// carries a session cookie). Same reasoning for /api/stripe/webhook: Stripe
+// never carries a session cookie, it self-authorizes via the
+// stripe-signature header instead.
+const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/stripe/webhook']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

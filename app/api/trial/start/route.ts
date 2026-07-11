@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { sendEmail } from '@/lib/email/resend'
+import { renderTrialWelcomeEmail } from '@/lib/email/trialWelcome'
 
 const MESSAGES = {
   en: {
@@ -23,7 +25,7 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await session.auth.getUser()
   if (!user) return NextResponse.json({ error: t.signIn }, { status: 401 })
 
-  const { error } = await session.rpc('start_trial', { p_owner_id: user.id })
+  const { data, error } = await session.rpc('start_trial', { p_owner_id: user.id })
   if (error) {
     if (error.message.includes('TRIAL_ALREADY_USED')) {
       return NextResponse.json({ error: t.alreadyUsed }, { status: 400 })
@@ -32,6 +34,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: t.alreadyActive }, { status: 400 })
     }
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Best-effort — a failed welcome email shouldn't undo the trial that was
+  // already granted.
+  if (user.email && data?.trial_ends_at) {
+    await sendEmail({ to: user.email, ...renderTrialWelcomeEmail(new Date(data.trial_ends_at)) })
   }
 
   return NextResponse.json({ ok: true })
