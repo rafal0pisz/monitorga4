@@ -1,8 +1,11 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import SidebarNav from './SidebarNav'
+import MobileTopBar from './MobileTopBar'
 import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
+
+const MOBILE_TOPBAR_HEIGHT = 52
 
 export default async function AppSidebar() {
   const session = await createClient()
@@ -54,15 +57,13 @@ export default async function AppSidebar() {
           .app-sidebar {
             position: fixed;
             left: 0;
-            top: 0;
+            top: ${MOBILE_TOPBAR_HEIGHT}px;
+            height: calc(100vh - ${MOBILE_TOPBAR_HEIGHT}px);
             transform: translateX(-100%);
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
           }
           .app-sidebar.open {
             transform: translateX(0);
-          }
-          .app-main {
-            margin-left: 0 !important;
           }
         }
         .sidebar-overlay {
@@ -75,41 +76,62 @@ export default async function AppSidebar() {
         .sidebar-overlay.open {
           display: block;
         }
-        .sidebar-hamburger {
-          display: none;
-          position: fixed;
-          top: 12px;
-          left: 12px;
-          z-index: 50;
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          background: var(--color-background-secondary);
-          border: 1px solid var(--color-border-tertiary);
-          cursor: pointer;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
-          gap: 4px;
-          padding: 0;
-        }
         @media (max-width: 768px) {
-          .sidebar-hamburger { display: flex; }
+          .sidebar-overlay { top: ${MOBILE_TOPBAR_HEIGHT}px; }
         }
-        .sidebar-hamburger span {
+
+        .mobile-topbar { display: none; }
+        @media (max-width: 768px) {
+          /* position: fixed (not sticky) deliberately — this sits inside the
+             same flex row as .app-sidebar/.app-main, so sticky would just
+             make it a 3rd flex item next to them instead of a full-width bar
+             above both. Fixed takes it out of that flow entirely. */
+          .mobile-topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            height: ${MOBILE_TOPBAR_HEIGHT}px;
+            padding: 0 16px;
+            background: var(--color-background-secondary);
+            border-bottom: 0.5px solid var(--color-border-tertiary);
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 45;
+          }
+        }
+        .mobile-topbar-hamburger {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          width: 20px;
+          height: 15px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 0;
+          flex-shrink: 0;
+        }
+        .mobile-topbar-hamburger span {
           display: block;
-          width: 16px;
+          width: 100%;
           height: 2px;
           background: var(--color-text-primary);
           border-radius: 2px;
           transition: all 0.2s;
         }
+
+        .app-main { padding: 32px 36px; }
+        @media (max-width: 768px) {
+          .app-main { padding: 18px 16px !important; margin-top: ${MOBILE_TOPBAR_HEIGHT}px; }
+        }
       `}</style>
+
+      <MobileTopBar />
 
       <aside className="app-sidebar" id="app-sidebar">
         {/* Logo */}
         <div style={{ padding: '16px 16px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
-          <BrandWordmark size={17} />
+          <BrandWordmark size={17} mono />
         </div>
 
         {/* Plan */}

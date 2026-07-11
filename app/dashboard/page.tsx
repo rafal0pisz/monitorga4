@@ -43,6 +43,11 @@ export default async function DashboardPage() {
   const showOnboarding = !bypass && !!user && !onboardingDismissed && onboardingSteps.some(s => !s.done)
   return (
     <div style={{ maxWidth: 700 }}>
+      <style>{`
+        @media (max-width: 560px) {
+          .dashboard-stat-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Overview</h1>
@@ -54,7 +59,7 @@ export default async function DashboardPage() {
       </div>
       {showOnboarding && <OnboardingChecklist steps={onboardingSteps} />}
       {list.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
+        <div className="dashboard-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
           {[
             { label: 'Projects', value: limit != null && limit < Number.MAX_SAFE_INTEGER ? `${list.length} / ${limit}` : list.length, sub: 'monitored' },
             { label: 'Avg score', value: avgScore ?? '–', sub: 'all projects' },

@@ -2,7 +2,6 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
 import { scoreColor } from '@/types'
 
 interface Project {
@@ -18,60 +17,10 @@ function scoreDotColor(score: number | null): string {
 
 export default function SidebarNav({ projects }: { projects: Project[] }) {
   const pathname = usePathname()
-  const [open, setOpen] = useState(false)
-
-  // Close sidebar on route change (mobile navigation)
-  useEffect(() => { setOpen(false) }, [pathname])
-
-  // Sync open state to DOM (CSS classes on the aside element)
-  useEffect(() => {
-    const sidebar  = document.getElementById('app-sidebar')
-    const overlay  = document.getElementById('sidebar-overlay')
-    const hamburger = document.getElementById('sidebar-hamburger')
-    if (sidebar)   sidebar.classList.toggle('open', open)
-    if (overlay)   overlay.classList.toggle('open', open)
-    if (hamburger) hamburger.setAttribute('aria-expanded', String(open))
-    // Prevent body scroll when open on mobile
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [open])
-
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
   return (
-    <>
-      {/* Hamburger button — visible on mobile only via CSS */}
-      <button
-        id="sidebar-hamburger"
-        className="sidebar-hamburger"
-        onClick={() => setOpen(o => !o)}
-        aria-label="Toggle navigation"
-        aria-expanded={open}
-      >
-        <span style={{ transform: open ? 'rotate(45deg) translate(4px, 4px)' : 'none' }} />
-        <span style={{ opacity: open ? 0 : 1 }} />
-        <span style={{ transform: open ? 'rotate(-45deg) translate(4px, -4px)' : 'none' }} />
-      </button>
-
-      {/* Overlay backdrop — mobile only */}
-      <div
-        id="sidebar-overlay"
-        className="sidebar-overlay"
-        onClick={() => setOpen(false)}
-      />
-
-      {/* Nav content */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-
-        {/* Mobile close button inside sidebar */}
-        <div style={{ display: 'none' }} className="sidebar-close-row">
-          <button
-            onClick={() => setOpen(false)}
-            style={{ margin: '8px 16px 0 auto', display: 'block', background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--color-text-secondary)', padding: 4 }}
-            aria-label="Close menu"
-          >✕</button>
-        </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
         {/* Projects */}
         <div style={{ padding: '14px 0 8px' }}>
           <p style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-secondary)', padding: '0 16px', margin: '0 0 4px' }}>
@@ -142,13 +91,6 @@ export default function SidebarNav({ projects }: { projects: Project[] }) {
             )
           })}
         </div>
-      </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .sidebar-close-row { display: block !important; }
-        }
-      `}</style>
-    </>
+    </div>
   )
 }

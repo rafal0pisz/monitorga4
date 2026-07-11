@@ -48,11 +48,13 @@ function PageStyles() {
   return (
     <style>{`
       @media (max-width: 768px) {
-        .page-nav-actions { flex-wrap: wrap; gap: 6px !important; }
+        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 16px !important; gap: 8px; }
+        .page-nav-actions { flex-wrap: wrap; gap: 6px !important; justify-content: flex-start !important; }
         .page-score-header { flex-direction: column !important; }
         .page-grid { grid-template-columns: 1fr !important; }
         .page-history-table { font-size: 11px !important; }
         .page-settings-grid { grid-template-columns: 1fr !important; }
+        .page-content-wrap { padding: 16px 14px !important; }
       }
       @media (max-width: 480px) {
         .page-period-label { display: none !important; }
@@ -115,13 +117,13 @@ export default async function ProjectPage({
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
       <PageStyles />
       <nav style={{ backgroundColor: 'var(--color-background-secondary)', borderBottom: '1px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Link href="/dashboard" style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>← Dashboard</Link>
-            <span style={{ color: 'var(--color-border-tertiary)' }}>·</span>
-            <span style={{ fontSize: 13, fontWeight: 600 }}>{project.name}</span>
+        <div className="page-nav-row" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <Link href="/dashboard" style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', flexShrink: 0 }}>← Dashboard</Link>
+            <span style={{ color: 'var(--color-border-tertiary)', flexShrink: 0 }}>·</span>
+            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{project.name}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="page-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Suspense fallback={<div style={{ width: 200, height: 24 }} />}>
               <PeriodSelector current={periodDays} />
             </Suspense>
@@ -134,7 +136,7 @@ export default async function ProjectPage({
         </div>
       </nav>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
+      <div className="page-content-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px' }}>
 
         {/* Score header */}
         <div className="page-score-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '16px 20px', marginBottom: 28, backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, gap: 20 }}>
