@@ -31,6 +31,27 @@ export const LANDING_BASE_STYLES = `
     .lp-nav .nav-cta-short { display: inline; }
   }
 
+  .lp-nav-hamburger {
+    display: none; background: none; border: none; cursor: pointer;
+    width: 26px; height: 20px; padding: 0; flex-direction: column; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .lp-nav-hamburger span { display: block; width: 100%; height: 2px; background: #fff; border-radius: 2px; transition: transform 0.2s, opacity 0.2s; }
+  @media (max-width: 860px) { .lp-nav-hamburger { display: flex; } }
+
+  .lp-nav-mobile { display: none; }
+  @media (max-width: 860px) {
+    .lp-nav-mobile {
+      display: flex; flex-direction: column;
+      background: rgba(35,43,49,0.98); border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 4px 24px 20px;
+    }
+    .lp-nav-mobile a { font-size: 15px; font-weight: 500; color: #fff; text-decoration: none; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .lp-nav-mobile-cta { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .lp-nav-mobile-cta a { border-bottom: none; padding: 0; }
+    .lp-nav-mobile-cta .btn--primary { justify-content: center; padding: 12px; }
+  }
+
   .lp .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     font-family: var(--font-sans), sans-serif; font-weight: 600; font-size: 14.5px;
