@@ -57,12 +57,25 @@ export function planByStripePriceId(priceId: string): Plan | undefined {
   return PLANS.find(p => p.stripePriceId.monthly === priceId || p.stripePriceId.yearly === priceId)
 }
 
+export const TRIAL_DAYS = 14
+
 export function planLimit(planId: string | null | undefined): number {
   if (planId === 'internal') return Number.MAX_SAFE_INTEGER
+  if (planId === 'trial') return 100 // same ceiling as Agency — see supabase/migrations/013_trial.sql
   return PLANS.find(p => p.id === planId)?.projectLimit ?? 0
 }
 
 export function planName(planId: string | null | undefined): string {
   if (planId === 'internal') return 'Internal'
+  if (planId === 'trial') return 'Trial (Agency)'
   return PLANS.find(p => p.id === planId)?.name ?? 'No plan'
+}
+
+// An expired trial should behave as no plan at all (matches
+// effective_plan_id() in supabase/migrations/013_trial.sql) — profiles.plan_id
+// itself is left as 'trial' after expiry as a historical record, so every
+// place that reads it for limit/display purposes needs to resolve it first.
+export function effectivePlanId(planId: string | null | undefined, trialEndsAt: string | null | undefined): string | null {
+  if (planId === 'trial' && (!trialEndsAt || new Date(trialEndsAt) < new Date())) return null
+  return planId ?? null
 }

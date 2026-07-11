@@ -2,7 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import SidebarNav from './SidebarNav'
 import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
-import { planLimit, planName } from '@/lib/billing/plans'
+import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 
 export default async function AppSidebar() {
   const session = await createClient()
@@ -19,11 +19,16 @@ export default async function AppSidebar() {
 
   let plan: string | null = null
   let limit: number | null = null
+  let trialDaysLeft: number | null = null
   if (!bypass && user) {
-    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
     if (!profileErr) {
-      plan = planName(profile?.plan_id)
-      limit = planLimit(profile?.plan_id)
+      const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
+      plan = planName(effective)
+      limit = planLimit(effective)
+      if (effective === 'trial' && profile?.trial_ends_at) {
+        trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
+      }
     }
   }
 
@@ -112,12 +117,19 @@ export default async function AppSidebar() {
 
         {/* Plan */}
         {plan && (
-          <div style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Plan: {plan}</span>
-            {limit != null && (
-              <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                {(projects ?? []).length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
-              </span>
+          <div style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Plan: {plan}</span>
+              {limit != null && (
+                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                  {(projects ?? []).length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
+                </span>
+              )}
+            </div>
+            {trialDaysLeft != null && (
+              <p style={{ fontSize: 10.5, color: 'var(--color-text-secondary)', margin: '3px 0 0' }}>
+                {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left
+              </p>
             )}
           </div>
         )}

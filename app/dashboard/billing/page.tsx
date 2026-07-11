@@ -1,9 +1,10 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { planLimit, planName, planById } from '@/lib/billing/plans'
+import { planLimit, planName, planById, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
 import { getStripe } from '@/lib/stripe/client'
 import { getCompanyDetails } from '@/lib/stripe/companyDetails'
 import BillingActions from '@/components/billing/BillingActions'
 import CompanyDetailsForm from '@/components/billing/CompanyDetailsForm'
+import StartTrialButton from '@/components/billing/StartTrialButton'
 import Link from 'next/link'
 
 interface InvoiceRow {
@@ -35,17 +36,21 @@ export default async function BillingPage() {
   let companyCity = ''
   let companyPostalCode = ''
   let companyNip = ''
+  let trialEndsAt: string | null = null
+  let trialUsedAt: string | null = null
 
   if (!bypass && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('plan_id, subscription_status, current_period_end, stripe_customer_id')
+      .select('plan_id, subscription_status, current_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
       .eq('id', user.id)
       .single()
-    planId = profile?.plan_id ?? null
+    planId = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
     subscriptionStatus = profile?.subscription_status ?? null
     currentPeriodEnd = profile?.current_period_end ?? null
     stripeCustomerId = profile?.stripe_customer_id ?? null
+    trialEndsAt = profile?.trial_ends_at ?? null
+    trialUsedAt = profile?.trial_used_at ?? null
 
     const { count } = await supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id)
     projectCount = count ?? 0
@@ -79,6 +84,9 @@ export default async function BillingPage() {
   const limit = planLimit(planId)
   const isUnlimited = limit >= Number.MAX_SAFE_INTEGER
   const hasPurchasablePlan = !!planById(planId ?? '')
+  const isTrial = planId === 'trial'
+  const trialDaysLeft = isTrial && trialEndsAt ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000)) : 0
+  const canStartTrial = !planId && !trialUsedAt
 
   return (
     <div style={{ maxWidth: 620 }}>
@@ -101,14 +109,27 @@ export default async function BillingPage() {
             {projectCount} / {isUnlimited ? '∞' : limit} monitored GA4 properties
           </p>
           <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
-            {currentPeriodEnd ? `Valid until: ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : hasPurchasablePlan ? '' : 'No expiry date'}
+            {isTrial
+              ? `Trial ends in ${trialDaysLeft} ${trialDaysLeft === 1 ? 'day' : 'days'}`
+              : currentPeriodEnd ? `Valid until: ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : hasPurchasablePlan ? '' : 'No expiry date'}
           </p>
           <BillingActions hasPurchasablePlan={hasPurchasablePlan} />
         </div>
-        {!hasPurchasablePlan && (
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 12 }}>
-            You don&apos;t have a paid plan yet — pick one below.
-          </p>
+        {!planId && (
+          <div style={{ marginTop: 12 }}>
+            {canStartTrial ? (
+              <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px' }}>
+                <p style={{ fontSize: 13, color: '#166534', margin: '0 0 10px' }}>
+                  Try AlertGA4 free for {TRIAL_DAYS} days on Agency terms (up to 100 GA4 properties) — no card required. One-time only.
+                </p>
+                <StartTrialButton label={`Start ${TRIAL_DAYS}-day free trial`} lang="en" />
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                You don&apos;t have a paid plan yet — pick one below.
+              </p>
+            )}
+          </div>
         )}
       </section>
 

@@ -4,8 +4,10 @@ import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import PricingCards from '@/components/marketing/PricingCards'
 import PlanComparisonTable from '@/components/marketing/PlanComparisonTable'
+import StartTrialButton from '@/components/billing/StartTrialButton'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
-import { PLANS } from '@/lib/billing/plans'
+import { PLANS, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'Cennik',
@@ -17,10 +19,18 @@ export default async function CennikPage() {
   const { data: { user } } = await supabase.auth.getUser()
 
   let currentPlanId: string | null = null
+  let trialEndsAt: string | null = null
+  let trialUsedAt: string | null = null
   if (user) {
-    const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
-    currentPlanId = profile?.plan_id ?? null
+    const { data: profile } = await supabase.from('profiles').select('plan_id, trial_ends_at, trial_used_at').eq('id', user.id).single()
+    currentPlanId = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
+    trialEndsAt = profile?.trial_ends_at ?? null
+    trialUsedAt = profile?.trial_used_at ?? null
   }
+
+  const trialActive = currentPlanId === 'trial' && !!trialEndsAt
+  const trialDaysLeft = trialActive ? Math.max(0, Math.ceil((new Date(trialEndsAt!).getTime() - Date.now()) / 86400000)) : 0
+  const canStartTrial = !!user && !currentPlanId && !trialUsedAt
 
   const primaryCta = user
     ? { href: '/dashboard', label: 'Przejdź do panelu' }
@@ -56,6 +66,10 @@ export default async function CennikPage() {
         .pricing-price .period { font-size: 13.5px; color: #8b939a; }
         .pricing-permonth { font-size: 12.5px; color: #8b939a; margin: 4px 0 0; }
 
+        .trial-banner { max-width: 640px; margin: 0 auto 40px; padding: 18px 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; text-align: center; }
+        .trial-banner p { font-size: 13.5px; color: #166534; margin: 0 0 12px; line-height: 1.5; }
+        .trial-banner p:last-child { margin-bottom: 0; }
+
         .plan-table-section { padding: 8px 0 88px; }
         .plan-table-section h2 { font-size: clamp(20px, 3vw, 26px); letter-spacing: -0.01em; text-align: center; margin: 0 0 32px; }
         .plan-table-wrap { overflow-x: auto; }
@@ -78,6 +92,23 @@ export default async function CennikPage() {
         </div>
 
         <div className="wrap cennik-body">
+          {trialActive && (
+            <div className="trial-banner">
+              <p>Twój bezpłatny okres próbny (na zasadach planu Agency) jest aktywny — zostało {trialDaysLeft} {trialDaysLeft === 1 ? 'dzień' : 'dni'}.</p>
+            </div>
+          )}
+          {canStartTrial && (
+            <div className="trial-banner">
+              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni na zasadach planu Agency (do 100 usług GA4) — bez podpinania karty. Można skorzystać jednorazowo.</p>
+              <StartTrialButton label={`Rozpocznij ${TRIAL_DAYS}-dniowy okres próbny`} lang="pl" />
+            </div>
+          )}
+          {!user && (
+            <div className="trial-banner">
+              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni na zasadach planu Agency — bez podpinania karty.</p>
+              <Link href="/login" className="btn btn--primary btn--sm">Zarejestruj się przez Google</Link>
+            </div>
+          )}
           <PricingCards
             loggedIn={!!user}
             currentPlanId={currentPlanId}
