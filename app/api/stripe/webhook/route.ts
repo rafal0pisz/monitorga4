@@ -56,7 +56,10 @@ export async function POST(request: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!)
+    // .trim() — a stray trailing newline/space pasted into the Vercel env var
+    // makes every signature check fail with no useful error beyond "no
+    // signatures found", so we defend against that specific paste mistake here.
+    event = stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET!.trim())
   } catch (err) {
     return NextResponse.json({ error: `Invalid signature: ${(err as Error).message}` }, { status: 400 })
   }

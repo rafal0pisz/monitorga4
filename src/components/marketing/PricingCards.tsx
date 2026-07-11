@@ -10,7 +10,13 @@ interface PlanCard {
   priceYearlyPLN: number
 }
 
-export default function PricingCards({ plans, loggedIn }: { plans: PlanCard[]; loggedIn: boolean }) {
+export default function PricingCards({
+  plans, loggedIn, currentPlanId,
+}: {
+  plans: PlanCard[]
+  loggedIn: boolean
+  currentPlanId?: string | null
+}) {
   const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +36,11 @@ export default function PricingCards({ plans, loggedIn }: { plans: PlanCard[]; l
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Nie udało się rozpocząć płatności.')
-      window.location.href = data.url
+      if (data.updated) {
+        window.location.href = '/dashboard/billing?updated=1'
+      } else {
+        window.location.href = data.url
+      }
     } catch (err: any) {
       setError(err.message)
       setLoadingPlan(null)
@@ -50,9 +60,13 @@ export default function PricingCards({ plans, loggedIn }: { plans: PlanCard[]; l
         {plans.map(plan => {
           const price = cycle === 'monthly' ? plan.priceMonthlyPLN : plan.priceYearlyPLN
           const perMonth = cycle === 'yearly' ? Math.round(plan.priceYearlyPLN / 12) : plan.priceMonthlyPLN
+          const isCurrent = plan.id === currentPlanId
           return (
-            <div key={plan.id} className="pricing-card">
-              <h3>{plan.name}</h3>
+            <div key={plan.id} className="pricing-card" style={isCurrent ? { borderColor: '#16a34a', boxShadow: '0 0 0 1px #16a34a' } : undefined}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3>{plan.name}</h3>
+                {isCurrent && <span style={{ fontSize: 10.5, fontWeight: 600, color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 999, padding: '2px 8px' }}>obecny</span>}
+              </div>
               <p className="pricing-limit">do {plan.projectLimit} {plan.projectLimit === 1 ? 'usługi' : 'usług'} GA4</p>
               <div className="pricing-price">
                 <span className="amount">{price} zł</span>
@@ -63,10 +77,10 @@ export default function PricingCards({ plans, loggedIn }: { plans: PlanCard[]; l
                 type="button"
                 className="btn btn--primary"
                 style={{ width: '100%', marginTop: 16 }}
-                disabled={loadingPlan === plan.id}
+                disabled={loadingPlan === plan.id || isCurrent}
                 onClick={() => handleSelect(plan.id)}
               >
-                {loadingPlan === plan.id ? 'Przekierowanie…' : loggedIn ? 'Wybierz plan' : 'Zarejestruj się'}
+                {isCurrent ? 'Twój obecny plan' : loadingPlan === plan.id ? 'Przetwarzanie…' : loggedIn ? (currentPlanId ? 'Przełącz na ten plan' : 'Wybierz plan') : 'Zarejestruj się'}
               </button>
             </div>
           )

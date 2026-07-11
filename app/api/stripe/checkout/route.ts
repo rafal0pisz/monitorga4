@@ -24,7 +24,24 @@ export async function POST(request: NextRequest) {
   const supabase = createAdminClient()
 
   try {
-    const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('profiles')
+      .select('stripe_customer_id, stripe_subscription_id, subscription_status')
+      .eq('id', user.id).single()
+
+    // Already on an active/trialing/past_due subscription — change it in
+    // place instead of starting a second Checkout Session, which would
+    // create a second, parallel subscription and double-bill the customer.
+    // Stripe prorates the difference automatically.
+    const liveStatuses = ['active', 'trialing', 'past_due']
+    if (profile?.stripe_subscription_id && liveStatuses.includes(profile.subscription_status ?? '')) {
+      const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id)
+      await stripe.subscriptions.update(profile.stripe_subscription_id, {
+        items: [{ id: subscription.items.data[0].id, price: priceId }],
+        proration_behavior: 'create_prorations',
+        metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
+      })
+      return NextResponse.json({ updated: true })
+    }
 
     let customerId = profile?.stripe_customer_id as string | undefined
     if (!customerId) {
@@ -45,7 +62,7 @@ export async function POST(request: NextRequest) {
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/dashboard/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/cennik?checkout=cancelled`,
+      cancel_url: `${appUrl}/dashboard/billing?checkout=cancelled`,
       client_reference_id: user.id,
       metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
       subscription_data: { metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle } },
