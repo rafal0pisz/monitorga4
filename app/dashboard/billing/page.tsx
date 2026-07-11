@@ -1,9 +1,9 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { planLimit, planName, planById, PLANS } from '@/lib/billing/plans'
+import { planLimit, planName, planById } from '@/lib/billing/plans'
 import { getStripe } from '@/lib/stripe/client'
 import BillingActions from '@/components/billing/BillingActions'
 import CompanyDetailsForm from '@/components/billing/CompanyDetailsForm'
-import PricingCards from '@/components/marketing/PricingCards'
+import Link from 'next/link'
 
 interface InvoiceRow {
   id: string
@@ -61,14 +61,14 @@ export default async function BillingPage({
         invoices = list.data.map(inv => ({
           id: inv.id ?? '',
           number: inv.number,
-          date: new Date(inv.created * 1000).toLocaleDateString('pl-PL'),
+          date: new Date(inv.created * 1000).toLocaleDateString('en-GB'),
           amount: `${(inv.total / 100).toFixed(2)} ${inv.currency.toUpperCase()}`,
           status: inv.status ?? 'unknown',
           pdfUrl: inv.invoice_pdf ?? null,
         }))
       } catch {
-        // Brak faktur lub chwilowy problem z API Stripe — sekcja po prostu
-        // pokaże się jako pusta, nie blokujemy renderowania reszty strony.
+        // No invoices yet, or a transient Stripe API issue — the section
+        // just renders empty, doesn't block the rest of the page.
       }
 
       try {
@@ -83,7 +83,7 @@ export default async function BillingPage({
         const vat = taxIds.data.find(t => t.type === 'eu_vat')
         companyNip = vat?.value.replace(/^PL/i, '') ?? ''
       } catch {
-        // Konto rozliczeniowe istnieje, ale danych firmowych jeszcze nie ustawiono.
+        // Billing account exists but company details aren't set yet.
       }
     }
   }
@@ -96,18 +96,18 @@ export default async function BillingPage({
     <div style={{ maxWidth: 620 }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Billing</h1>
-        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Twój plan i rozliczenia</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Your plan and billing details</p>
       </div>
 
       {updated === '1' && (
         <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 24 }}>
-          <p style={{ fontSize: 13, color: '#166534', margin: 0 }}>Plan zaktualizowany. Zmiana (i ewentualna proporcjonalna dopłata) pojawi się na koncie w ciągu kilku sekund.</p>
+          <p style={{ fontSize: 13, color: '#166534', margin: 0 }}>Plan updated. The change (and any prorated charge) will show up on your account within a few seconds.</p>
         </div>
       )}
 
-      {/* Obecny plan */}
+      {/* Current plan */}
       <section>
-        <h2 style={sectionH2}>Obecny plan</h2>
+        <h2 style={sectionH2}>Current plan</h2>
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 500, color: 'var(--color-text-primary)' }}>{planName(planId)}</span>
@@ -116,33 +116,38 @@ export default async function BillingPage({
             )}
           </div>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>
-            {projectCount} / {isUnlimited ? '∞' : limit} monitorowanych usług GA4
+            {projectCount} / {isUnlimited ? '∞' : limit} monitored GA4 properties
           </p>
           <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
-            {currentPeriodEnd ? `Plan ważny do: ${new Date(currentPeriodEnd).toLocaleDateString('pl-PL')}` : hasPurchasablePlan ? '' : 'Bez terminu ważności'}
+            {currentPeriodEnd ? `Valid until: ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : hasPurchasablePlan ? '' : 'No expiry date'}
           </p>
           <BillingActions hasPurchasablePlan={hasPurchasablePlan} />
         </div>
         {!hasPurchasablePlan && (
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 12 }}>
-            Nie masz jeszcze wykupionego planu — wybierz go poniżej.
+            You don&apos;t have a paid plan yet — pick one below.
           </p>
         )}
       </section>
 
-      {/* Zmiana planu */}
+      {/* Change plan */}
       <section style={sectionWrap}>
-        <h2 style={sectionH2}>Zmiana planu</h2>
-        <PricingCards
-          loggedIn={!!user}
-          currentPlanId={hasPurchasablePlan ? planId : null}
-          plans={PLANS.map(p => ({ id: p.id, name: p.name, projectLimit: p.projectLimit, priceMonthlyPLN: p.priceMonthlyPLN, priceYearlyPLN: p.priceYearlyPLN }))}
-        />
+        <h2 style={sectionH2}>Change plan</h2>
+        <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, maxWidth: 380 }}>
+            {hasPurchasablePlan
+              ? 'Compare plans and switch anytime — if you already have an active subscription, picking a new plan updates it in place instead of starting a second one.'
+              : 'Compare plans and pick the one that fits how many GA4 properties you monitor.'}
+          </p>
+          <Link href="/cennik" style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', fontSize: 13, whiteSpace: 'nowrap' }}>
+            View pricing →
+          </Link>
+        </div>
       </section>
 
-      {/* Faktury */}
+      {/* Invoices */}
       <section style={sectionWrap}>
-        <h2 style={sectionH2}>Faktury</h2>
+        <h2 style={sectionH2}>Invoices</h2>
         {invoices.length > 0 ? (
           <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
             {invoices.map((inv, i) => (
@@ -152,19 +157,19 @@ export default async function BillingPage({
                 <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', flexShrink: 0 }}>{inv.amount}</span>
                 <span style={{ fontSize: 11, color: inv.status === 'paid' ? '#16a34a' : 'var(--color-text-secondary)', flexShrink: 0, width: 60 }}>{inv.status}</span>
                 {inv.pdfUrl ? (
-                  <a href={inv.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: '#16a34a', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>Pobierz ↓</a>
+                  <a href={inv.pdfUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: '#16a34a', textDecoration: 'none', fontWeight: 500, flexShrink: 0 }}>Download ↓</a>
                 ) : <span style={{ width: 60, flexShrink: 0 }} />}
               </div>
             ))}
           </div>
         ) : (
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Brak wystawionych faktur.</p>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>No invoices yet.</p>
         )}
       </section>
 
-      {/* Dane firmy */}
+      {/* Company details */}
       <section style={sectionWrap}>
-        <h2 style={sectionH2}>Dane firmy</h2>
+        <h2 style={sectionH2}>Company details</h2>
         <CompanyDetailsForm
           hasCustomer={!!stripeCustomerId}
           initialName={companyName}

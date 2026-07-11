@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   const stripe = getStripe()
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Musisz być zalogowany' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'You must be signed in' }, { status: 401 })
 
   const body = await request.json().catch(() => null)
   const name = typeof body?.name === 'string' ? body.name.trim().slice(0, 200) : ''
@@ -19,15 +19,15 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
   const customerId = profile?.stripe_customer_id as string | undefined
   if (!customerId) {
-    return NextResponse.json({ error: 'Brak konta rozliczeniowego — dane firmy można ustawić po pierwszym zakupie planu.' }, { status: 400 })
+    return NextResponse.json({ error: 'No billing account yet — company details can be set after your first plan purchase.' }, { status: 400 })
   }
 
   try {
-    // Aktualizuje dane na koncie Klienta w Stripe, z którego Stripe generuje
-    // KAŻDĄ przyszłą fakturę (odnowienie subskrypcji, zmianę planu) — więc
-    // to naprawdę "łączy się" z zakupem, tak jak proszono. Już wystawionych
-    // (zamkniętych) faktur nie da się retroaktywnie zmienić — to standard
-    // księgowy, nie ograniczenie naszej integracji.
+    // Updates the Stripe Customer object, which Stripe uses to generate
+    // EVERY future invoice (renewal, plan change) — so this genuinely stays
+    // in sync with the purchase, as requested. Already-issued (finalized)
+    // invoices can't be changed retroactively — that's an accounting
+    // constraint, not a gap in this integration.
     await stripe.customers.update(customerId, {
       name: name || undefined,
       address: line1 ? { line1, city, postal_code: postalCode, country: 'PL' } : undefined,

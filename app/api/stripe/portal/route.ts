@@ -6,12 +6,12 @@ export async function POST(request: NextRequest) {
   const stripe = getStripe()
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Musisz być zalogowany' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'You must be signed in' }, { status: 401 })
 
   const supabase = createAdminClient()
   const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
   if (!profile?.stripe_customer_id) {
-    return NextResponse.json({ error: 'Brak aktywnej subskrypcji' }, { status: 400 })
+    return NextResponse.json({ error: 'No active subscription' }, { status: 400 })
   }
 
   try {

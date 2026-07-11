@@ -64,5 +64,5 @@ export function planLimit(planId: string | null | undefined): number {
 
 export function planName(planId: string | null | undefined): string {
   if (planId === 'internal') return 'Internal'
-  return PLANS.find(p => p.id === planId)?.name ?? 'Brak planu'
+  return PLANS.find(p => p.id === planId)?.name ?? 'No plan'
 }

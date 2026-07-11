@@ -38,7 +38,7 @@ export default function CompanyDetailsForm({ hasCustomer, initialName, initialLi
         body: JSON.stringify({ name, line1, city, postalCode, nip }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Nie udało się zapisać danych.')
+      if (!res.ok) throw new Error(data.error ?? 'Could not save your details.')
       setStatus('saved')
     } catch (err: any) {
       setStatus('error')
@@ -49,7 +49,7 @@ export default function CompanyDetailsForm({ hasCustomer, initialName, initialLi
   if (!hasCustomer) {
     return (
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-        Dane firmy będzie można ustawić po pierwszym zakupie planu.
+        Company details can be set after your first plan purchase.
       </p>
     )
   }
@@ -57,39 +57,43 @@ export default function CompanyDetailsForm({ hasCustomer, initialName, initialLi
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 420 }}>
       <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>
-        Te dane trafiają na konto rozliczeniowe w Stripe i zostaną użyte na kolejnej wystawionej fakturze (np. przy odnowieniu subskrypcji). Już wystawionych faktur nie da się zmienić wstecz.
+        These details are saved to your Stripe billing account and used on the next invoice issued (e.g. a subscription renewal). Already-issued invoices can&apos;t be changed retroactively.
       </p>
       <div>
-        <label style={labelStyle} htmlFor="cd-name">Nazwa firmy</label>
-        <input id="cd-name" style={fieldStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Twoja Firma Sp. z o.o." />
+        <label style={labelStyle} htmlFor="cd-name">Company name</label>
+        <input id="cd-name" style={fieldStyle} value={name} onChange={e => setName(e.target.value)} placeholder="Your Company Sp. z o.o." />
       </div>
       <div>
-        <label style={labelStyle} htmlFor="cd-line1">Adres</label>
-        <input id="cd-line1" style={fieldStyle} value={line1} onChange={e => setLine1(e.target.value)} placeholder="ul. Przykładowa 1" />
+        <label style={labelStyle} htmlFor="cd-line1">Address</label>
+        <input id="cd-line1" style={fieldStyle} value={line1} onChange={e => setLine1(e.target.value)} placeholder="1 Example Street" />
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <label style={labelStyle} htmlFor="cd-postal">Kod pocztowy</label>
+          <label style={labelStyle} htmlFor="cd-postal">Postal code</label>
           <input id="cd-postal" style={fieldStyle} value={postalCode} onChange={e => setPostalCode(e.target.value)} placeholder="00-000" />
         </div>
         <div style={{ flex: 2 }}>
-          <label style={labelStyle} htmlFor="cd-city">Miasto</label>
-          <input id="cd-city" style={fieldStyle} value={city} onChange={e => setCity(e.target.value)} placeholder="Warszawa" />
+          <label style={labelStyle} htmlFor="cd-city">City</label>
+          <input id="cd-city" style={fieldStyle} value={city} onChange={e => setCity(e.target.value)} placeholder="Warsaw" />
         </div>
       </div>
       <div>
-        <label style={labelStyle} htmlFor="cd-nip">NIP</label>
+        <label style={labelStyle} htmlFor="cd-nip">Tax ID (NIP)</label>
         <input id="cd-nip" style={fieldStyle} value={nip} onChange={e => setNip(e.target.value)} placeholder="1234567890" />
       </div>
 
-      {error && <div className="contact-error" style={{ fontSize: 12.5 }}>{error}</div>}
+      {error && (
+        <div style={{ fontSize: 12.5, color: '#c23b34', background: '#fdf2f1', border: '1px solid #f8d4d1', borderRadius: 8, padding: '8px 12px' }}>
+          {error}
+        </div>
+      )}
 
       <button
         type="submit"
         disabled={status === 'saving'}
         style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, border: 'none', fontSize: 13, cursor: 'pointer', width: 'fit-content' }}
       >
-        {status === 'saving' ? 'Zapisywanie…' : status === 'saved' ? 'Zapisano ✓' : 'Zapisz dane firmy'}
+        {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved ✓' : 'Save company details'}
       </button>
     </form>
   )

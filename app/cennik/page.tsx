@@ -15,6 +15,12 @@ export default async function CennikPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  let currentPlanId: string | null = null
+  if (user) {
+    const { data: profile } = await supabase.from('profiles').select('plan_id').eq('id', user.id).single()
+    currentPlanId = profile?.plan_id ?? null
+  }
+
   const primaryCta = user
     ? { href: '/dashboard', label: 'Przejdź do panelu' }
     : { href: '/login', label: 'Zarejestruj się przez Google' }
@@ -61,6 +67,7 @@ export default async function CennikPage() {
         <div className="wrap cennik-body">
           <PricingCards
             loggedIn={!!user}
+            currentPlanId={currentPlanId}
             plans={PLANS.map(p => ({ id: p.id, name: p.name, projectLimit: p.projectLimit, priceMonthlyPLN: p.priceMonthlyPLN, priceYearlyPLN: p.priceYearlyPLN }))}
           />
         </div>
