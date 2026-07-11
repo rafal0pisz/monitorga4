@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens used throughout the app (dashboard, sidebar, project pages)
+   via var(--color-*) with no fallback — until now these were never actually
+   defined anywhere, so every one of those declarations was invalid at
+   computed-value time: background properties silently resolved to
+   `transparent` and text `color` fell back to the browser's own default
+   (which can be white in a dark-mode browser). Usually invisible since nothing
+   else was rendered underneath, but glaring the moment something overlaps —
+   e.g. the mobile sidebar drawer sliding in over page content. */
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f6f7f8;
+  --color-background-tertiary: #eef0f2;
+  --color-background-info: #eff6ff;
+
+  --color-text-primary: #1c2328;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-text-info: #2563eb;
+
+  --color-border-primary: #c7ccd2;
+  --color-border-secondary: #dde2e7;
+  --color-border-tertiary: #e6e9ec;
+}
+
 * { box-sizing: border-box; }
 
 body {

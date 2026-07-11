@@ -48,13 +48,17 @@ function PageStyles() {
   return (
     <style>{`
       @media (max-width: 768px) {
-        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 16px !important; gap: 8px; }
-        .page-nav-actions { flex-wrap: wrap; gap: 6px !important; justify-content: flex-start !important; }
+        /* Extra gap + a divider between the back/name row and the actions
+           row (Period/PDF/Settings/Run now) — stacked with nothing but 8px
+           between them, "⚙ Settings" sat right under the back link and read
+           as one crowded cluster instead of two distinct rows. */
+        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 16px !important; gap: 10px; }
+        .page-nav-actions { flex-wrap: wrap; gap: 8px !important; justify-content: flex-start !important; padding-top: 8px; border-top: 0.5px solid var(--color-border-tertiary); }
         .page-score-header { flex-direction: column !important; }
         .page-grid { grid-template-columns: 1fr !important; }
         .page-history-table { font-size: 11px !important; }
         .page-settings-grid { grid-template-columns: 1fr !important; }
-        .page-content-wrap { padding: 16px 14px !important; }
+        .page-content-wrap { padding: 12px 10px !important; }
       }
       @media (max-width: 480px) {
         .page-period-label { display: none !important; }

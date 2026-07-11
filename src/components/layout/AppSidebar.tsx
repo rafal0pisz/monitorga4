@@ -122,7 +122,7 @@ export default async function AppSidebar() {
 
         .app-main { padding: 32px 36px; }
         @media (max-width: 768px) {
-          .app-main { padding: 18px 16px !important; margin-top: ${MOBILE_TOPBAR_HEIGHT}px; }
+          .app-main { padding: 14px 10px !important; margin-top: ${MOBILE_TOPBAR_HEIGHT}px; }
         }
       `}</style>
 
