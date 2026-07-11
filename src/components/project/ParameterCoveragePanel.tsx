@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ga4Fetch } from '@/lib/ga4/clientQueue'
 
 interface CoverageResult {
   total_events: number
@@ -154,7 +155,7 @@ export default function ParameterCoveragePanel({ propertyId, parameterChecks, pe
         periodDays: String(periodDays),
       })
 
-      fetch(`/api/ga4/parameters?${params}`)
+      ga4Fetch(`/api/ga4/parameters?${params}`)
         .then(res => res.json())
         .then(json => {
           if (json.error) throw new Error(json.error)

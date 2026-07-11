@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
+import { ga4Fetch } from '@/lib/ga4/clientQueue'
 
 interface GA4Property {
   propertyId: string
@@ -138,7 +139,7 @@ export default function NewProjectForm() {
     async function loadProperties() {
       setPropertiesLoading(true)
       try {
-        const res = await fetch('/api/ga4/properties')
+        const res = await ga4Fetch('/api/ga4/properties')
         const data = await res.json()
         if (!res.ok) throw new Error(data.error ?? 'Failed to load')
         const flat: GA4Property[] = []
@@ -181,12 +182,12 @@ export default function NewProjectForm() {
     setDiscoverLoading(true)
     const propertyName = `properties/${effectivePropertyId}`
     Promise.all([
-      fetch(`/api/ga4/discover-events?propertyId=${encodeURIComponent(propertyName)}`).then(async r => {
+      ga4Fetch(`/api/ga4/discover-events?propertyId=${encodeURIComponent(propertyName)}`).then(async r => {
         const data = await r.json().catch(() => null)
         if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
         return data
       }),
-      fetch(`/api/ga4/custom-dimensions?propertyId=${encodeURIComponent(propertyName)}`).then(async r => {
+      ga4Fetch(`/api/ga4/custom-dimensions?propertyId=${encodeURIComponent(propertyName)}`).then(async r => {
         const data = await r.json().catch(() => null)
         if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
         return data

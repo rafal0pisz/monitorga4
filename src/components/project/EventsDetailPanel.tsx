@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { ga4Fetch } from '@/lib/ga4/clientQueue'
 
 interface DayCount { date: string; count: number }
 interface EventData { current: DayCount[]; prev: DayCount[]; totalCurrent: number; totalPrev: number }
@@ -70,7 +71,7 @@ export default function EventsDetailPanel({ propertyId, expectedEvents, periodDa
       setLoading(true); setError(null)
       try {
         const params = new URLSearchParams({ propertyId, events: expectedEvents.join(','), periodDays: String(periodDays) })
-        const res = await fetch(`/api/ga4/events?${params}`)
+        const res = await ga4Fetch(`/api/ga4/events?${params}`)
         const json = await res.json()
         if (!res.ok) throw new Error(json.error)
         setData(json.events); setRanges(json.ranges)

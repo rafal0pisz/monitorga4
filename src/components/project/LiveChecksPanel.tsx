@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { ga4Fetch } from '@/lib/ga4/clientQueue'
 
 type Status = 'pass' | 'warn' | 'check'
 
@@ -187,7 +188,7 @@ export default function LiveChecksPanel({ propertyId, period, extraChecks = [] }
     let cancelled = false
     setLoading(true); setError(null)
 
-    fetch('/api/ga4/checks', {
+    ga4Fetch('/api/ga4/checks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ propertyId, period }),
