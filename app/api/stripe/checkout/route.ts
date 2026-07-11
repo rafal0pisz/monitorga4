@@ -33,6 +33,18 @@ export async function POST(request: NextRequest) {
       const customer = await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } })
       customerId = customer.id
       await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id)
+    } else {
+      // Stripe Checkout only shows the "buying as a business" / tax ID field
+      // once per customer — once a tax ID is saved, it's permanently hidden
+      // on every future Checkout Session, even with tax_id_collection
+      // enabled. Clearing it here brings the field back for every purchase,
+      // so a returning customer can re-confirm or change company details.
+      // (The name/address stay on the customer; only the VAT ID itself is
+      // reset, and only right before a fresh Checkout Session is started.)
+      const existingTaxIds = await stripe.customers.listTaxIds(customerId, { limit: 10 })
+      for (const taxId of existingTaxIds.data) {
+        if (taxId.type === 'eu_vat') await stripe.customers.deleteTaxId(customerId, taxId.id)
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
