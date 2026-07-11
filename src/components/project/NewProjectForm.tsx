@@ -327,21 +327,21 @@ export default function NewProjectForm() {
           p_project_id: projectId,
           p_events: customEvents.map((e, i) => ({ event_name: e.event_name, check_type: e.check_type, is_enabled: e.is_enabled, sort_order: i })),
         })
-        if (ceErr) throw new Error(`Custom events: ${ceErr.message}`)
+        if (ceErr) throw new Error(ceErr.message.includes('ITEM_LIMIT_REACHED') ? "Your plan allows up to 10 custom events per project. Upgrade to add more." : `Custom events: ${ceErr.message}`)
       }
       if (ecomEnabled.size > 0) {
         const { error: ecErr } = await supabase.rpc('save_ecommerce_config', {
           p_project_id: projectId,
           p_events: [...ecomEnabled].map(event_name => ({ event_name })),
         })
-        if (ecErr) throw new Error(`Ecommerce: ${ecErr.message}`)
+        if (ecErr) throw new Error(ecErr.message.includes('ITEM_LIMIT_REACHED') ? "Your plan allows up to 10 e-commerce events per project. Upgrade to add more." : `Ecommerce: ${ecErr.message}`)
       }
       if (params.length > 0) {
         const { error: pcErr } = await supabase.rpc('save_parameter_checks', {
           p_project_id: projectId,
           p_params: params.map((p, i) => ({ event_name: p.event_name, parameter_name: p.parameter_name, sort_order: i })),
         })
-        if (pcErr) throw new Error(`Parameters: ${pcErr.message}`)
+        if (pcErr) throw new Error(pcErr.message.includes('ITEM_LIMIT_REACHED') ? "Your plan allows up to 10 parameter checks per project. Upgrade to add more." : `Parameters: ${pcErr.message}`)
       }
 
       router.push('/dashboard'); router.refresh()

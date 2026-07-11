@@ -11,10 +11,10 @@ interface Row {
 const ROWS: Row[] = [
   { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 10', agency: 'do 100' },
   { label: 'Codzienny automatyczny monitoring', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Weryfikacja zdarzeń niestandardowych i e-commerce', individual: '✓', pro: '✓', agency: '✓' },
+  { label: 'Zdarzenia niestandardowe, parametry i e-commerce (na usługę)', individual: 'do 10', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Alerty e-mail przy wykrytych błędach', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Wsparcie', individual: 'e-mail', pro: 'e-mail priorytetowe', agency: 'e-mail priorytetowe + dedykowany kontakt' },
+  { label: 'Wsparcie', individual: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
   { label: 'Konsultacja z analitykiem GA4', individual: '—', pro: '—', agency: '1h / miesiąc' },
 ]
 
