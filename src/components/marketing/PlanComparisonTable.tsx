@@ -13,7 +13,7 @@ export interface Row {
 export const ROWS: Row[] = [
   { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 10', agency: 'do 100' },
   { label: 'Codzienny automatyczny monitoring', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Zdarzenia niestandardowe, parametry i e-commerce (na usługę)', individual: 'do 10', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Zdarzenia niestandardowe, parametry i e-commerce (na usługę)', individual: 'do 5', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Alerty e-mail przy wykrytych błędach', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Wsparcie', individual: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
