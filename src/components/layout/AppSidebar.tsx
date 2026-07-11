@@ -109,10 +109,7 @@ export default async function AppSidebar() {
       <aside className="app-sidebar" id="app-sidebar">
         {/* Logo */}
         <div style={{ padding: '16px 16px 14px', borderBottom: '0.5px solid var(--color-border-tertiary)', flexShrink: 0 }}>
-          <div style={{ marginBottom: 2 }}>
-            <BrandWordmark size={17} />
-            <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '2px 0 0', lineHeight: 1.3 }}>alertga4.bettersteps.pl</p>
-          </div>
+          <BrandWordmark size={17} />
         </div>
 
         {/* Plan */}
@@ -141,7 +138,7 @@ export default async function AppSidebar() {
 
         {/* Footer */}
         <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '10px 16px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Bettersteps · 2026</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>AlertGA4 {new Date().getFullYear()}</span>
           <LogoutButton />
         </div>
       </aside>

@@ -1,9 +1,9 @@
 // Wordmark using the same treatment as the standard Bettersteps logo:
-// Poppins, bold italic, uppercase, tracked out. Two-tone — "Alert" in
-// ink/white depending on surface, "GA4." in yellow — no animation.
-// `dark` controls which surface it sits on: true = dark background
-// (Alert renders white), false = light background (Alert renders ink).
+// Poppins, bold italic, uppercase, tracked out. `dark` controls which
+// surface it sits on: true = dark background (renders white), false =
+// light background (renders ink).
 export default function BrandWordmark({ size = 20, dark = false }: { size?: number; dark?: boolean }) {
+  const color = dark ? '#ffffff' : '#1c2328'
   return (
     <span
       style={{
@@ -16,10 +16,11 @@ export default function BrandWordmark({ size = 20, dark = false }: { size?: numb
         textTransform: 'uppercase',
         letterSpacing: '0.06em',
         lineHeight: 1,
+        color,
       }}
     >
-      <span style={{ color: dark ? '#ffffff' : '#1c2328' }}>Alert</span>
-      <span style={{ color: '#fffd73' }}>GA4.</span>
+      <span>Alert</span>
+      <span>GA4.</span>
     </span>
   )
 }

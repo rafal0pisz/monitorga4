@@ -106,6 +106,9 @@ export default async function BillingPage() {
             )}
           </div>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>
+            {user?.email}
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>
             {projectCount} / {isUnlimited ? '∞' : limit} monitored GA4 properties
           </p>
           <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
