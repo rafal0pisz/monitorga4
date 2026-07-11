@@ -81,6 +81,32 @@ export default async function CennikPage() {
         .plan-table tbody td { color: #5b6570; }
         .plan-table tbody td[data-check="true"] { color: #16a34a; font-weight: 600; }
         .plan-table tbody tr:last-child th, .plan-table tbody tr:last-child td { border-bottom: none; }
+
+        /* Below 640px the 4-column table becomes unreadably cramped (or
+           needs horizontal scrolling to use at all) — instead, each feature
+           row turns into its own card, with the 3 plan values stacked and
+           labeled via their own data-label attribute. */
+        @media (max-width: 640px) {
+          .plan-table-wrap { overflow-x: visible; }
+          .plan-table { min-width: 0; }
+          .plan-table thead { display: none; }
+          .plan-table, .plan-table tbody, .plan-table tr, .plan-table th, .plan-table td { display: block; width: 100%; }
+          .plan-table tbody tr {
+            margin-bottom: 14px; border: 1px solid #e2e6e8; border-radius: 10px; overflow: hidden;
+          }
+          .plan-table tbody tr:last-child { margin-bottom: 0; }
+          .plan-table tbody th {
+            background: #f3f6f7; padding: 10px 14px; border-bottom: 1px solid #e2e6e8; white-space: normal;
+          }
+          .plan-table tbody td {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 9px 14px; border-bottom: 1px solid #eef1f2; text-align: right;
+          }
+          .plan-table tbody td:last-child { border-bottom: none; }
+          .plan-table tbody td::before {
+            content: attr(data-label); font-weight: 600; color: #232b31; text-align: left;
+          }
+        }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
@@ -117,7 +143,7 @@ export default async function CennikPage() {
         </div>
 
         <div className="wrap plan-table-section">
-          <h2>Co zawiera każdy plan</h2>
+          <h2>Porównanie planów</h2>
           <PlanComparisonTable />
         </div>
 

@@ -19,6 +19,7 @@ const ROWS: Row[] = [
 ]
 
 const PLAN_KEYS = ['individual', 'pro', 'agency'] as const
+const PLAN_LABELS: Record<typeof PLAN_KEYS[number], string> = { individual: 'Individual', pro: 'Pro', agency: 'Agency' }
 
 export default function PlanComparisonTable() {
   return (
@@ -37,7 +38,7 @@ export default function PlanComparisonTable() {
             <tr key={row.label}>
               <th scope="row">{row.label}</th>
               {PLAN_KEYS.map(key => (
-                <td key={key} data-check={row[key] === '✓' ? 'true' : undefined}>{row[key]}</td>
+                <td key={key} data-label={PLAN_LABELS[key]} data-check={row[key] === '✓' ? 'true' : undefined}>{row[key]}</td>
               ))}
             </tr>
           ))}
