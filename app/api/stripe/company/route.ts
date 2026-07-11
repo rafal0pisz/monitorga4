@@ -1,23 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe/client'
-import { getCompanyDetails } from '@/lib/stripe/companyDetails'
-
-export async function GET() {
-  const session = await createClient()
-  const { data: { user } } = await session.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'You must be signed in' }, { status: 401 })
-
-  const supabase = createAdminClient()
-  const { data: profile } = await supabase.from('profiles').select('stripe_customer_id').eq('id', user.id).single()
-  const customerId = profile?.stripe_customer_id as string | undefined
-  if (!customerId) {
-    return NextResponse.json({ hasCustomer: false, name: '', line1: '', city: '', postalCode: '', nip: '' })
-  }
-
-  const details = await getCompanyDetails(customerId)
-  return NextResponse.json({ hasCustomer: true, ...details })
-}
 
 export async function POST(request: NextRequest) {
   const stripe = getStripe()

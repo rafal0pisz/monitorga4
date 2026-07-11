@@ -18,12 +18,7 @@ interface InvoiceRow {
 const sectionH2: React.CSSProperties = { fontSize: 15, fontWeight: 500, margin: '0 0 12px', color: 'var(--color-text-primary)' }
 const sectionWrap: React.CSSProperties = { marginTop: 40 }
 
-export default async function BillingPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ updated?: string }>
-}) {
-  const { updated } = await searchParams
+export default async function BillingPage() {
   const session = await createClient()
   const { data: { user } } = await session.auth.getUser()
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
@@ -92,12 +87,6 @@ export default async function BillingPage({
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Your plan and billing details</p>
       </div>
 
-      {updated === '1' && (
-        <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '10px 16px', marginBottom: 24 }}>
-          <p style={{ fontSize: 13, color: '#166534', margin: 0 }}>Plan updated. The change (and any prorated charge) will show up on your account within a few seconds.</p>
-        </div>
-      )}
-
       {/* Current plan */}
       <section>
         <h2 style={sectionH2}>Current plan</h2>
@@ -129,7 +118,7 @@ export default async function BillingPage({
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, maxWidth: 380 }}>
             {hasPurchasablePlan
-              ? 'Compare plans and switch anytime — if you already have an active subscription, picking a new plan updates it in place instead of starting a second one.'
+              ? 'Compare plans and switch anytime — picking a new plan goes through checkout again, and your previous subscription is cancelled automatically once the new one is confirmed.'
               : 'Compare plans and pick the one that fits how many GA4 properties you monitor.'}
           </p>
           <Link href="/cennik" style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', fontSize: 13, whiteSpace: 'nowrap' }}>

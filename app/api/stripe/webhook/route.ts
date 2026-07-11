@@ -77,6 +77,10 @@ export async function POST(request: NextRequest) {
         const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
         const profileId = await resolveProfileId(supabase, subscription.customer as string, session.metadata?.supabase_user_id)
         if (!profileId) break
+
+        const { data: existingProfile } = await supabase.from('profiles').select('stripe_subscription_id').eq('id', profileId).single()
+        const previousSubscriptionId = existingProfile?.stripe_subscription_id as string | null | undefined
+
         const { planId, cycle } = planFromSubscription(subscription)
         await supabase.from('profiles').update({
           plan_id: planId,
@@ -86,6 +90,19 @@ export async function POST(request: NextRequest) {
           subscription_status: subscription.status,
           current_period_end: periodEndIso(subscription),
         }).eq('id', profileId)
+
+        // Buying through Checkout again while a different subscription is
+        // still live (switching plans) would otherwise leave two active
+        // subscriptions billing the same customer — cancel the old one now
+        // that the new one is confirmed. No proration credit is issued for
+        // the unused portion of the old subscription.
+        if (previousSubscriptionId && previousSubscriptionId !== subscription.id) {
+          try {
+            await stripe.subscriptions.cancel(previousSubscriptionId)
+          } catch {
+            // Already canceled or gone — nothing to do.
+          }
+        }
         break
       }
 
@@ -93,6 +110,14 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const profileId = await resolveProfileId(supabase, subscription.customer as string, subscription.metadata?.supabase_user_id)
         if (!profileId) break
+
+        // A subscription switch cancels the old subscription, which can
+        // also emit an update event for it on the way to being deleted —
+        // ignore anything that isn't the profile's current subscription so
+        // stale events can't clobber a plan already switched to.
+        const { data: currentProfile } = await supabase.from('profiles').select('stripe_subscription_id').eq('id', profileId).single()
+        if (currentProfile?.stripe_subscription_id && currentProfile.stripe_subscription_id !== subscription.id) break
+
         const { planId, cycle } = planFromSubscription(subscription)
         await supabase.from('profiles').update({
           plan_id: planId,
@@ -108,9 +133,16 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription
         const profileId = await resolveProfileId(supabase, subscription.customer as string, subscription.metadata?.supabase_user_id)
         if (!profileId) break
-        // Subskrypcja faktycznie się skończyła — cofamy plan do braku planu
-        // (0 projektów limit). Istniejące projekty NIE są usuwane ani
-        // wstrzymywane, tylko tworzenie nowych zostaje zablokowane.
+
+        // Same guard as above: don't let the cancellation of a superseded
+        // (switched-away-from) subscription wipe out a plan the profile has
+        // already moved on to.
+        const { data: currentProfile } = await supabase.from('profiles').select('stripe_subscription_id').eq('id', profileId).single()
+        if (currentProfile?.stripe_subscription_id !== subscription.id) break
+
+        // Subscription actually ended — revert to no plan (0 project limit).
+        // Existing projects are NOT deleted or paused, only new creation
+        // gets blocked.
         await supabase.from('profiles').update({
           plan_id: null,
           subscription_status: subscription.status,

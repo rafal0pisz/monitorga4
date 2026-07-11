@@ -25,23 +25,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const { data: profile } = await supabase.from('profiles')
-      .select('stripe_customer_id, stripe_subscription_id, subscription_status')
+      .select('stripe_customer_id')
       .eq('id', user.id).single()
-
-    // Already on an active/trialing/past_due subscription — change it in
-    // place instead of starting a second Checkout Session, which would
-    // create a second, parallel subscription and double-bill the customer.
-    // Stripe prorates the difference automatically.
-    const liveStatuses = ['active', 'trialing', 'past_due']
-    if (profile?.stripe_subscription_id && liveStatuses.includes(profile.subscription_status ?? '')) {
-      const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id)
-      await stripe.subscriptions.update(profile.stripe_subscription_id, {
-        items: [{ id: subscription.items.data[0].id, price: priceId }],
-        proration_behavior: 'create_prorations',
-        metadata: { supabase_user_id: user.id, plan_id: plan.id, billing_cycle: cycle },
-      })
-      return NextResponse.json({ updated: true })
-    }
 
     let customerId = profile?.stripe_customer_id as string | undefined
     if (!customerId) {
