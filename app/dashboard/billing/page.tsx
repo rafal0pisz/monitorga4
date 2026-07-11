@@ -1,6 +1,7 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { planLimit, planName, planById } from '@/lib/billing/plans'
 import { getStripe } from '@/lib/stripe/client'
+import { getCompanyDetails } from '@/lib/stripe/companyDetails'
 import BillingActions from '@/components/billing/BillingActions'
 import CompanyDetailsForm from '@/components/billing/CompanyDetailsForm'
 import Link from 'next/link'
@@ -71,20 +72,12 @@ export default async function BillingPage({
         // just renders empty, doesn't block the rest of the page.
       }
 
-      try {
-        const customer = await stripe.customers.retrieve(stripeCustomerId)
-        if (!customer.deleted) {
-          companyName = customer.name ?? ''
-          companyLine1 = customer.address?.line1 ?? ''
-          companyCity = customer.address?.city ?? ''
-          companyPostalCode = customer.address?.postal_code ?? ''
-        }
-        const taxIds = await stripe.customers.listTaxIds(stripeCustomerId, { limit: 5 })
-        const vat = taxIds.data.find(t => t.type === 'eu_vat')
-        companyNip = vat?.value.replace(/^PL/i, '') ?? ''
-      } catch {
-        // Billing account exists but company details aren't set yet.
-      }
+      const company = await getCompanyDetails(stripeCustomerId)
+      companyName = company.name
+      companyLine1 = company.line1
+      companyCity = company.city
+      companyPostalCode = company.postalCode
+      companyNip = company.nip
     }
   }
 
