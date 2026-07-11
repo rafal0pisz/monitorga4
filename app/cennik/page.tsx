@@ -3,6 +3,7 @@ import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import PricingCards from '@/components/marketing/PricingCards'
+import PlanComparisonTable from '@/components/marketing/PlanComparisonTable'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { PLANS } from '@/lib/billing/plans'
 
@@ -54,6 +55,18 @@ export default async function CennikPage() {
         .pricing-price .amount { font-size: 32px; font-weight: 600; letter-spacing: -0.01em; color: #232b31; }
         .pricing-price .period { font-size: 13.5px; color: #8b939a; }
         .pricing-permonth { font-size: 12.5px; color: #8b939a; margin: 4px 0 0; }
+
+        .plan-table-section { padding: 8px 0 88px; }
+        .plan-table-section h2 { font-size: clamp(20px, 3vw, 26px); letter-spacing: -0.01em; text-align: center; margin: 0 0 32px; }
+        .plan-table-wrap { overflow-x: auto; }
+        .plan-table { width: 100%; border-collapse: collapse; min-width: 560px; }
+        .plan-table th, .plan-table td { padding: 13px 16px; text-align: center; border-bottom: 1px solid #e2e6e8; font-size: 13.5px; }
+        .plan-table thead th { font-size: 13px; font-weight: 600; color: #232b31; background: #f3f6f7; }
+        .plan-table thead th:first-child { background: transparent; }
+        .plan-table tbody th { text-align: left; font-weight: 500; color: #232b31; white-space: nowrap; }
+        .plan-table tbody td { color: #5b6570; }
+        .plan-table tbody td[data-check="true"] { color: #16a34a; font-weight: 600; }
+        .plan-table tbody tr:last-child th, .plan-table tbody tr:last-child td { border-bottom: none; }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
@@ -70,6 +83,11 @@ export default async function CennikPage() {
             currentPlanId={currentPlanId}
             plans={PLANS.map(p => ({ id: p.id, name: p.name, projectLimit: p.projectLimit, priceMonthlyPLN: p.priceMonthlyPLN, priceYearlyPLN: p.priceYearlyPLN }))}
           />
+        </div>
+
+        <div className="wrap plan-table-section">
+          <h2>Co zawiera każdy plan</h2>
+          <PlanComparisonTable />
         </div>
 
         <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
