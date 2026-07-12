@@ -61,18 +61,25 @@ function PageStyles() {
         /* Extra gap + a divider between the back/name row and the actions
            row (Period/PDF/Settings/Run now) — stacked with nothing but 8px
            between them, "Settings" sat right under the back link and read
-           as one crowded cluster instead of two distinct rows. */
-        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 16px !important; gap: 10px; }
+           as one crowded cluster instead of two distinct rows. This nav
+           also sits inside .app-main (10px horizontal padding already) —
+           its own side padding only needs to be small, not stack another
+           16px on top. */
+        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 6px !important; gap: 10px; }
         .page-nav-actions { flex-wrap: wrap; gap: 8px !important; justify-content: flex-start !important; padding-top: 8px; border-top: 0.5px solid var(--color-border-tertiary); }
         .page-score-header { flex-direction: column !important; padding: 14px !important; gap: 10px !important; }
         .page-grid { grid-template-columns: 1fr !important; }
         .page-history-table { font-size: 11px !important; }
         .page-settings-grid { grid-template-columns: 1fr !important; }
-        /* Cards already have their own ~14-16px padding — stacking the
-           page's own 20px/24px margin on top of that on a ~375-390px
-           screen was wasting a visible chunk of width on empty space
-           instead of content. */
-        .page-content-wrap { padding: 10px 8px !important; }
+        /* This wrap sits inside .app-main (app/dashboard/layout.tsx), which
+           already applies its own 10px horizontal padding on mobile (see
+           src/components/layout/AppSidebar.tsx) — this wrap was adding a
+           SECOND, redundant layer of horizontal padding on top of that
+           (18px combined per side), unlike every other dashboard page
+           (Overview, Billing, etc.), which only pads once via .app-main.
+           Dropping the horizontal padding here brings this page in line
+           with the rest of the dashboard and actually uses the screen. */
+        .page-content-wrap { padding: 10px 0 !important; }
         .page-check-card { padding: 10px 12px !important; }
       }
       @media (max-width: 480px) {
