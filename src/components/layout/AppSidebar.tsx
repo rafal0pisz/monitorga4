@@ -62,7 +62,13 @@ export default async function AppSidebar() {
             position: fixed;
             left: 0;
             top: ${MOBILE_TOPBAR_HEIGHT}px;
+            /* 100vh on mobile browsers includes the address-bar area that
+               isn't actually visible, which was pushing the footer (and its
+               Sign out button) below the real fold. 100dvh tracks the
+               actual visible viewport; the vh line above is just a fallback
+               for browsers that don't support dvh yet. */
             height: calc(100vh - ${MOBILE_TOPBAR_HEIGHT}px);
+            height: calc(100dvh - ${MOBILE_TOPBAR_HEIGHT}px);
             transform: translateX(-100%);
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
           }
@@ -128,6 +134,13 @@ export default async function AppSidebar() {
         @media (max-width: 768px) {
           .app-main { padding: 14px 10px !important; margin-top: ${MOBILE_TOPBAR_HEIGHT}px; }
         }
+
+        .app-sidebar-footer { padding-bottom: 10px; }
+        @media (max-width: 768px) {
+          /* Clears the home-indicator area on notched phones so the Sign
+             out button isn't flush against (or hidden under) it. */
+          .app-sidebar-footer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+        }
       `}</style>
 
       <MobileTopBar />
@@ -163,9 +176,14 @@ export default async function AppSidebar() {
         </div>
 
         {/* Footer */}
-        <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '10px 16px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>AlertGA4 {new Date().getFullYear()}</span>
-          <LogoutButton />
+        <div className="app-sidebar-footer" style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '10px 16px 0', flexShrink: 0 }}>
+          <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>AlertGA4 {new Date().getFullYear()}</p>
+          <LogoutButton style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
+            fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)',
+            background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)',
+            borderRadius: 8, padding: '9px 12px',
+          }} />
         </div>
       </aside>
     </>
