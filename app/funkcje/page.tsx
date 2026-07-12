@@ -210,7 +210,7 @@ export default async function FunkcjePage() {
                     <div className="cov-track"><div className="cov-fill" style={{ width: '87%' }} /></div>
                   </div>
                   <div className="cov-row">
-                    <div className="cov-label"><span>coupon_code</span><b>12%</b></div>
+                    <div className="cov-label"><span>value</span><b>12%</b></div>
                     <div className="cov-track"><div className="cov-fill warn" style={{ width: '12%' }} /></div>
                   </div>
                 </div>
