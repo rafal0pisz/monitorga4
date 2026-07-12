@@ -14,14 +14,17 @@ export async function getCompanyDetails(stripeCustomerId: string): Promise<Compa
   const stripe = getStripe()
   const details = { ...EMPTY }
   try {
-    const customer = await stripe.customers.retrieve(stripeCustomerId)
+    // Independent Stripe API calls — run in parallel, not one after another.
+    const [customer, taxIds] = await Promise.all([
+      stripe.customers.retrieve(stripeCustomerId),
+      stripe.customers.listTaxIds(stripeCustomerId, { limit: 5 }),
+    ])
     if (!customer.deleted) {
       details.name = customer.name ?? ''
       details.line1 = customer.address?.line1 ?? ''
       details.city = customer.address?.city ?? ''
       details.postalCode = customer.address?.postal_code ?? ''
     }
-    const taxIds = await stripe.customers.listTaxIds(stripeCustomerId, { limit: 5 })
     const vat = taxIds.data.find(t => t.type === 'eu_vat')
     details.nip = vat?.value.replace(/^PL/i, '') ?? ''
   } catch {

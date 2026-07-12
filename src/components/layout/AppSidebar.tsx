@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import SidebarNav from './SidebarNav'
 import MobileTopBar from './MobileTopBar'
 import LogoutButton from '@/components/ui/LogoutButton'
@@ -8,30 +8,34 @@ import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 const MOBILE_TOPBAR_HEIGHT = 52
 
 export default async function AppSidebar() {
-  const session = await createClient()
-  const { data: { user } } = await session.auth.getUser()
+  const user = await getAuthUser()
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
   const supabase = createAdminClient()
-  let query = supabase
+  let projectsQuery = supabase
     .from('dashboard_projects')
     .select('id, name, last_score, status')
     .order('name')
-  if (!bypass && user) query = query.eq('owner_id', user.id)
-  const { data: projects } = await query
+  if (!bypass && user) projectsQuery = projectsQuery.eq('owner_id', user.id)
+
+  // Independent queries — same owner_id, no data dependency between them —
+  // so they run as one round trip instead of two sequential ones.
+  const [{ data: projects }, { data: profile, error: profileErr }] = await Promise.all([
+    projectsQuery,
+    !bypass && user
+      ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
+      : Promise.resolve({ data: null, error: null }),
+  ])
 
   let plan: string | null = null
   let limit: number | null = null
   let trialDaysLeft: number | null = null
-  if (!bypass && user) {
-    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
-    if (!profileErr) {
-      const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-      plan = planName(effective)
-      limit = planLimit(effective)
-      if (effective === 'trial' && profile?.trial_ends_at) {
-        trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
-      }
+  if (!bypass && user && !profileErr) {
+    const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
+    plan = planName(effective)
+    limit = planLimit(effective)
+    if (effective === 'trial' && profile?.trial_ends_at) {
+      trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
     }
   }
 

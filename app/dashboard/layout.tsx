@@ -1,12 +1,11 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AppSidebar from '@/components/layout/AppSidebar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
   if (!bypass) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await getAuthUser()
     if (!user) redirect('/login')
   }
 

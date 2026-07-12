@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import { planLimit, planName, planById, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
 import { getStripe } from '@/lib/stripe/client'
 import { getCompanyDetails } from '@/lib/stripe/companyDetails'
@@ -20,8 +20,7 @@ const sectionH2: React.CSSProperties = { fontSize: 15, fontWeight: 500, margin: 
 const sectionWrap: React.CSSProperties = { marginTop: 40 }
 
 export default async function BillingPage() {
-  const session = await createClient()
-  const { data: { user } } = await session.auth.getUser()
+  const user = await getAuthUser()
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
   const supabase = createAdminClient()
@@ -40,26 +39,34 @@ export default async function BillingPage() {
   let trialUsedAt: string | null = null
 
   if (!bypass && user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('plan_id, subscription_status, current_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
-      .eq('id', user.id)
-      .single()
+    // Independent queries — same owner, no data dependency — run as one
+    // round trip instead of two sequential ones.
+    const [{ data: profile }, { count }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('plan_id, subscription_status, current_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
+        .eq('id', user.id)
+        .single(),
+      supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+    ])
     planId = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
     subscriptionStatus = profile?.subscription_status ?? null
     currentPeriodEnd = profile?.current_period_end ?? null
     stripeCustomerId = profile?.stripe_customer_id ?? null
     trialEndsAt = profile?.trial_ends_at ?? null
     trialUsedAt = profile?.trial_used_at ?? null
-
-    const { count } = await supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id)
     projectCount = count ?? 0
 
     if (stripeCustomerId) {
       const stripe = getStripe()
-      try {
-        const list = await stripe.invoices.list({ customer: stripeCustomerId, limit: 12 })
-        invoices = list.data.map(inv => ({
+      // Two independent Stripe API calls — also run in parallel rather
+      // than one after another.
+      const [invoicesResult, company] = await Promise.all([
+        stripe.invoices.list({ customer: stripeCustomerId, limit: 12 }).catch(() => null),
+        getCompanyDetails(stripeCustomerId),
+      ])
+      if (invoicesResult) {
+        invoices = invoicesResult.data.map(inv => ({
           id: inv.id ?? '',
           number: inv.number,
           date: new Date(inv.created * 1000).toLocaleDateString('en-GB'),
@@ -67,12 +74,7 @@ export default async function BillingPage() {
           status: inv.status ?? 'unknown',
           pdfUrl: inv.invoice_pdf ?? null,
         }))
-      } catch {
-        // No invoices yet, or a transient Stripe API issue — the section
-        // just renders empty, doesn't block the rest of the page.
       }
-
-      const company = await getCompanyDetails(stripeCustomerId)
       companyName = company.name
       companyLine1 = company.line1
       companyCity = company.city
