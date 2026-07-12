@@ -48,6 +48,16 @@ function PageStyles() {
   return (
     <style>{`
       @media (max-width: 768px) {
+        /* This page's own sub-nav is sticky at top:0 — fine on desktop,
+           but on mobile the sidebar's hamburger/logo bar is a separate
+           fixed 52px strip above everything. Without this override the
+           sub-nav (higher z-index) scrolls up and sits exactly on top of
+           it, hiding the hamburger button entirely instead of stacking
+           below it. 52px must match MOBILE_TOPBAR_HEIGHT in
+           src/components/layout/AppSidebar.tsx.
+        */
+        .page-top-nav { top: 52px !important; }
+
         /* Extra gap + a divider between the back/name row and the actions
            row (Period/PDF/Settings/Run now) — stacked with nothing but 8px
            between them, "⚙ Settings" sat right under the back link and read
@@ -120,7 +130,7 @@ export default async function ProjectPage({
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
       <PageStyles />
-      <nav style={{ backgroundColor: 'var(--color-background-secondary)', borderBottom: '1px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <nav className="page-top-nav" style={{ backgroundColor: 'var(--color-background-secondary)', borderBottom: '1px solid var(--color-border-tertiary)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div className="page-nav-row" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <Link href="/dashboard" style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', flexShrink: 0 }}>← Dashboard</Link>

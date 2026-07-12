@@ -8,9 +8,14 @@ interface RunPoint {
   score_total: number | null
 }
 
-// Deliberately compact — this sits inline above the live checks panel, not
-// as a full dashboard chart. Width is capped at ~2x the old static
-// sparkline (160px), not a responsive full-bleed chart.
+// Deliberately compact on desktop — this sits inline above the live checks
+// panel, not as a full dashboard chart. Width is capped at ~2x the old
+// static sparkline (160px). On mobile it instead goes full-width (below,
+// via .score-trend-card/.score-trend-inner) to match the width of the
+// Overall Score card above it — the fixed 320px used to make this card
+// visibly narrower than its neighbor once the viewport was wider than
+// ~350px, since it never adapted to the actual screen width like every
+// other card on this page.
 const WIDTH = 320
 const HEIGHT = 90
 
@@ -33,35 +38,46 @@ export default function ScoreTrendChart({ runs, alertThreshold }: { runs: RunPoi
   const col = scoreColor(latestScore)
 
   return (
-    <div style={{
-      padding: '10px 16px 8px', marginBottom: 16,
-      backgroundColor: 'var(--color-background-primary)',
-      border: '1px solid var(--color-border-tertiary)',
-      borderRadius: 10,
-      display: 'inline-block',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, width: WIDTH }}>
-        <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-          Score trend · {data.length} runs
-        </div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
-          {delta >= 0 ? '+' : ''}{delta} vs prev
+    <>
+      <style>{`
+        .score-trend-card { display: inline-block; max-width: 100%; }
+        .score-trend-inner { width: ${WIDTH}px; max-width: 100%; }
+        @media (max-width: 640px) {
+          .score-trend-card { display: block; }
+          .score-trend-inner { width: 100%; }
+        }
+      `}</style>
+      <div className="score-trend-card" style={{
+        padding: '10px 16px 8px', marginBottom: 16,
+        backgroundColor: 'var(--color-background-primary)',
+        border: '1px solid var(--color-border-tertiary)',
+        borderRadius: 10,
+      }}>
+        <div className="score-trend-inner">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              Score trend · {data.length} runs
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#16a34a' : '#dc2626' }}>
+              {delta >= 0 ? '+' : ''}{delta} vs prev
+            </div>
+          </div>
+
+          <ResponsiveContainer width="100%" height={HEIGHT}>
+            <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 9, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+              <YAxis domain={[0, 100]} hide />
+              <ReferenceLine y={alertThreshold} stroke="#9ca3af" strokeDasharray="3 3" />
+              <Tooltip
+                contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11, padding: '4px 8px' }}
+                labelFormatter={(label) => fmtDate(String(label))}
+                formatter={(value) => [value, 'Score']}
+              />
+              <Line type="monotone" dataKey="score" stroke={col} strokeWidth={2} dot={data.length <= 14} activeDot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
-
-      <ResponsiveContainer width={WIDTH} height={HEIGHT}>
-        <LineChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-          <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 9, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-          <YAxis domain={[0, 100]} hide />
-          <ReferenceLine y={alertThreshold} stroke="#9ca3af" strokeDasharray="3 3" />
-          <Tooltip
-            contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 11, padding: '4px 8px' }}
-            labelFormatter={(label) => fmtDate(String(label))}
-            formatter={(value) => [value, 'Score']}
-          />
-          <Line type="monotone" dataKey="score" stroke={col} strokeWidth={2} dot={data.length <= 14} activeDot={{ r: 3 }} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    </>
   )
 }
