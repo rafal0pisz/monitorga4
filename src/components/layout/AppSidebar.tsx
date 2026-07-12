@@ -71,6 +71,13 @@ export default async function AppSidebar() {
             height: calc(100dvh - ${MOBILE_TOPBAR_HEIGHT}px);
             transform: translateX(-100%);
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+            /* Page content can have its own sticky bars with a higher
+               z-index than this drawer's base 40 (e.g. the project page's
+               sub-nav at 50) — without this override, opening the drawer
+               left that sub-nav painting on top of it instead of being
+               covered like the rest of the page. 60 beats anything
+               currently used in page content. */
+            z-index: 60;
           }
           .app-sidebar.open {
             transform: translateX(0);
@@ -81,7 +88,9 @@ export default async function AppSidebar() {
           position: fixed;
           inset: 0;
           background: rgba(0,0,0,0.35);
-          z-index: 39;
+          /* Must stay above in-page sticky content (see .app-sidebar z-index
+             note above) and below the drawer itself. */
+          z-index: 59;
         }
         .sidebar-overlay.open {
           display: block;

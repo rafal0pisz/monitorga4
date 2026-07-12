@@ -40,15 +40,15 @@ export default function ScoreTrendChart({ runs, alertThreshold }: { runs: RunPoi
   return (
     <>
       <style>{`
-        .score-trend-card { display: inline-block; max-width: 100%; }
+        .score-trend-card { display: inline-block; max-width: 100%; padding: 10px 16px 8px; }
         .score-trend-inner { width: ${WIDTH}px; max-width: 100%; }
         @media (max-width: 640px) {
-          .score-trend-card { display: block; }
+          .score-trend-card { display: block; padding: 10px 12px 8px; }
           .score-trend-inner { width: 100%; }
         }
       `}</style>
       <div className="score-trend-card" style={{
-        padding: '10px 16px 8px', marginBottom: 16,
+        marginBottom: 16,
         backgroundColor: 'var(--color-background-primary)',
         border: '1px solid var(--color-border-tertiary)',
         borderRadius: 10,

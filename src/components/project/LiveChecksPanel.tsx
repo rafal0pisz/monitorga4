@@ -42,7 +42,7 @@ function CheckCard({ check }: { check: CheckResult }) {
       : (isPositive ? '#16a34a' : '#dc2626')
 
   return (
-    <div style={{
+    <div className="lc-card" style={{
       backgroundColor: 'var(--color-background-primary)',
       border: '1px solid var(--color-border-tertiary)',
       borderRadius: 10,
@@ -174,6 +174,7 @@ const LCStyle = () => (
     @media (max-width: 600px) {
       .lc-grid { grid-template-columns: 1fr !important; }
       .lc-nav  { flex-wrap: wrap; gap: 8px !important; }
+      .lc-card { padding: 12px 12px !important; }
     }
   `}</style>
 )
