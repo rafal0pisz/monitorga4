@@ -9,9 +9,25 @@ import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { PLANS, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
 import Link from 'next/link'
 
+// Reviewed/refreshed date for this page's copy — not shown in the UI, only
+// exposed via JSON-LD dateModified and the last-modified meta tag below, as
+// a freshness signal for AI crawlers and search engines.
+const LAST_UPDATED = '2026-07-12'
+
 export const metadata = {
   title: 'Cennik',
   description: 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 10 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.',
+  other: { 'last-modified': LAST_UPDATED },
+}
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Cennik — AlertGA4',
+  description: metadata.description,
+  url: 'https://alertga4.bettersteps.pl/cennik',
+  inLanguage: 'pl',
+  dateModified: LAST_UPDATED,
 }
 
 export default async function CennikPage() {
@@ -41,6 +57,10 @@ export default async function CennikPage() {
 
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <style>{`
         ${LANDING_BASE_STYLES}
 

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = [
   '/login', '/auth/callback', '/share', '/privacy', '/terms', '/funkcje', '/kontakt', '/cennik',
-  '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
+  '/robots.txt', '/sitemap.xml', '/llms.txt', '/pricing.md', '/icon', '/apple-icon', '/opengraph-image',
   '/api/contact',
 ]
 

@@ -5,9 +5,25 @@ import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import FeatureSubnav from '@/components/marketing/FeatureSubnav'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
+// Reviewed/refreshed date for this page's copy — not shown in the UI, only
+// exposed via JSON-LD dateModified and the last-modified meta tag below, as
+// a freshness signal for AI crawlers and search engines.
+const LAST_UPDATED = '2026-07-12'
+
 export const metadata = {
   title: 'Funkcje',
   description: 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: monitoring danych głównych, weryfikacja parametrów, zdarzenia niestandardowe i e-commerce, alert mailowy, podsumowanie projektów i kreator konfiguracji.',
+  other: { 'last-modified': LAST_UPDATED },
+}
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  name: 'Funkcje — AlertGA4',
+  description: metadata.description,
+  url: 'https://alertga4.bettersteps.pl/funkcje',
+  inLanguage: 'pl',
+  dateModified: LAST_UPDATED,
 }
 
 const SUBNAV = [
@@ -33,6 +49,10 @@ export default async function FunkcjePage() {
 
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <style>{`
         ${LANDING_BASE_STYLES}
 

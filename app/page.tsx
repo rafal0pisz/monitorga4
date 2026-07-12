@@ -104,6 +104,15 @@ const FAQ_ITEMS = [
 const TREND_POINTS = '8,49.8 49.9,42.5 91.7,55.5 133.5,68.5 175.4,78.3 217.2,94.5 259.1,104.3 300.9,110.8 342.8,97.8 384.6,78.3 426.5,62 468.3,45.8 510.2,36 552,29.5'
 const TREND_AREA = `${TREND_POINTS} 552,140 8,140`
 
+// Reviewed/refreshed date for this landing page's copy — not shown in the
+// UI, only exposed via JSON-LD dateModified and the last-modified meta tag
+// below, as a freshness signal for AI crawlers and search engines.
+const LAST_UPDATED = '2026-07-12'
+
+export const metadata = {
+  other: { 'last-modified': LAST_UPDATED },
+}
+
 export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -124,6 +133,8 @@ export default async function HomePage() {
     url: 'https://alertga4.bettersteps.pl',
     inLanguage: 'pl',
     description: 'AlertGA4 codziennie weryfikuje usługę Google Analytics 4: zdarzenia, parametry, lejek e-commerce i anomalie ruchu, oraz wysyła alert e-mail, zanim popsute dane trafią do raportu.',
+    datePublished: '2026-07-12',
+    dateModified: LAST_UPDATED,
     provider: {
       '@type': 'Organization',
       name: 'Bettersteps Sp. z o.o.',
@@ -132,11 +143,26 @@ export default async function HomePage() {
     },
   }
 
+  const faqStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    dateModified: LAST_UPDATED,
+    mainEntity: FAQ_ITEMS.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }
+
   return (
     <div className="lp">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
       />
       <style>{`
         ${LANDING_BASE_STYLES}

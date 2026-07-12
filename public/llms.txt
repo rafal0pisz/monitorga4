@@ -9,12 +9,18 @@ Access is via Google sign-in with the read-only `analytics.readonly` scope — A
 ## Key pages
 
 - [Homepage](https://alertga4.bettersteps.pl/): product overview, how it works, the checks it runs, and who it's for.
+- [Funkcje](https://alertga4.bettersteps.pl/funkcje): detailed breakdown of every check AlertGA4 runs daily.
+- [Cennik](https://alertga4.bettersteps.pl/cennik): plans, limits, and pricing in PLN.
 - [Privacy Policy](https://alertga4.bettersteps.pl/privacy): what data is collected and how it's used.
 - [Terms of Service](https://alertga4.bettersteps.pl/terms): terms governing use of the service.
 
 ## What it checks
 
 Missing/expected events, duplicate purchase events, self-referral traffic, direct-traffic anomalies, night-time bot traffic, bounce-rate anomalies, conversion-rate drops, e-commerce funnel continuity (view_item → add_to_cart → view_cart → purchase), and whether configured event parameters actually arrive with data.
+
+## Pricing
+
+Three plans, billed monthly or annually in PLN, no long-term commitment: **Individual** (49 PLN/mo, up to 3 GA4 properties), **Pro** (139 PLN/mo, up to 10 properties, unlimited custom checks per property), **Agency** (399 PLN/mo, up to 100 properties, dedicated support and a monthly analyst consultation). A 14-day free trial at Agency-tier limits is available once per account, no card required. Full machine-readable pricing: [pricing.md](https://alertga4.bettersteps.pl/pricing.md).
 
 ## Contact
 
