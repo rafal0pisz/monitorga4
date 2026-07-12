@@ -73,6 +73,22 @@ export const LANDING_BASE_STYLES = `
 
   .lp-hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 
+  /* Guest (logged-out) free-trial callout — shared between the homepage and
+     /cennik. Uses the site's own ink/neutral palette, not a semantic green,
+     since this is a brand moment, not a status indicator. */
+  .lp .trial-banner-guest {
+    max-width: 640px; margin: 0 auto; padding: 18px 22px 18px 20px;
+    background: #f3f6f7; border: 1px solid #e2e6e8; border-left: 4px solid #232b31;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    text-align: left;
+  }
+  .lp .trial-banner-guest p { font-size: 13.5px; color: #232b31; line-height: 1.5; margin: 0; }
+  .lp .trial-banner-guest .btn { flex-shrink: 0; }
+  @media (max-width: 560px) {
+    .lp .trial-banner-guest { flex-direction: column; align-items: stretch; text-align: center; }
+  }
+
   /* Specificity note: plain ".lp-cta-band" (0,1,0) was silently losing to
      ".lp section" (0,1,1), since this class sits on an actual <section> —
      every previous padding bump here was a no-op. Scoping under ".lp"

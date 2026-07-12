@@ -4,6 +4,7 @@ import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
+import { TRIAL_DAYS } from '@/lib/billing/plans'
 
 const STEPS = [
   { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu, jak rola „Viewer" w GA4.' },
@@ -303,6 +304,12 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
+            {!user && (
+              <div className="trial-banner-guest" style={{ marginTop: 40 }}>
+                <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni. Bez podpinania karty.</p>
+                <Link href="/login" className="btn btn--primary btn--sm">Zarejestruj się przez Google</Link>
+              </div>
+            )}
           </div>
         </section>
 
