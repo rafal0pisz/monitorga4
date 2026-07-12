@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { GA4_STANDARD_EVENTS } from '@/lib/ga4/standardEvents'
 import { ga4Report } from '@/lib/ga4/report'
+import { resolvePropertyId } from '@/lib/ga4/resolveProperty'
 
 // Lists the events actually firing on a property, ordered by volume — powers
 // the "suggest events instead of blind text entry" flows in the creation
 // wizard and the project settings edit panel.
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const propertyId = searchParams.get('propertyId')
+  const resolved = await resolvePropertyId(searchParams)
+  if ('error' in resolved) return resolved.error
+  const { propertyId } = resolved
   const periodDays = parseInt(searchParams.get('periodDays') ?? '30')
-
-  if (!propertyId)
-    return NextResponse.json({ error: 'Missing propertyId' }, { status: 400 })
 
   const token = await getGa4Token()
   if (!token)

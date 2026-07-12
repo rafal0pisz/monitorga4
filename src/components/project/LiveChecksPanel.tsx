@@ -167,7 +167,7 @@ function ErrorBlock({ message }: { message: string }) {
   )
 }
 
-interface Props { propertyId: string; period: number; extraChecks?: CheckResult[] }
+interface Props { projectId: string; period: number; extraChecks?: CheckResult[] }
 
 const LCStyle = () => (
   <style>{`
@@ -179,7 +179,7 @@ const LCStyle = () => (
 )
 // lcResponsive
 
-export default function LiveChecksPanel({ propertyId, period, extraChecks = [] }: Props) {
+export default function LiveChecksPanel({ projectId, period, extraChecks = [] }: Props) {
   const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
@@ -191,7 +191,7 @@ export default function LiveChecksPanel({ propertyId, period, extraChecks = [] }
     ga4Fetch('/api/ga4/checks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ propertyId, period }),
+      body: JSON.stringify({ projectId, period }),
     })
       .then(r => r.json())
       .then(d => {
@@ -203,7 +203,7 @@ export default function LiveChecksPanel({ propertyId, period, extraChecks = [] }
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [propertyId, period])
+  }, [projectId, period])
 
   // extraChecks (from the last daily run) render immediately — they don't
   // depend on the live GA4 fetch above, so a slow/failed live fetch

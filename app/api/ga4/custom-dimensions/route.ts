@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
+import { resolvePropertyId } from '@/lib/ga4/resolveProperty'
 
 // Lists the custom dimensions registered on a GA4 property, so the project
 // settings form can validate a parameter name before saving it — a typo'd
 // or unregistered parameter would otherwise silently fail every day in the
 // worker run instead of being caught at config time.
 export async function GET(request: NextRequest) {
-  const propertyId = request.nextUrl.searchParams.get('propertyId')
-  if (!propertyId) {
-    return NextResponse.json({ error: 'Missing propertyId' }, { status: 400 })
-  }
+  const resolved = await resolvePropertyId(request.nextUrl.searchParams)
+  if ('error' in resolved) return resolved.error
+  const { propertyId } = resolved
 
   const token = await getGa4Token()
   if (!token) {

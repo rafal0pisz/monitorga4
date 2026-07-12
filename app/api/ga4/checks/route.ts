@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report as ga4Post } from '@/lib/ga4/report'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
@@ -67,12 +68,30 @@ function stDelta(d: number, w: number, f: number): Status  { const a = Math.abs(
 function stBelow(v: number, w: number, f: number): Status  { return v >= w ? 'pass' : v >= f ? 'warn' : 'check' }
 
 export async function POST(req: NextRequest) {
-  const body       = await req.json().catch(() => ({}))
-  const period     = (Number(body.period) as Period) || 7
-  const propertyId = body.propertyId as string | undefined
+  const body      = await req.json().catch(() => ({}))
+  const period    = (Number(body.period) as Period) || 7
+  const projectId = body.projectId as string | undefined
 
-  if (!propertyId) return NextResponse.json({ error: 'Missing propertyId' }, { status: 400 })
+  if (!projectId) return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
 
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: project } = await admin
+    .from('projects')
+    .select('ga4_property_id, owner_id')
+    .eq('id', projectId)
+    .single()
+
+  // 404, not 403 — don't confirm to the caller that a project id they
+  // don't own exists at all.
+  if (!project || project.owner_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const propertyId = project.ga4_property_id
   const token = await getGa4Token()
   if (!token) return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
 

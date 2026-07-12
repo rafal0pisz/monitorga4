@@ -1,16 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const propertyId = searchParams.get('propertyId')
+  const projectId = searchParams.get('projectId')
   const events = searchParams.get('events')?.split(',').filter(Boolean) ?? []
   const periodDays = parseInt(searchParams.get('periodDays') ?? '7')
 
-  if (!propertyId || events.length === 0)
+  if (!projectId || events.length === 0)
     return NextResponse.json({ error: 'Missing params' }, { status: 400 })
 
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: project } = await admin
+    .from('projects')
+    .select('ga4_property_id, owner_id')
+    .eq('id', projectId)
+    .single()
+
+  if (!project || project.owner_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const propertyId = project.ga4_property_id
   const token = await getGa4Token()
   if (!token)
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })

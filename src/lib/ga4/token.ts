@@ -97,13 +97,18 @@ async function refreshAndPersist(
  *     silently pass/fail against the wrong GA4 property permissions.
  *  2. Otherwise, the currently signed-in user's OWN stored token (matched by
  *     their user id), refreshed via their own refresh_token if expired.
- *  3. Falls back to the profile explicitly flagged `is_ga4_default` — used
- *     only when the owner/user has NEVER connected Google at all (no stored
- *     refresh token), or for unattended runs with no owner context. This is
- *     NOT "whichever account happened to log in first": an old throwaway/
- *     test login with access to only one property would silently produce a
- *     GA4 403 on every other property. The default account must be picked
- *     deliberately (see profiles.is_ga4_default).
+ *  3. Falls back to the profile explicitly flagged `is_ga4_default` — ONLY
+ *     for unattended runs with no session and no owner context (the cron
+ *     worker calling with a project whose owner has no token of their own).
+ *     A signed-in browser session that lacks its own token gets `null`, not
+ *     this fallback — is_ga4_default exists solely for the unattended cron
+ *     case (see migration 006_ga4_default_account.sql), and returning
+ *     someone else's GA4 data to a session that never connected its own
+ *     Google account would be a cross-account data leak, not a convenience.
+ *     This is NOT "whichever account happened to log in first": an old
+ *     throwaway/test login with access to only one property would silently
+ *     produce a GA4 403 on every other property. The default account must
+ *     be picked deliberately (see profiles.is_ga4_default).
  *
  *     Once an owner/user HAS a stored refresh token, resolution never falls
  *     through past it — success or failure resolves strictly to their own
@@ -160,6 +165,15 @@ export async function getGa4Token(ownerId?: string): Promise<string | null> {
           // signed-in user's request onto a different account's data.
           return refreshAndPersist(admin, user.id, ownProfile.ga4_refresh_token)
         }
+
+        // Signed-in user, but they've never connected their own Google
+        // account — is_ga4_default exists only for the unattended cron
+        // worker (see migration 006_ga4_default_account.sql), not as a
+        // stand-in for an interactive user's missing credentials. Falling
+        // through here would hand this browser session GA4 data belonging
+        // to whichever account is flagged default, regardless of what
+        // propertyId/projectId it asked for.
+        return null
       }
     } catch {
       // No session context (e.g. cron worker) — fall through to org default

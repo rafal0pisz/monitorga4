@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 // GA4 dimension name for a custom event parameter
 // Standard item dimensions use camelCase (itemName, transactionId)
@@ -62,14 +63,30 @@ async function getCoverage(propertyId: string, token: string, eventName: string,
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
-  const propertyId  = searchParams.get('propertyId')
+  const projectId   = searchParams.get('projectId')
   const eventName   = searchParams.get('event')
   const paramName   = searchParams.get('parameter')
   const periodDays  = parseInt(searchParams.get('periodDays') ?? '7')
 
-  if (!propertyId || !eventName || !paramName)
-    return NextResponse.json({ error: 'Missing params: propertyId, event, parameter' }, { status: 400 })
+  if (!projectId || !eventName || !paramName)
+    return NextResponse.json({ error: 'Missing params: projectId, event, parameter' }, { status: 400 })
 
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const admin = createAdminClient()
+  const { data: project } = await admin
+    .from('projects')
+    .select('ga4_property_id, owner_id')
+    .eq('id', projectId)
+    .single()
+
+  if (!project || project.owner_id !== user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const propertyId = project.ga4_property_id
   const token = await getGa4Token()
   if (!token)
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })

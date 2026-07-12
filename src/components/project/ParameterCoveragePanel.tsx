@@ -133,12 +133,12 @@ function ParameterCard({ data }: { data: ParameterData }) {
 }
 
 interface Props {
-  propertyId: string
+  projectId: string
   parameterChecks: { event_name: string; parameter_name: string }[]
   periodDays: number
 }
 
-export default function ParameterCoveragePanel({ propertyId, parameterChecks, periodDays }: Props) {
+export default function ParameterCoveragePanel({ projectId, parameterChecks, periodDays }: Props) {
   const [data, setData] = useState<Record<string, ParameterData>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -149,7 +149,7 @@ export default function ParameterCoveragePanel({ propertyId, parameterChecks, pe
       setLoading(prev => ({ ...prev, [key]: true }))
 
       const params = new URLSearchParams({
-        propertyId,
+        projectId,
         event: pc.event_name,
         parameter: pc.parameter_name,
         periodDays: String(periodDays),
@@ -164,7 +164,7 @@ export default function ParameterCoveragePanel({ propertyId, parameterChecks, pe
         .catch(err => setErrors(prev => ({ ...prev, [key]: err.message })))
         .finally(() => setLoading(prev => ({ ...prev, [key]: false })))
     }
-  }, [propertyId, JSON.stringify(parameterChecks), periodDays])
+  }, [projectId, JSON.stringify(parameterChecks), periodDays])
 
   if (parameterChecks.length === 0) return null
 

@@ -92,7 +92,7 @@ export default function ProjectConfigForm({ project }: Props) {
         const events = raw.map((e: any) => ({ event_name: e.event_name, check_type: e.check_type ?? 'presence', is_enabled: e.is_enabled !== false }))
         setCustomEvents(events)
         if (events.length > 0 && project.ga4_property_id) {
-          ga4Fetch(`/api/ga4/events?propertyId=${encodeURIComponent(project.ga4_property_id)}&events=${encodeURIComponent(events.map((e: CustomEvent) => e.event_name).join(','))}&periodDays=14`)
+          ga4Fetch(`/api/ga4/events?projectId=${encodeURIComponent(project.id)}&events=${encodeURIComponent(events.map((e: CustomEvent) => e.event_name).join(','))}&periodDays=14`)
             .then(r => r.json())
             .then(data => {
               if (!data?.events) return
@@ -124,7 +124,7 @@ export default function ProjectConfigForm({ project }: Props) {
 
   useEffect(() => {
     if (!project.ga4_property_id) return
-    ga4Fetch(`/api/ga4/custom-dimensions?propertyId=${encodeURIComponent(project.ga4_property_id)}`)
+    ga4Fetch(`/api/ga4/custom-dimensions?projectId=${encodeURIComponent(project.id)}`)
       .then(async r => {
         const data = await r.json().catch(() => null)
         if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`)
@@ -154,7 +154,7 @@ export default function ProjectConfigForm({ project }: Props) {
     if (discovered !== null || discoverLoading || !project.ga4_property_id) return
     setDiscoverLoading(true)
     try {
-      const res = await ga4Fetch(`/api/ga4/discover-events?propertyId=${encodeURIComponent(project.ga4_property_id)}`)
+      const res = await ga4Fetch(`/api/ga4/discover-events?projectId=${encodeURIComponent(project.id)}`)
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`)
       setDiscovered(data.events ?? [])

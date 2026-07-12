@@ -44,7 +44,11 @@ export async function middleware(request: NextRequest) {
   const isPublic = path === '/' || PUBLIC_PATHS.some(p => path.startsWith(p))
   const isAuthExemptApi = AUTH_EXEMPT_API_PATHS.some(p => path.startsWith(p))
 
-  if (process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true' || isAuthExemptApi) {
+  // NODE_ENV !== 'production' guards against this flag ever taking effect
+  // in the deployed app — it's a local-dev-only convenience, not something
+  // a Vercel env var typo/mistake should be able to disable auth with.
+  const devBypassAllowed = process.env.NODE_ENV !== 'production'
+  if ((devBypassAllowed && process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true') || isAuthExemptApi) {
     return supabaseResponse
   }
 

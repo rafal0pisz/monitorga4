@@ -167,7 +167,7 @@ export default async function ProjectPage({
             the 9 always-on checks from the last daily run, merged into the
             same sections rather than shown as a separate duplicate block. */}
         {project.ga4_property_id
-          ? <LiveChecksPanel propertyId={project.ga4_property_id} period={periodDays} extraChecks={coreExtraChecks} />
+          ? <LiveChecksPanel projectId={id} period={periodDays} extraChecks={coreExtraChecks} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 
@@ -197,12 +197,12 @@ export default async function ProjectPage({
               }
               {sectionId === 'custom_events' && expectedEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel propertyId={project.ga4_property_id} expectedEvents={expectedEvents} periodDays={periodDays} />
+                  <EventsDetailPanel projectId={id} expectedEvents={expectedEvents} periodDays={periodDays} />
                 </div>
               )}
               {sectionId === 'ecommerce' && ecomEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel propertyId={project.ga4_property_id} expectedEvents={ecomEvents} periodDays={periodDays} />
+                  <EventsDetailPanel projectId={id} expectedEvents={ecomEvents} periodDays={periodDays} />
                 </div>
               )}
             </div>

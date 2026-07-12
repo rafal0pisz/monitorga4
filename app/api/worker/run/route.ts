@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { timingSafeEqual } from 'crypto'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
@@ -22,12 +23,25 @@ export const maxDuration = 300
 // codzienny automatyczny run) ORAZ z sesją (klik "Run now" z UI). Middleware
 // przepuszcza ten path bez przekierowania na /login, więc autoryzację
 // sprawdzamy tutaj: albo poprawny sekret crona, albo zalogowany użytkownik.
-async function isAuthorized(request: NextRequest): Promise<boolean> {
+function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a)
+  const bufB = Buffer.from(b)
+  // timingSafeEqual throws on mismatched lengths rather than returning
+  // false, and the length check itself leaks length — both are fine here
+  // since the secret's length isn't the sensitive part, only its value.
+  if (bufA.length !== bufB.length) return false
+  return timingSafeEqual(bufA, bufB)
+}
+
+function isCronRequest(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET
-  if (cronSecret) {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader === `Bearer ${cronSecret}`) return true
-  }
+  if (!cronSecret) return false
+  const authHeader = request.headers.get('authorization')
+  return !!authHeader && safeCompare(authHeader, `Bearer ${cronSecret}`)
+}
+
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+  if (isCronRequest(request)) return true
 
   try {
     const supabase = await createClient()
@@ -883,6 +897,26 @@ export async function POST(request: NextRequest) {
   }
   const body = await request.json().catch(() => ({}))
   const projectId: string | undefined = body.project_id
+
+  // A signed-in user's manual "Run now" must own the project it targets —
+  // otherwise any logged-in account could force a run (and its side effects:
+  // GA4 quota usage, a new dqs_runs row, a client alert email) on someone
+  // else's project just by guessing/copying its id. The cron path (secret
+  // bearer token, no project_id) is exempt — it always runs the full
+  // auto_run set, never an attacker-supplied id.
+  if (!isCronRequest(request)) {
+    if (!projectId) {
+      return NextResponse.json({ error: 'Missing project_id' }, { status: 400 })
+    }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const admin = createAdminClient()
+    const { data: project } = await admin.from('projects').select('owner_id').eq('id', projectId).single()
+    if (!user || !project || project.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+  }
+
   return runWorker(projectId ?? null)
 }
 
