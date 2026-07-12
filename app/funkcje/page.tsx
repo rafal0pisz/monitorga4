@@ -167,13 +167,13 @@ export default async function FunkcjePage() {
               </div>
               <div className="fx-feature-visual">
                 <div className="core-grid">
-                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Self-referral</div>
-                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Bounce rate</div>
+                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Bank Payment Referral</div>
+                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Engagement rate</div>
                   <div className="core-chip"><span className="dot" style={{ background: '#ea580c' }} />Direct traffic</div>
                   <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Conversion rate</div>
-                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Page title</div>
+                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />SEM traffic</div>
                   <div className="core-chip"><span className="dot" style={{ background: '#dc2626' }} />Bot traffic</div>
-                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Purchase duplicates</div>
+                  <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />(not set) traffic</div>
                   <div className="core-chip"><span className="dot" style={{ background: '#16a34a' }} />Geo anomaly</div>
                 </div>
               </div>
@@ -187,9 +187,10 @@ export default async function FunkcjePage() {
               <div className="fx-feature-text">
                 <div className="fx-feature-num">02</div>
                 <h2>Weryfikacja parametrów</h2>
-                <p>Zdarzenie może „działać", a mimo to nie nieść kluczowych danych. Sprawdzamy, czy zdefiniowane parametry faktycznie docierają razem ze zdarzeniem i w jakim procencie.</p>
+                <p>Zdarzenie może działać, a mimo to nie nieść kluczowych danych. Sprawdzamy, czy zdefiniowane parametry faktycznie docierają razem ze zdarzeniem i w jakim procencie.</p>
                 <ul className="fx-feature-list">
                   <li>Pokrycie parametru liczone tydzień do tygodnia</li>
+                  <li>Pokrycie parametru przesyłanego przy konkretnym zdarzeniu</li>
                   <li>Ostrzeżenie, gdy parametr nie jest zarejestrowany jako custom dimension</li>
                   <li>Obsługa parametrów standardowych i customowych</li>
                 </ul>
@@ -277,7 +278,7 @@ export default async function FunkcjePage() {
                 <p>Gdy wynik jakości spada poniżej ustalonego progu, dostajesz e-mail z konkretną diagnozą, nie tylko liczbą. Bez logowania się codziennie, żeby to sprawdzić.</p>
                 <ul className="fx-feature-list">
                   <li>Alert per projekt, na adres, który sam skonfigurujesz</li>
-                  <li>Zbiorczy dzienny digest dla właściciela konta</li>
+                  <li>Zbiorcze podsumowanie wszystkich projektów dla właściciela konta</li>
                   <li>Osobne powiadomienie, gdy wygaśnie połączenie z Google</li>
                 </ul>
               </div>
