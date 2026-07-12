@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono, Poppins } from 'next/font/google'
 import './globals.css'
 
@@ -71,6 +71,15 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
+}
+
+// viewportFit: 'cover' is required for env(safe-area-inset-*) to resolve to
+// anything other than 0 on iOS — without it, the fixed mobile topbar has no
+// way to know how much room the notch/Dynamic Island actually needs.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

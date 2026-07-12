@@ -6,6 +6,12 @@ import BrandWordmark from '@/components/ui/BrandWordmark'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 
 const MOBILE_TOPBAR_HEIGHT = 52
+// Notched/Dynamic-Island phones need extra clearance above the topbar's own
+// 52px content — without env(safe-area-inset-top), the fixed topbar (and
+// everything sized relative to its height) assumed a flat 52px regardless of
+// device, which could leave content below it overlapping the topbar on
+// devices where the safe area eats into that budget.
+const TOPBAR_SAFE_HEIGHT = `calc(${MOBILE_TOPBAR_HEIGHT}px + env(safe-area-inset-top, 0px))`
 
 export default async function AppSidebar() {
   const user = await getAuthUser()
@@ -61,14 +67,14 @@ export default async function AppSidebar() {
           .app-sidebar {
             position: fixed;
             left: 0;
-            top: ${MOBILE_TOPBAR_HEIGHT}px;
+            top: ${TOPBAR_SAFE_HEIGHT};
             /* 100vh on mobile browsers includes the address-bar area that
                isn't actually visible, which was pushing the footer (and its
                Sign out button) below the real fold. 100dvh tracks the
                actual visible viewport; the vh line above is just a fallback
                for browsers that don't support dvh yet. */
-            height: calc(100vh - ${MOBILE_TOPBAR_HEIGHT}px);
-            height: calc(100dvh - ${MOBILE_TOPBAR_HEIGHT}px);
+            height: calc(100vh - ${TOPBAR_SAFE_HEIGHT});
+            height: calc(100dvh - ${TOPBAR_SAFE_HEIGHT});
             transform: translateX(-100%);
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
             /* Page content can have its own sticky bars with a higher
@@ -96,7 +102,7 @@ export default async function AppSidebar() {
           display: block;
         }
         @media (max-width: 768px) {
-          .sidebar-overlay { top: ${MOBILE_TOPBAR_HEIGHT}px; }
+          .sidebar-overlay { top: ${TOPBAR_SAFE_HEIGHT}; }
         }
 
         .mobile-topbar { display: none; }
@@ -109,8 +115,9 @@ export default async function AppSidebar() {
             display: flex;
             align-items: center;
             gap: 12px;
-            height: ${MOBILE_TOPBAR_HEIGHT}px;
+            height: ${TOPBAR_SAFE_HEIGHT};
             padding: 0 16px;
+            padding-top: env(safe-area-inset-top, 0px);
             background: var(--color-background-secondary);
             border-bottom: 0.5px solid var(--color-border-tertiary);
             position: fixed;
@@ -141,7 +148,7 @@ export default async function AppSidebar() {
 
         .app-main { padding: 32px 36px; }
         @media (max-width: 768px) {
-          .app-main { padding: 12px 8px !important; margin-top: ${MOBILE_TOPBAR_HEIGHT}px; }
+          .app-main { padding: 12px 8px !important; margin-top: ${TOPBAR_SAFE_HEIGHT}; }
         }
 
         .app-sidebar-footer { padding-bottom: 10px; }
