@@ -105,8 +105,6 @@ export default async function FunkcjePage() {
         .evt-delta.down { color: #c23b34; }
 
         .email-frame { border-radius: 14px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 20px 40px -22px rgba(35,43,49,0.2); overflow: hidden; background: #fff; }
-        .email-toolbar { background: #f3f6f7; border-bottom: 1px solid #e2e6e8; padding: 9px 14px; display: flex; gap: 6px; }
-        .email-toolbar span { width: 8px; height: 8px; border-radius: 50%; background: #e2e6e8; }
         .email-body { padding: 18px 20px; }
         .email-score-row { display: flex; align-items: flex-end; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #e2e6e8; margin-bottom: 12px; }
         .email-score { font-family: var(--font-mono), monospace; font-size: 36px; font-weight: 700; color: #c23b34; line-height: 1; }
@@ -284,7 +282,6 @@ export default async function FunkcjePage() {
               </div>
               <div className="fx-feature-visual">
                 <div className="email-frame">
-                  <div className="email-toolbar"><span style={{ background: '#dc2626' }} /><span style={{ background: '#ea580c' }} /><span style={{ background: '#16a34a' }} /></div>
                   <div className="email-body">
                     <div className="email-score-row">
                       <span className="email-score">68</span>

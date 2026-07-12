@@ -205,8 +205,7 @@ export default async function HomePage() {
         .lp-card { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; display: flex; flex-direction: column; }
         .lp-card-bar { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #e2e6e8; }
         .lp-card-bar-left { display: flex; align-items: center; gap: 8px; }
-        .lp-card-dot { width: 9px; height: 9px; border-radius: 50%; }
-        .lp-card-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lp-card-title { font-family: var(--font-mono), monospace; font-size: 12px; color: #8b939a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .lp-card-tag { font-family: var(--font-mono), monospace; font-size: 12px; color: #c23b34; flex-shrink: 0; }
         @media (max-width: 480px) { .lp-card-title { display: none; } }
 
@@ -396,9 +395,6 @@ export default async function HomePage() {
               <div className="lp-card">
                 <div className="lp-card-bar">
                   <div className="lp-card-bar-left">
-                    <span className="lp-card-dot" style={{ background: '#dc2626' }} />
-                    <span className="lp-card-dot" style={{ background: '#ea580c' }} />
-                    <span className="lp-card-dot" style={{ background: '#16a34a' }} />
                     <span className="lp-card-title">sklep-rowerowy.pl · 14 dni</span>
                   </div>
                 </div>
@@ -424,9 +420,6 @@ export default async function HomePage() {
               <div className="lp-card">
                 <div className="lp-card-bar">
                   <div className="lp-card-bar-left">
-                    <span className="lp-card-dot" style={{ background: '#dc2626' }} />
-                    <span className="lp-card-dot" style={{ background: '#ea580c' }} />
-                    <span className="lp-card-dot" style={{ background: '#16a34a' }} />
                     <span className="lp-card-title">alertga4.bettersteps.pl/dashboard</span>
                   </div>
                   <span className="lp-card-tag">+ nowy projekt</span>
