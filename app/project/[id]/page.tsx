@@ -48,31 +48,34 @@ function PageStyles() {
   return (
     <style>{`
       @media (max-width: 768px) {
-        /* This page's own sub-nav is sticky at top:0 — fine on desktop,
-           but on mobile the sidebar's hamburger/logo bar is a separate
-           fixed 52px strip above everything. Without this override the
-           sub-nav (higher z-index) scrolls up and sits exactly on top of
-           it, hiding the hamburger button entirely instead of stacking
-           below it. 52px must match MOBILE_TOPBAR_HEIGHT in
-           src/components/layout/AppSidebar.tsx.
+        /* This page's own sub-nav is position:sticky on desktop. On mobile
+           that's actually broken: .app-main has overflow-y:auto, but the
+           page never really scrolls inside it (the flex row uses
+           min-height:100vh, so it grows and the WINDOW scrolls instead) —
+           sticky resolves against .app-main's box, not the real viewport,
+           so it either overlapped the score card at rest or silently
+           stopped sticking at all once scrolled. Verified by rendering the
+           actual layout at a mobile viewport. Simplest fix: don't try to
+           keep it pinned on mobile at all — let it scroll away like any
+           other content, same as the score card below it.
         */
-        .page-top-nav { top: 52px !important; }
+        .page-top-nav { position: static !important; }
 
         /* Extra gap + a divider between the back/name row and the actions
            row (Period/PDF/Settings/Run now) — stacked with nothing but 8px
            between them, "Settings" sat right under the back link and read
            as one crowded cluster instead of two distinct rows. This nav
-           also sits inside .app-main (10px horizontal padding already) —
+           also sits inside .app-main (8px horizontal padding already) —
            its own side padding only needs to be small, not stack another
            16px on top. */
-        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 10px 6px !important; gap: 10px; }
+        .page-nav-row { flex-direction: column !important; align-items: stretch !important; height: auto !important; padding: 8px 4px !important; gap: 10px; }
         .page-nav-actions { flex-wrap: wrap; gap: 8px !important; justify-content: flex-start !important; padding-top: 8px; border-top: 0.5px solid var(--color-border-tertiary); }
         .page-score-header { flex-direction: column !important; padding: 14px !important; gap: 10px !important; }
         .page-grid { grid-template-columns: 1fr !important; }
         .page-history-table { font-size: 11px !important; }
         .page-settings-grid { grid-template-columns: 1fr !important; }
         /* This wrap sits inside .app-main (app/dashboard/layout.tsx), which
-           already applies its own 10px horizontal padding on mobile (see
+           already applies its own horizontal padding on mobile (see
            src/components/layout/AppSidebar.tsx) — this wrap was adding a
            SECOND, redundant layer of horizontal padding on top of that
            (18px combined per side), unlike every other dashboard page
