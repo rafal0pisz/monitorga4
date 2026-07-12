@@ -70,6 +70,22 @@ export default async function CennikPage() {
         .trial-banner p { font-size: 13.5px; color: #166534; margin: 0 0 12px; line-height: 1.5; }
         .trial-banner p:last-child { margin-bottom: 0; }
 
+        /* Guest (logged-out) trial callout — same brand palette as the nav/
+           footer (ink + neutral), not the green used for the logged-in
+           trial-status banners above. */
+        .trial-banner-guest {
+          max-width: 640px; margin: 0 auto 40px; padding: 18px 22px 18px 20px;
+          background: #f3f6f7; border: 1px solid #e2e6e8; border-left: 4px solid #232b31;
+          border-radius: 12px;
+          display: flex; align-items: center; justify-content: space-between; gap: 20px;
+          text-align: left;
+        }
+        .trial-banner-guest p { font-size: 13.5px; color: #232b31; line-height: 1.5; margin: 0; }
+        .trial-banner-guest .btn { flex-shrink: 0; }
+        @media (max-width: 560px) {
+          .trial-banner-guest { flex-direction: column; align-items: stretch; text-align: center; }
+        }
+
         .plan-table-section { padding: 8px 0 88px; }
         .plan-table-section h2 { font-size: clamp(20px, 3vw, 26px); letter-spacing: -0.01em; text-align: center; margin: 0 0 32px; }
         .plan-table-wrap { overflow-x: auto; }
@@ -133,8 +149,8 @@ export default async function CennikPage() {
             </div>
           )}
           {!user && (
-            <div className="trial-banner">
-              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni na zasadach planu Agency — bez podpinania karty.</p>
+            <div className="trial-banner-guest">
+              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni. Bez podpinania karty.</p>
               <Link href="/login" className="btn btn--primary btn--sm">Zarejestruj się przez Google</Link>
             </div>
           )}
