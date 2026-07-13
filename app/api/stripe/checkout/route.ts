@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
       customer_update: { name: 'auto', address: 'auto' },
       billing_address_collection: 'required',
       tax_id_collection: { enabled: true },
+      // Shows a "Add promotion code" field on the Stripe-hosted checkout
+      // page — the actual coupons/promotion codes are created and managed
+      // directly in the Stripe Dashboard, not in this app.
+      allow_promotion_codes: true,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl}/dashboard/billing/success?session_id={CHECKOUT_SESSION_ID}`,
