@@ -764,17 +764,18 @@ async function processProject(
     const rawScore = allResults.reduce((s, r) => s + r.score, 0)
     const scoreTotal = totalWeight > 0 ? +((rawScore / totalWeight) * 100).toFixed(2) : 0
 
-    // Keep best score of the day
+    // Keep best score of the day (avoids a same-day re-run with noisier
+    // GA4 data — or a manual "Run now" — dragging the displayed score down).
+    // This must only affect the displayed score_total, never dqs_results:
+    // the check set is driven by live project config (custom events/params/
+    // ecommerce can be edited between two same-day runs), so skipping the
+    // results write whenever the new score wasn't "better" left deleted
+    // checks (e.g. a removed parameter) stuck showing forever.
     const isBetter = !existingRun || scoreTotal >= (existingRun.score_total ?? 0)
     const finalScore = isBetter ? scoreTotal : (existingRun!.score_total ?? scoreTotal)
-    if (isBetter) {
-      await supabase.from('dqs_results').delete().eq('run_id', run.id)
-      await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
-      await supabase.from('dqs_runs').update({ status: 'completed', score_total: scoreTotal }).eq('id', run.id)
-    } else {
-      // Score not better — mark run as completed but keep old results
-      await supabase.from('dqs_runs').update({ status: 'completed', score_total: existingRun!.score_total }).eq('id', run.id)
-    }
+    await supabase.from('dqs_results').delete().eq('run_id', run.id)
+    await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
+    await supabase.from('dqs_runs').update({ status: 'completed', score_total: finalScore }).eq('id', run.id)
 
     // Yesterday's score, for the WoW delta shown in both email types
     const { data: prevRun } = await supabase
