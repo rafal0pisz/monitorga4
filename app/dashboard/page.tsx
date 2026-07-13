@@ -72,7 +72,13 @@ export default async function DashboardPage() {
     <div style={{ maxWidth: 700 }}>
       <style>{`
         @media (max-width: 560px) {
-          .dashboard-stat-grid { grid-template-columns: 1fr !important; }
+          /* 3 compact tiles per row instead of stacking one per row — plenty
+             of room for short label/number/sub content at this size. */
+          .dashboard-stat-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
+          .dashboard-stat-card { padding: 8px 6px !important; }
+          .dashboard-stat-label { font-size: 9.5px !important; margin-bottom: 2px !important; }
+          .dashboard-stat-value { font-size: 19px !important; }
+          .dashboard-stat-sub { font-size: 9.5px !important; }
         }
       `}</style>
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -94,10 +100,10 @@ export default async function DashboardPage() {
             { label: 'Daily check', value: `${dailyCheckCount} / ${list.length}`, sub: 'enabled' },
             { label: 'Email alerts', value: `${emailAlertCount} / ${list.length}`, sub: 'configured' },
           ].map(card => (
-            <div key={card.label} style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: '14px 16px' }}>
-              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>{card.label}</p>
-              <p style={{ fontSize: 28, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 2px', lineHeight: 1 }}>{card.value}</p>
-              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>{card.sub}</p>
+            <div key={card.label} className="dashboard-stat-card" style={{ background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, padding: '14px 16px' }}>
+              <p className="dashboard-stat-label" style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 4px' }}>{card.label}</p>
+              <p className="dashboard-stat-value" style={{ fontSize: 28, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 2px', lineHeight: 1 }}>{card.value}</p>
+              <p className="dashboard-stat-sub" style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: 0 }}>{card.sub}</p>
             </div>
           ))}
         </div>
