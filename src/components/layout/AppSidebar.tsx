@@ -151,11 +151,14 @@ export default async function AppSidebar() {
           .app-main { padding: 12px 8px !important; margin-top: ${TOPBAR_SAFE_HEIGHT}; }
         }
 
-        .app-sidebar-footer { padding-bottom: 10px; }
+        /* !important needed: the footer div's inline padding shorthand
+           (below) sets padding-bottom: 0 directly, which otherwise beats a
+           plain class rule regardless of media query. */
+        .app-sidebar-footer { padding-bottom: 14px !important; }
         @media (max-width: 768px) {
           /* Clears the home-indicator area on notched phones so the Sign
              out button isn't flush against (or hidden under) it. */
-          .app-sidebar-footer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+          .app-sidebar-footer { padding-bottom: max(14px, env(safe-area-inset-bottom)) !important; }
         }
       `}</style>
 

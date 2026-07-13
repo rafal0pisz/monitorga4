@@ -20,17 +20,22 @@ function statusChipStyle(on: boolean): CSSProperties {
 function chipDotStyle(on: boolean): CSSProperties {
   return { width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: on ? '#16a34a' : 'var(--color-text-tertiary)' }
 }
-// Small count chip (E-com / Events / Params) — same neutral shape for all three.
-function countChipStyle(): CSSProperties {
+// Small count chip (E-com / Events / Params) — green once configured (count >
+// 0), same as the Email/Daily status chips. This only reflects whether
+// something was configured, not whether it's healthy at scale — hence the
+// "Conf." label placed to the left of this chip group.
+function countChipStyle(on: boolean): CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 4,
     fontSize: 10.5, fontWeight: 500, borderRadius: 20, padding: '2.5px 9px', whiteSpace: 'nowrap',
-    border: '0.5px solid var(--color-border-tertiary)',
-    background: 'var(--color-background-tertiary)',
-    color: 'var(--color-text-secondary)',
+    border: `0.5px solid ${on ? '#86efac' : 'var(--color-border-tertiary)'}`,
+    background: on ? '#f0fdf4' : 'var(--color-background-tertiary)',
+    color: on ? '#166534' : 'var(--color-text-secondary)',
   }
 }
-const countValueStyle: CSSProperties = { fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--color-text-primary)' }
+function countValueStyle(on: boolean): CSSProperties {
+  return { fontFamily: 'var(--font-mono)', fontWeight: 700, color: on ? '#166534' : 'var(--color-text-primary)' }
+}
 
 export default async function DashboardPage() {
   const session = await createClient()
@@ -62,10 +67,12 @@ export default async function DashboardPage() {
   }
   const atLimit = limit != null && list.length >= limit
 
+  const hasFirstRun = list.some(p => p.last_score != null)
   const onboardingSteps = [
     { label: 'Add your first GA4 property', done: list.length > 0, href: '/dashboard/new' },
+    { label: 'Run your first check manually', done: hasFirstRun, href: list[0] ? `/project/${list[0].id}` : undefined },
     { label: 'Set an alert email for it', done: hasAlertEmail, href: list[0] ? `/project/${list[0].id}/config` : undefined },
-    { label: 'Get your first automated check', done: list.some(p => p.last_score != null) },
+    { label: 'Get your first automated check', done: hasFirstRun },
   ]
   const showOnboarding = !bypass && !!user && !onboardingDismissed && onboardingSteps.some(s => !s.done)
   return (
@@ -157,9 +164,10 @@ export default async function DashboardPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '0 20px 12px 42px' }}>
                   <span style={statusChipStyle(emailOn)}><span style={chipDotStyle(emailOn)} />Email</span>
                   <span style={statusChipStyle(dailyOn)}><span style={chipDotStyle(dailyOn)} />Daily</span>
-                  <span style={countChipStyle()}>E-com <b style={countValueStyle}>{p.ecommerce_events_count}</b></span>
-                  <span style={countChipStyle()}>Events <b style={countValueStyle}>{p.custom_events_count}</b></span>
-                  <span style={countChipStyle()}>Params <b style={countValueStyle}>{p.parameter_checks_count}</b></span>
+                  <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>Conf.</span>
+                  <span style={countChipStyle(p.ecommerce_events_count > 0)}>E-com <b style={countValueStyle(p.ecommerce_events_count > 0)}>{p.ecommerce_events_count}</b></span>
+                  <span style={countChipStyle(p.custom_events_count > 0)}>Events <b style={countValueStyle(p.custom_events_count > 0)}>{p.custom_events_count}</b></span>
+                  <span style={countChipStyle(p.parameter_checks_count > 0)}>Params <b style={countValueStyle(p.parameter_checks_count > 0)}>{p.parameter_checks_count}</b></span>
                 </div>
               </Link>
             )
