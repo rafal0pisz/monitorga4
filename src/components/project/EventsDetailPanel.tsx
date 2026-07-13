@@ -5,21 +5,47 @@ import { ga4Fetch } from '@/lib/ga4/clientQueue'
 interface DayCount { date: string; count: number }
 interface EventData { current: DayCount[]; prev: DayCount[]; totalCurrent: number; totalPrev: number }
 
+// GA4's date dimension is a bare YYYYMMDD string — this doesn't assume the
+// API returns rows in a particular order (it wasn't oldest-first, which is
+// why the newest day was rendering on the left instead of the right, unlike
+// ScoreTrendChart's explicit oldest→newest sort).
+function sortAscending(days: DayCount[]): DayCount[] {
+  return [...days].sort((a, b) => a.date.localeCompare(b.date))
+}
+
+function fmtGA4Date(d: string) {
+  const iso = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
 function MiniBarChart({ current, prev }: { current: DayCount[]; prev: DayCount[] }) {
-  const maxCount = Math.max(...current.map(d => d.count), ...prev.map(d => d.count), 1)
   const days = Math.min(Math.max(current.length, prev.length, 7), 14)
+  // Sort oldest→newest first, then keep only the most recent `days` entries
+  // — otherwise slicing before sorting could keep the OLDEST days instead
+  // of the most recent ones whenever there's more history than `days`.
+  const sortedCurrent = sortAscending(current).slice(-days)
+  const sortedPrev = sortAscending(prev).slice(-days)
+  const maxCount = Math.max(...sortedCurrent.map(d => d.count), ...sortedPrev.map(d => d.count), 1)
+  const latestDate = sortedCurrent[sortedCurrent.length - 1]?.date
   return (
-    <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36 }}>
-      {Array.from({ length: days }).map((_, i) => {
-        const c = current[i]?.count ?? 0; const p = prev[i]?.count ?? 0
-        const cH = Math.round((c / maxCount) * 36); const pH = Math.round((p / maxCount) * 36)
-        return (
-          <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
-            <div style={{ flex: 1, height: pH || 1, background: '#d1d5db', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
-            <div style={{ flex: 1, height: cH || 1, background: c > 0 ? '#16a34a' : '#f3f4f6', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
-          </div>
-        )
-      })}
+    <div>
+      <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36 }}>
+        {Array.from({ length: days }).map((_, i) => {
+          const c = sortedCurrent[i]?.count ?? 0; const p = sortedPrev[i]?.count ?? 0
+          const cH = Math.round((c / maxCount) * 36); const pH = Math.round((p / maxCount) * 36)
+          return (
+            <div key={i} style={{ display: 'flex', gap: 1, alignItems: 'flex-end', flex: 1 }}>
+              <div style={{ flex: 1, height: pH || 1, background: '#d1d5db', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
+              <div style={{ flex: 1, height: cH || 1, background: c > 0 ? '#16a34a' : '#f3f4f6', borderRadius: '2px 2px 0 0', minWidth: 3 }} />
+            </div>
+          )
+        })}
+      </div>
+      {latestDate && (
+        <div style={{ textAlign: 'right', fontSize: 8, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+          {fmtGA4Date(latestDate)}
+        </div>
+      )}
     </div>
   )
 }
