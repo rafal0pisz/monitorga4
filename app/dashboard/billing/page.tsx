@@ -119,6 +119,13 @@ export default async function BillingPage() {
               : currentPeriodEnd ? `Valid until: ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : hasPurchasablePlan ? '' : 'No expiry date'}
           </p>
           <BillingActions hasPurchasablePlan={hasPurchasablePlan} />
+          {isTrial && (
+            <div style={{ marginTop: 12 }}>
+              <Link href="/cennik" style={{ display: 'inline-block', background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', fontSize: 13 }}>
+                Upgrade to a paid plan →
+              </Link>
+            </div>
+          )}
         </div>
         {!planId && (
           <div style={{ marginTop: 12 }}>
