@@ -116,7 +116,13 @@ export default async function DashboardPage() {
       )}
       {list.length === 0 ? (
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '48px 24px', textAlign: 'center' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>📊</p>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'var(--color-background-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="26" height="22" viewBox="0 0 26 22" fill="none" aria-hidden="true">
+              <rect x="0" y="10" width="6" height="12" rx="1.5" fill="var(--color-border-primary)" />
+              <rect x="10" y="4" width="6" height="18" rx="1.5" fill="#16a34a" />
+              <rect x="20" y="13" width="6" height="9" rx="1.5" fill="var(--color-border-primary)" />
+            </svg>
+          </div>
           <h2 style={{ fontSize: 16, fontWeight: 500, margin: '0 0 8px', color: 'var(--color-text-primary)' }}>No projects yet</h2>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20 }}>Add your first GA4 property to start monitoring</p>
           <Link href="/dashboard/new" style={{ display: 'inline-block', background: '#16a34a', color: '#fff', fontWeight: 500, padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontSize: 13 }}>+ Add project</Link>

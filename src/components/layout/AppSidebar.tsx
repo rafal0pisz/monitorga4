@@ -192,14 +192,9 @@ export default async function AppSidebar() {
         </div>
 
         {/* Footer */}
-        <div className="app-sidebar-footer" style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '10px 16px 0', flexShrink: 0 }}>
-          <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>AlertGA4 {new Date().getFullYear()}</p>
-          <LogoutButton style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
-            fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)',
-            background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)',
-            borderRadius: 8, padding: '9px 12px',
-          }} />
+        <div className="app-sidebar-footer" style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '10px 16px 0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>AlertGA4 {new Date().getFullYear()}</span>
+          <LogoutButton style={{ fontSize: 11, color: 'var(--color-text-secondary)', textDecoration: 'underline', padding: '2px 0' }} />
         </div>
       </aside>
     </>
