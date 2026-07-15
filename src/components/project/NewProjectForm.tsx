@@ -7,7 +7,6 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
-import { parseEmailList } from '@/lib/email/shared'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -114,9 +113,21 @@ export default function NewProjectForm() {
     name: '',
     own_domain: '',
     alert_threshold: '70',
-    alert_email: '',
   })
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
+
+  const [alertEmails, setAlertEmails] = useState<string[]>([])
+  const [newAlertEmail, setNewAlertEmail] = useState('')
+  const [alertEmailError, setAlertEmailError] = useState<string | null>(null)
+  function addAlertEmail() {
+    const e = newAlertEmail.trim()
+    if (!e) return
+    if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
+    if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
+    setAlertEmails(prev => [...prev, e])
+    setNewAlertEmail('')
+    setAlertEmailError(null)
+  }
 
   // Suggestions sourced from the connected GA4 property
   const [discovered, setDiscovered] = useState<DiscoveredEvent[] | null>(null)
@@ -312,9 +323,6 @@ export default function NewProjectForm() {
 
   async function handleSubmit() {
     if (!canSubmitProperty) { setError('Select or enter a GA4 property'); setStep(1); return }
-    const alertEmails = parseEmailList(form.alert_email)
-    const invalidEmail = alertEmails.find(e => !EMAIL_RE.test(e))
-    if (invalidEmail) { setError(`"${invalidEmail}" doesn't look like a valid email address`); return }
     setLoading(true); setError(null)
     try {
       const supabase = createClient()
@@ -676,8 +684,28 @@ export default function NewProjectForm() {
           <Field label="Score threshold" hint="Alert when the score drops below this value">
             <input type="number" min="0" max="100" value={form.alert_threshold} onChange={e => set('alert_threshold', e.target.value)} style={{ ...inp, width: 100 }} />
           </Field>
-          <Field label="Alert email(s)" hint="Separate multiple addresses with a comma">
-            <input type="email" multiple value={form.alert_email} onChange={e => set('alert_email', e.target.value)} placeholder="you@company.com, client@company.com" style={inp} />
+          <Field label="Alert email(s)">
+            {alertEmails.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                {alertEmails.map((e, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
+                    <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e}</span>
+                    <button type="button" onClick={() => setAlertEmails(prev => prev.filter((_, j) => j !== i))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={newAlertEmail} onChange={e => { setNewAlertEmail(e.target.value); setAlertEmailError(null) }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlertEmail() } }}
+                placeholder="you@company.com" type="email" style={{ ...inp, flex: 1 }} />
+              <button type="button" onClick={addAlertEmail}
+                style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
+                Add
+              </button>
+            </div>
+            {alertEmailError && <p style={{ fontSize: 11, color: '#dc2626', margin: '4px 0 0' }}>{alertEmailError}</p>}
           </Field>
         </Section>
       )}

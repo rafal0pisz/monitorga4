@@ -44,7 +44,7 @@ export default function ProjectConfigForm({ project }: Props) {
   const [name,        setName]        = useState(project.name ?? '')
   const [propertyId,  setPropertyId]  = useState(project.ga4_property_id ?? '')
   const [ownDomain,   setOwnDomain]   = useState(project.own_domain ?? '')
-  const [alertEmail,  setAlertEmail]  = useState(project.alert_email ?? '')
+  const [alertEmails, setAlertEmails] = useState<string[]>(() => parseEmailList(project.alert_email))
   const [alertThresh, setAlertThresh] = useState(String(project.alert_threshold ?? 70))
   const [status,      setStatus]      = useState(project.status ?? 'active')
   const [autoRun,     setAutoRun]     = useState(project.auto_run ?? false)
@@ -56,6 +56,8 @@ export default function ProjectConfigForm({ project }: Props) {
   const [newEvent,    setNewEvent]    = useState('')
   const [newEvtName,  setNewEvtName]  = useState('')
   const [newParamName,setNewParamName]= useState('')
+  const [newAlertEmail, setNewAlertEmail] = useState('')
+  const [alertEmailError, setAlertEmailError] = useState<string | null>(null)
 
   // null = not loaded yet (or couldn't load) — validation is skipped rather
   // than blocking adds when we can't confirm either way.
@@ -152,6 +154,16 @@ export default function ProjectConfigForm({ project }: Props) {
     setNewEvent('')
   }
 
+  function addAlertEmail() {
+    const e = newAlertEmail.trim()
+    if (!e) return
+    if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
+    if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
+    setAlertEmails(prev => [...prev, e])
+    setNewAlertEmail('')
+    setAlertEmailError(null)
+  }
+
   async function openSuggestions() {
     setShowSuggestions(true)
     if (discovered !== null || discoverLoading || !project.ga4_property_id) return
@@ -236,10 +248,6 @@ export default function ProjectConfigForm({ project }: Props) {
   async function handleSave() {
     setSaving(true); setError(null); setSuccess(false)
     try {
-      const emails = parseEmailList(alertEmail)
-      const invalidEmail = emails.find(e => !EMAIL_RE.test(e))
-      if (invalidEmail) throw new Error(`"${invalidEmail}" doesn't look like a valid email address`)
-
       const pid = project.id
       const pidClean = propertyId.startsWith('properties/')
         ? propertyId : propertyId ? `properties/${propertyId.replace(/\D/g, '')}` : ''
@@ -248,7 +256,7 @@ export default function ProjectConfigForm({ project }: Props) {
         name: name.trim(),
         ga4_property_id: pidClean || null,
         own_domain: ownDomain.trim() || null,
-        alert_email: emails.length > 0 ? emails.join(', ') : null,
+        alert_email: alertEmails.length > 0 ? alertEmails.join(', ') : null,
         alert_threshold: Number(alertThresh) || 70,
         status,
         auto_run: autoRun,
@@ -622,8 +630,27 @@ export default function ProjectConfigForm({ project }: Props) {
           <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
               <label style={lbl}>Alert email(s)</label>
-              <input value={alertEmail} onChange={e => setAlertEmail(e.target.value)} placeholder="you@company.com, client@company.com" type="email" multiple style={inp} />
-              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '4px 0 0' }}>Separate multiple addresses with a comma.</p>
+              {alertEmails.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                  {alertEmails.map((e, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
+                      <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e}</span>
+                      <button onClick={() => setAlertEmails(prev => prev.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={newAlertEmail} onChange={e => { setNewAlertEmail(e.target.value); setAlertEmailError(null) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlertEmail() } }}
+                  placeholder="you@company.com" type="email" style={{ ...inp, flex: 1 }} />
+                <button onClick={addAlertEmail}
+                  style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
+                  Add
+                </button>
+              </div>
+              {alertEmailError && <p style={{ fontSize: 11, color: '#dc2626', margin: '4px 0 0' }}>{alertEmailError}</p>}
             </div>
             <div>
               <label style={lbl}>Alert threshold (score)</label>
