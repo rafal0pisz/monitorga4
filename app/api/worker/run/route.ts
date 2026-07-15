@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
 import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
+import { parseEmailList } from '@/lib/email/shared'
 import type { Project, CheckResult } from '@/types'
 
 // Default serverless timeout is far too short once this loops over dozens
@@ -797,7 +798,8 @@ async function processProject(
     // Per-project client alert — separate from the owner digest, only to
     // the address configured on this specific project, only about this
     // one project's data.
-    if (scoreTotal < project.alert_threshold && project.alert_email) {
+    const alertEmails = parseEmailList(project.alert_email)
+    if (scoreTotal < project.alert_threshold && alertEmails.length > 0) {
       const { data: lastAlert } = await supabase.from('alert_log')
         .select('sent_at').eq('project_id', project.id)
         .order('sent_at', { ascending: false }).limit(1).single()
@@ -822,7 +824,7 @@ async function processProject(
         const passing = allResults.filter(r => r.status === 'pass')
 
         await sendEmail({
-          to: project.alert_email,
+          to: alertEmails,
           ...renderClientAlertEmail({
             projectId: project.id,
             projectName: project.name,

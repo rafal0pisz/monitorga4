@@ -102,6 +102,14 @@ export function fmtDate(d: string | Date): string {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+// projects.alert_email stores a free-text, comma/semicolon/whitespace
+// separated list (a project can notify several people) — this is the one
+// place that turns it into a clean, deduped array of individual addresses.
+export function parseEmailList(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  return [...new Set(raw.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean))]
+}
+
 // Escapes text interpolated into email HTML. Required for any field that
 // can come from a public, unauthenticated form (e.g. the contact form) —
 // every other template here only interpolates server-controlled data.

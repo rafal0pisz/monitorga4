@@ -7,6 +7,9 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { parseEmailList } from '@/lib/email/shared'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 interface GA4Property {
   propertyId: string
@@ -309,6 +312,9 @@ export default function NewProjectForm() {
 
   async function handleSubmit() {
     if (!canSubmitProperty) { setError('Select or enter a GA4 property'); setStep(1); return }
+    const alertEmails = parseEmailList(form.alert_email)
+    const invalidEmail = alertEmails.find(e => !EMAIL_RE.test(e))
+    if (invalidEmail) { setError(`"${invalidEmail}" doesn't look like a valid email address`); return }
     setLoading(true); setError(null)
     try {
       const supabase = createClient()
@@ -327,7 +333,7 @@ export default function NewProjectForm() {
         p_own_domain: form.own_domain || null,
         p_expected_events: customEvents.map(e => e.event_name),
         p_alert_threshold: parseInt(form.alert_threshold),
-        p_alert_email: form.alert_email || null,
+        p_alert_email: alertEmails.length > 0 ? alertEmails.join(', ') : null,
       })
       if (projErr) {
         if (projErr.message.includes('PLAN_LIMIT_REACHED')) {
@@ -670,8 +676,8 @@ export default function NewProjectForm() {
           <Field label="Score threshold" hint="Alert when the score drops below this value">
             <input type="number" min="0" max="100" value={form.alert_threshold} onChange={e => set('alert_threshold', e.target.value)} style={{ ...inp, width: 100 }} />
           </Field>
-          <Field label="Alert email">
-            <input type="email" value={form.alert_email} onChange={e => set('alert_email', e.target.value)} placeholder="you@company.com" style={inp} />
+          <Field label="Alert email(s)" hint="Separate multiple addresses with a comma">
+            <input type="email" multiple value={form.alert_email} onChange={e => set('alert_email', e.target.value)} placeholder="you@company.com, client@company.com" style={inp} />
           </Field>
         </Section>
       )}

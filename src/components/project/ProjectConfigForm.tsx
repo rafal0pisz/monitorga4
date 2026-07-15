@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { parseEmailList } from '@/lib/email/shared'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
 
@@ -233,6 +236,10 @@ export default function ProjectConfigForm({ project }: Props) {
   async function handleSave() {
     setSaving(true); setError(null); setSuccess(false)
     try {
+      const emails = parseEmailList(alertEmail)
+      const invalidEmail = emails.find(e => !EMAIL_RE.test(e))
+      if (invalidEmail) throw new Error(`"${invalidEmail}" doesn't look like a valid email address`)
+
       const pid = project.id
       const pidClean = propertyId.startsWith('properties/')
         ? propertyId : propertyId ? `properties/${propertyId.replace(/\D/g, '')}` : ''
@@ -241,7 +248,7 @@ export default function ProjectConfigForm({ project }: Props) {
         name: name.trim(),
         ga4_property_id: pidClean || null,
         own_domain: ownDomain.trim() || null,
-        alert_email: alertEmail.trim() || null,
+        alert_email: emails.length > 0 ? emails.join(', ') : null,
         alert_threshold: Number(alertThresh) || 70,
         status,
         auto_run: autoRun,
@@ -614,8 +621,9 @@ export default function ProjectConfigForm({ project }: Props) {
         {openSection === 'alerts' && (
           <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
-              <label style={lbl}>Alert email</label>
-              <input value={alertEmail} onChange={e => setAlertEmail(e.target.value)} placeholder="you@company.com" type="email" style={inp} />
+              <label style={lbl}>Alert email(s)</label>
+              <input value={alertEmail} onChange={e => setAlertEmail(e.target.value)} placeholder="you@company.com, client@company.com" type="email" multiple style={inp} />
+              <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '4px 0 0' }}>Separate multiple addresses with a comma.</p>
             </div>
             <div>
               <label style={lbl}>Alert threshold (score)</label>

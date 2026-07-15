@@ -8,7 +8,7 @@ import { Resend } from 'resend'
  * is the only delivery mechanism and a silent failure would strand the
  * submitter's message with no feedback).
  */
-export async function sendEmail(opts: { to: string; subject: string; html: string; replyTo?: string }): Promise<boolean> {
+export async function sendEmail(opts: { to: string | string[]; subject: string; html: string; replyTo?: string }): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM
 

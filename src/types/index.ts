@@ -35,7 +35,7 @@ export interface Project {
   own_domain: string | null
   expected_events: string[]
   alert_threshold: number
-  alert_email: string | null
+  alert_email: string | null // comma-separated list — see parseEmailList()
   share_token: string
   status: ProjectStatus
   auto_run?: boolean | null
@@ -116,7 +116,7 @@ export interface DashboardProject {
   last_score: number | null
   run_status: RunStatus | null
   prev_week_score: number | null
-  alert_email: string | null
+  alert_email: string | null // comma-separated list — see parseEmailList()
   auto_run: boolean | null
   custom_events_count: number
   ecommerce_events_count: number
