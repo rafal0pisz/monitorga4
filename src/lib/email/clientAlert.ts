@@ -1,4 +1,4 @@
-import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, barChartHtml, fmtDate } from './shared'
+import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
 import { checkLabel } from '@/lib/ga4/checkLabels'
 
 export interface TrendPoint { runDate: string; score: number }
@@ -18,25 +18,46 @@ export interface ClientAlertData {
   passingLabels: string[]
 }
 
-const BAR_HEIGHT = 52
+const LINE_HEIGHT = 60
+const LINE_WIDTH = 536 // email body is 600px wide with 32px padding each side
 
+// Plain SVG line — Apple Mail, Gmail, Outlook.com/mobile and most other
+// clients render this fine; classic Windows desktop Outlook (Word's HTML
+// engine) drops inline SVG entirely and shows nothing here. That's an
+// acceptable degradation: the score, delta and pass/fail list right above
+// and below this chart already carry the same information as plain text.
 function trendHtml(trend: TrendPoint[], threshold: number): string {
   if (trend.length < 2) return ''
 
-  const bars = trend.map((p, i) => {
-    const h = Math.max(2, Math.round((p.score / 100) * BAR_HEIGHT))
-    const below = p.score < threshold
-    const isToday = i === trend.length - 1
-    const color = below ? BRAND.coralText : BRAND.ink
-    return { heightPx: h, color, title: `${fmtDate(p.runDate)} · ${Math.round(p.score)}`, isToday, below }
-  })
+  const n = trend.length
+  const points = trend.map((p, i) => ({
+    x: +((i * LINE_WIDTH) / (n - 1)).toFixed(1),
+    y: +((1 - p.score / 100) * LINE_HEIGHT).toFixed(1),
+    date: p.runDate,
+    score: p.score,
+  }))
+  const thresholdY = +((1 - threshold / 100) * LINE_HEIGHT).toFixed(1)
+  const labelY = Math.max(thresholdY - 4, 9)
 
-  const thresholdTop = Math.round(BAR_HEIGHT - (threshold / 100) * BAR_HEIGHT)
+  const linePoints = points.map(p => `${p.x},${p.y}`).join(' ')
+  const areaPoints = `${linePoints} ${LINE_WIDTH},${LINE_HEIGHT} 0,${LINE_HEIGHT}`
+  const dots = points.map((p, i) => {
+    const title = `<title>${fmtDate(p.date)} · ${Math.round(p.score)}</title>`
+    return i === n - 1
+      ? `<circle cx="${p.x}" cy="${p.y}" r="4.5" fill="${BRAND.ink}" stroke="#ffffff" stroke-width="1.5">${title}</circle>`
+      : `<circle cx="${p.x}" cy="${p.y}" r="2.75" fill="${BRAND.ink}">${title}</circle>`
+  }).join('')
 
   return `
   <div style="padding:20px 32px 4px;">
     <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 10px;font-weight:700;">Trend checks</h2>
-    ${barChartHtml(bars, BAR_HEIGHT, thresholdTop, `threshold ${threshold}`)}
+    <svg width="${LINE_WIDTH}" height="${LINE_HEIGHT}" viewBox="0 0 ${LINE_WIDTH} ${LINE_HEIGHT}" style="display:block;width:100%;height:auto;">
+      <line x1="0" y1="${thresholdY}" x2="${LINE_WIDTH}" y2="${thresholdY}" stroke="#c7ccd0" stroke-width="1" stroke-dasharray="3,3" />
+      <text x="${LINE_WIDTH}" y="${labelY}" text-anchor="end" font-size="9.5" fill="${BRAND.soft}" font-family="-apple-system,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif">threshold ${threshold}</text>
+      <polygon points="${areaPoints}" fill="${BRAND.ink}" fill-opacity="0.07" />
+      <polyline points="${linePoints}" fill="none" stroke="${BRAND.ink}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      ${dots}
+    </svg>
     <div style="margin-top:6px;">${hstack([
       { html: `<span style="font-size:10.5px;color:${BRAND.soft};">${fmtDate(trend[0].runDate)}</span>` },
       { html: `<span style="font-size:10.5px;color:${BRAND.soft};">${fmtDate(trend[trend.length - 1].runDate)}</span>`, align: 'right' },

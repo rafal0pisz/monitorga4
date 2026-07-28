@@ -78,26 +78,6 @@ export function ctaHtml(label: string, href: string): string {
   </table>`
 }
 
-// Simple bar chart built from a table — one <td> per bar, bottom-aligned,
-// each holding a fixed-height colored block. No flexbox, no images.
-export function barChartHtml(bars: { heightPx: number; color: string; title: string }[], frameHeightPx: number, thresholdTopPx: number, thresholdLabel: string): string {
-  const cells = bars.map(b => `
-    <td valign="bottom" style="padding:0 2px;">
-      <div title="${b.title}" style="height:${b.heightPx}px;background:${b.color};border-radius:2px 2px 0 0;font-size:0;line-height:0;">&nbsp;</div>
-    </td>`).join('')
-
-  return `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="position:relative;">
-    <tr><td style="position:relative;padding:0;">
-      <div style="position:absolute;left:0;right:0;top:${thresholdTopPx}px;border-top:1px dashed #c7ccd0;font-size:0;line-height:0;">&nbsp;</div>
-      <span style="position:absolute;right:0;top:${thresholdTopPx}px;transform:translateY(-100%);font-size:9.5px;color:${BRAND.soft};background:#fff;padding:0 4px 1px;">${thresholdLabel}</span>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="height:${frameHeightPx}px;">
-        <tr>${cells}</tr>
-      </table>
-    </td></tr>
-  </table>`
-}
-
 export function fmtDate(d: string | Date): string {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
