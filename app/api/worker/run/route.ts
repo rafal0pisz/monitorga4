@@ -17,6 +17,14 @@ import type { Project, CheckResult } from '@/types'
 // to 60s (Hobby ceiling) to match your actual plan.
 export const maxDuration = 300
 
+// ga4Report() already returns the whole response body (rows + metadata),
+// but every check just destructures .rows — this thin per-project wrapper
+// is how sampling gets noticed at all: it's the one place that also reads
+// metadata.samplingMetadatas, so runAllChecks/checkParameters don't each
+// need their own copy of that logic.
+type Ga4ReportFn = (body: object) => Promise<any>
+interface SamplingHit { samplesReadCount: number; samplingSpaceSize: number }
+
 // ============================================================
 // Autoryzacja
 // ============================================================
@@ -121,7 +129,7 @@ const ITEM_METRIC_BY_EVENT: Record<string, string> = {
 
 async function checkParameters(
   project: { ga4_property_id: string },
-  token: string,
+  report: Ga4ReportFn,
   paramChecks: { event_name: string; parameter_name: string }[],
   ranges: { current: { startDate: string; endDate: string }; prev: { startDate: string; endDate: string } }
 ): Promise<CheckResult[]> {
@@ -148,7 +156,7 @@ async function checkParameters(
 
         if (stdMetric) {
           // For value/price etc — check if metric > 0 (presence, not coverage)
-          const data = await ga4Report(project.ga4_property_id, token, {
+          const data = await report({
             dateRanges: [dateRange],
             metrics:    [{ name: stdMetric }],
             dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
@@ -164,7 +172,7 @@ async function checkParameters(
           }
           // No eventName filter here — the item metric is already specific
           // to that event (e.g. itemsAddedToCart only counts add_to_cart).
-          const data = await ga4Report(project.ga4_property_id, token, {
+          const data = await report({
             dateRanges: [dateRange],
             dimensions: [{ name: stdDim }],
             metrics:    [{ name: itemMetric }],
@@ -178,7 +186,7 @@ async function checkParameters(
           return total > 0 ? (withParam / total) * 100 : 0
         }
 
-        const data = await ga4Report(project.ga4_property_id, token, {
+        const data = await report({
           dateRanges: [dateRange],
           dimensions: [{ name: dimName }],
           metrics:    [{ name: 'eventCount' }],
@@ -213,10 +221,9 @@ async function checkParameters(
   return results
 }
 
-async function runAllChecks(project: Project, token: string, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
+async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
   const results: CheckResult[] = []
   const ranges = getWoWRanges()
-  const pid = project.ga4_property_id
 
   // ── 1. EXPECTED EVENTS ──────────────────────────────────
   {
@@ -226,7 +233,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({ check_key: 'expected_events', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No expected events configured — check skipped' })
     } else {
       try {
-        const r = await ga4Report(pid, token, {
+        const r = await report({
           dateRanges: [{ startDate: '30daysAgo', endDate: 'yesterday' }],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
@@ -259,7 +266,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
       results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No domain configured — check skipped' })
     } else {
       try {
-        const r = await ga4Report(pid, token, {
+        const r = await report({
           dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
           dimensions: [{ name: 'sessionSource' }],
           metrics: [{ name: 'sessions' }],
@@ -291,8 +298,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     try {
       // Dwa osobne requesty — GA4 nie pozwala używać dateRange jako wymiaru
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], metrics: [{ name: 'bounceRate' }] }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    metrics: [{ name: 'bounceRate' }] }),
+        report({ dateRanges: [ranges.current], metrics: [{ name: 'bounceRate' }] }),
+        report({ dateRanges: [ranges.prev],    metrics: [{ name: 'bounceRate' }] }),
       ])
       const curr = parseFloat(rC.rows?.[0]?.metricValues?.[0]?.value ?? '0')
       const prev = parseFloat(rP.rows?.[0]?.metricValues?.[0]?.value ?? '0')
@@ -315,8 +322,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     const w = WEIGHTS.direct_traffic_spike
     try {
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], dimensions: [{ name: 'sessionMedium' }], metrics: [{ name: 'sessions' }] }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    dimensions: [{ name: 'sessionMedium' }], metrics: [{ name: 'sessions' }] }),
+        report({ dateRanges: [ranges.current], dimensions: [{ name: 'sessionMedium' }], metrics: [{ name: 'sessions' }] }),
+        report({ dateRanges: [ranges.prev],    dimensions: [{ name: 'sessionMedium' }], metrics: [{ name: 'sessions' }] }),
       ])
       const sumRows = (rows: any[]) => rows.reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
       const directRows = (rows: any[]) => rows.filter((r: any) => r.dimensionValues?.[0]?.value === '(none)')
@@ -344,8 +351,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     const w = WEIGHTS.conversion_rate
     try {
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], metrics: [{ name: 'sessions' }, { name: 'conversions' }] }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    metrics: [{ name: 'sessions' }, { name: 'conversions' }] }),
+        report({ dateRanges: [ranges.current], metrics: [{ name: 'sessions' }, { name: 'conversions' }] }),
+        report({ dateRanges: [ranges.prev],    metrics: [{ name: 'sessions' }, { name: 'conversions' }] }),
       ])
       const sessC = parseInt(rC.rows?.[0]?.metricValues?.[0]?.value ?? '0')
       const convC = parseInt(rC.rows?.[0]?.metricValues?.[1]?.value ?? '0')
@@ -371,7 +378,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
   {
     const w = WEIGHTS.page_title_null
     try {
-      const r = await ga4Report(pid, token, {
+      const r = await report({
         dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
         dimensions: [{ name: 'pageTitle' }],
         metrics: [{ name: 'sessions' }],
@@ -401,8 +408,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     try {
       // Dwa osobne requesty — GA4 nie pozwala używać dateRange jako wymiaru
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
+        report({ dateRanges: [ranges.current], dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
+        report({ dateRanges: [ranges.prev],    dimensions: [{ name: 'hour' }], metrics: [{ name: 'sessions' }] }),
       ])
       const nightHours = ['0','1','2','3','4','5']
       const sumNight = (rows: any[]) => rows
@@ -434,8 +441,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     const w = WEIGHTS.purchase_duplicates
     try {
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], metrics: [{ name: 'sessions' }, { name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'purchase' } } } }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    metrics: [{ name: 'sessions' }, { name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'purchase' } } } }),
+        report({ dateRanges: [ranges.current], metrics: [{ name: 'sessions' }, { name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'purchase' } } } }),
+        report({ dateRanges: [ranges.prev],    metrics: [{ name: 'sessions' }, { name: 'eventCount' }], dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: 'purchase' } } } }),
       ])
       const sessC = parseInt(rC.rows?.[0]?.metricValues?.[0]?.value ?? '0')
       const evC   = parseInt(rC.rows?.[0]?.metricValues?.[1]?.value ?? '0')
@@ -461,8 +468,8 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     const w = WEIGHTS.geo_anomaly
     try {
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, { dateRanges: [ranges.current], dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
-        ga4Report(pid, token, { dateRanges: [ranges.prev],    dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
+        report({ dateRanges: [ranges.current], dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
+        report({ dateRanges: [ranges.prev],    dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
       ])
       const top5C = new Set<string>((rC.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value))
       const top5P = new Set<string>((rP.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value))
@@ -483,7 +490,7 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
   {
     const w = WEIGHTS.session_no_events
     try {
-      const r = await ga4Report(pid, token, {
+      const r = await report({
         dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
         metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
       })
@@ -510,13 +517,13 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
     try {
       const eventNames = customEventChecks.map(e => e.event_name)
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, {
+        report({
           dateRanges: [ranges.current],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
           dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: eventNames } } },
         }),
-        ga4Report(pid, token, {
+        report({
           dateRanges: [ranges.prev],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
@@ -562,13 +569,13 @@ async function runAllChecks(project: Project, token: string, ecomEvents: string[
   if (ecomEvents.length > 0) {
     try {
       const [rC, rP] = await Promise.all([
-        ga4Report(pid, token, {
+        report({
           dateRanges: [ranges.current],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
           dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: ecomEvents } } },
         }),
-        ga4Report(pid, token, {
+        report({
           dateRanges: [ranges.prev],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
@@ -742,9 +749,28 @@ async function processProject(
     const paramArr    = Array.isArray(paramRaw) ? paramRaw : (typeof paramRaw === 'string' ? JSON.parse(paramRaw) : [])
     const paramChecks = paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
 
+    // Wraps every GA4 call this run makes so quota/sampling instrumentation
+    // lives in one place instead of every check needing its own copy:
+    // - returnPropertyQuota surfaces how much of the property's daily/hourly
+    //   GA4 API quota is used — shown on the Billing page.
+    // - metadata.samplingMetadatas tells us whether THIS query's numbers
+    //   were sampled rather than exact — surfaced on the project page.
+    const samplingHits: SamplingHit[] = []
+    let quotaSnapshot: Record<string, unknown> | null = null
+    const report: Ga4ReportFn = async (body) => {
+      const data = await ga4Report(project.ga4_property_id, accessToken, { ...body, returnPropertyQuota: true })
+      if (data?.propertyQuota) quotaSnapshot = data.propertyQuota
+      for (const s of data?.metadata?.samplingMetadatas ?? []) {
+        const samplesReadCount = Number(s.samplesReadCount ?? 0)
+        const samplingSpaceSize = Number(s.samplingSpaceSize ?? 0)
+        if (samplingSpaceSize > 0) samplingHits.push({ samplesReadCount, samplingSpaceSize })
+      }
+      return data
+    }
+
     const [results, paramResults] = await Promise.all([
-      runAllChecks(project, accessToken, ecomEvents, customEventChecks),
-      checkParameters(project, accessToken, paramChecks, (() => {
+      runAllChecks(project, report, ecomEvents, customEventChecks),
+      checkParameters(project, report, paramChecks, (() => {
         const _today = new Date()
         const _fmt = (d: Date) => d.toISOString().split('T')[0]
         const _endC = new Date(_today); _endC.setDate(_today.getDate() - 1)
@@ -755,6 +781,16 @@ async function processProject(
       })()),
     ])
     const allResults = [...results, ...paramResults]
+
+    // Persisted regardless of the "keep best score" outcome below — quota
+    // and sampling reflect this run's actual GA4 calls, not the score.
+    if (quotaSnapshot) {
+      await supabase.from('projects').update({ ga4_quota: quotaSnapshot, ga4_quota_checked_at: new Date().toISOString() }).eq('id', project.id)
+    }
+    const totalRead = samplingHits.reduce((s, h) => s + h.samplesReadCount, 0)
+    const totalSpace = samplingHits.reduce((s, h) => s + h.samplingSpaceSize, 0)
+    const sampled = samplingHits.length > 0
+    const samplingRatio = sampled && totalSpace > 0 ? +(totalRead / totalSpace).toFixed(4) : null
     // Normalizacja do rzeczywistej sumy wag checków, które się wykonały
     // w tym przebiegu — 10 zawsze aktywnych checków sumuje się do 100,
     // ale Ecommerce/Custom events/Parameter checks są doliczane tylko
@@ -776,7 +812,7 @@ async function processProject(
     const finalScore = isBetter ? scoreTotal : (existingRun!.score_total ?? scoreTotal)
     await supabase.from('dqs_results').delete().eq('run_id', run.id)
     await supabase.from('dqs_results').insert(allResults.map(r => ({ ...r, run_id: run.id })))
-    await supabase.from('dqs_runs').update({ status: 'completed', score_total: finalScore }).eq('id', run.id)
+    await supabase.from('dqs_runs').update({ status: 'completed', score_total: finalScore, sampled, sampling_ratio: samplingRatio }).eq('id', run.id)
 
     // Yesterday's score, for the WoW delta shown in both email types
     const { data: prevRun } = await supabase

@@ -16,6 +16,13 @@ interface InvoiceRow {
   pdfUrl: string | null
 }
 
+interface QuotaProject {
+  id: string
+  name: string
+  ga4_quota: Record<string, { consumed?: number; remaining?: number }> | null
+  ga4_quota_checked_at: string | null
+}
+
 const sectionH2: React.CSSProperties = { fontSize: 15, fontWeight: 500, margin: '0 0 12px', color: 'var(--color-text-primary)' }
 const sectionWrap: React.CSSProperties = { marginTop: 40 }
 
@@ -37,17 +44,19 @@ export default async function BillingPage() {
   let companyNip = ''
   let trialEndsAt: string | null = null
   let trialUsedAt: string | null = null
+  let quotaProjects: QuotaProject[] = []
 
   if (!bypass && user) {
     // Independent queries — same owner, no data dependency — run as one
     // round trip instead of two sequential ones.
-    const [{ data: profile }, { count }] = await Promise.all([
+    const [{ data: profile }, { count }, { data: quotaRows }] = await Promise.all([
       supabase
         .from('profiles')
         .select('plan_id, subscription_status, current_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
         .eq('id', user.id)
         .single(),
       supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+      supabase.from('projects').select('id, name, ga4_quota, ga4_quota_checked_at').eq('owner_id', user.id).order('name'),
     ])
     planId = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
     subscriptionStatus = profile?.subscription_status ?? null
@@ -56,6 +65,7 @@ export default async function BillingPage() {
     trialEndsAt = profile?.trial_ends_at ?? null
     trialUsedAt = profile?.trial_used_at ?? null
     projectCount = count ?? 0
+    quotaProjects = ((quotaRows ?? []) as QuotaProject[]).filter(p => p.ga4_quota)
 
     if (stripeCustomerId) {
       const stripe = getStripe()
@@ -144,6 +154,42 @@ export default async function BillingPage() {
           </div>
         )}
       </section>
+
+      {/* Using — GA4 Data API quota per property, refreshed on every daily check run */}
+      {quotaProjects.length > 0 && (
+        <section style={sectionWrap}>
+          <h2 style={sectionH2}>Using</h2>
+          <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
+            {quotaProjects.map((p, i) => {
+              const daily = p.ga4_quota?.tokensPerDay
+              const consumed = daily?.consumed ?? 0
+              const remaining = daily?.remaining ?? 0
+              const total = consumed + remaining
+              const pct = total > 0 ? Math.round((consumed / total) * 100) : 0
+              const color = pct >= 90 ? '#dc2626' : pct >= 70 ? '#ca8a04' : '#16a34a'
+              return (
+                <div key={p.id} style={{ padding: '14px 20px', borderBottom: i < quotaProjects.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 12 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{p.name}</span>
+                    <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>{consumed.toLocaleString('en')} / {total.toLocaleString('en')} daily tokens</span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--color-background-secondary)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3 }} />
+                  </div>
+                  {p.ga4_quota_checked_at && (
+                    <p style={{ fontSize: 10.5, color: 'var(--color-text-secondary)', margin: '5px 0 0' }}>
+                      Last checked: {new Date(p.ga4_quota_checked_at).toLocaleString('en-GB')}
+                    </p>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          <p style={{ fontSize: 11.5, color: 'var(--color-text-secondary)', marginTop: 8 }}>
+            Google's GA4 Data API daily token quota per property, refreshed each time the daily check runs.
+          </p>
+        </section>
+      )}
 
       {/* Change plan */}
       <section style={sectionWrap}>

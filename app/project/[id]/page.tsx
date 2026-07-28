@@ -13,7 +13,7 @@ import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 import { scoreColor } from '@/types'
 
-type RunRow = { id: string; run_date: string; score_total: number | null; status: string }
+type RunRow = { id: string; run_date: string; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
 type SectionId = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
 
 // Worker saves results with column check_key (not check_id)
@@ -114,7 +114,7 @@ export default async function ProjectPage({
   if (!bypass && project.owner_id !== authData!.user!.id) return <AccountMismatch />
 
   const { data: runsRaw } = await admin
-    .from('dqs_runs').select('id, run_date, score_total, status')
+    .from('dqs_runs').select('id, run_date, score_total, status, sampled, sampling_ratio')
     .eq('project_id', id).order('run_date', { ascending: false }).limit(30)
   const runs = (runsRaw ?? []) as RunRow[]
   const latestRun = runs[0] ?? null
@@ -175,6 +175,16 @@ export default async function ProjectPage({
             {latestRun
               ? <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Last run: {latestRun.run_date}{latestRun.status === 'failed' && <span style={{ color: '#dc2626', marginLeft: 8 }}>· Failed</span>}</div>
               : <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>No runs yet — click <strong>Run now</strong> to start.</div>}
+            {/* GA4 can return sampled (not exact) numbers once a non-360
+                property's query volume/complexity crosses its threshold —
+                shown only once we actually know (sampled is null for runs
+                from before this was tracked). */}
+            {latestRun?.sampled != null && (
+              <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                Sampling: {latestRun.sampled ? 'Applied' : 'Not applied'}.
+                {latestRun.sampled && latestRun.sampling_ratio != null && ` Sampling level: ${Math.round(latestRun.sampling_ratio * 100)}% of data read.`}
+              </div>
+            )}
           </div>
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>
