@@ -181,8 +181,9 @@ export default async function ProjectPage({
                 from before this was tracked). */}
             {latestRun?.sampled != null && (
               <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                Sampling: {latestRun.sampled ? 'Applied' : 'Not applied'}.
-                {latestRun.sampled && latestRun.sampling_ratio != null && ` Sampling level: ${Math.round(latestRun.sampling_ratio * 100)}% of data read.`}
+                {latestRun.sampled
+                  ? `Sampling: data sampling level: ${latestRun.sampling_ratio != null ? Math.round(latestRun.sampling_ratio * 100) : '?'}%. There may be differences from the raw data. Trends should be preserved.`
+                  : 'No sampling. 100% of data read.'}
               </div>
             )}
           </div>
