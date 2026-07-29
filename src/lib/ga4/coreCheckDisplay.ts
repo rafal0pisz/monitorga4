@@ -56,8 +56,12 @@ export function formatCoreCheckForPanel(row: { check_key: string; status: string
     case 'expected_events':
       return { ...base, valueLabel: !v.missing || v.missing.length === 0 ? 'All present' : `${v.missing.length} missing`, prevLabel: '', deltaLabel: '' }
     case 'self_referral':
+      // Stored status is 'pass' (see the worker — 'skip' isn't a value the
+      // dqs_results.status column accepts), so the "not configured" badge
+      // is driven entirely off value.not_configured, overriding the badge
+      // to 'skip' only for display.
       return v.not_configured
-        ? { ...base, valueLabel: 'Not configured', prevLabel: '', deltaLabel: '' }
+        ? { ...base, status: 'skip', valueLabel: 'Not configured', prevLabel: '', deltaLabel: '' }
         : { ...base, valueLabel: pct(v.ratio), prevLabel: pct(v.ratio_prev), deltaLabel: signed(v.delta) }
     case 'direct_traffic_spike':
       return { ...base, valueLabel: pct(v.direct_ratio_current), prevLabel: pct(v.direct_ratio_prev), deltaLabel: signed(v.delta) }

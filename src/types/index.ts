@@ -3,7 +3,10 @@
 // Odpowiadają dokładnie tabelom w Supabase
 // ============================================================
 
-export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip'
+// Matches the dqs_results.status column's actual constraint — 'skip' is a
+// display-only concept (see PanelCheck in coreCheckDisplay.ts), it must
+// never be written here or the whole day's batch insert fails.
+export type CheckStatus = 'pass' | 'warn' | 'fail'
 export type RunStatus = 'completed' | 'failed' | 'running'
 export type AuthType = 'service_account' | 'oauth'
 export type ProjectStatus = 'active' | 'paused'

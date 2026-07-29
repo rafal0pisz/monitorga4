@@ -268,11 +268,14 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
   {
     const w = WEIGHTS.self_referral
     if (!project.own_domain) {
-      // Doesn't cost any score (same score/weight as a pass) — this only
-      // changes how it's displayed, from a misleading green "Pass" (which
-      // read as "no self-referral detected") to an explicit nudge to
-      // configure it.
-      results.push({ check_key: 'self_referral', check_level: 'core', status: 'skip', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
+      // Stored status stays 'pass' — the dqs_results.status column only
+      // accepts pass/warn/fail, and a 'skip' value here made the WHOLE
+      // batch insert for the day fail (Postgres rejects the entire insert
+      // on one constraint violation), silently wiping every check for that
+      // run, not just this one. The "not configured" treatment is display
+      // -only: formatCoreCheckForPanel() overrides the badge to "Skip"
+      // based on value.not_configured instead of the stored status.
+      results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
     } else {
       try {
         const bySource = async (dateRange: object) => {
