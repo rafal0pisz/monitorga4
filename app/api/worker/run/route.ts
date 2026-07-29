@@ -239,7 +239,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
     } else {
       try {
         const r = await report({
-          dateRanges: [{ startDate: '30daysAgo', endDate: 'yesterday' }],
+          dateRanges: [ranges.current],
           dimensions: [{ name: 'eventName' }],
           metrics: [{ name: 'eventCount' }],
           dimensionFilter: {
@@ -275,25 +275,29 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       results.push({ check_key: 'self_referral', check_level: 'core', status: 'skip', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
     } else {
       try {
-        const r = await report({
-          dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-          dimensions: [{ name: 'sessionSource' }],
-          metrics: [{ name: 'sessions' }],
-          orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-          limit: 50,
-        })
-        const rows = r.rows ?? []
-        const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
-        const selfSessions = rows
-          .filter((row: any) => row.dimensionValues?.[0]?.value?.includes(project.own_domain!))
-          .reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
-        const ratio = total > 0 ? selfSessions / total : 0
-        const status = ratio === 0 ? 'pass' : ratio < 0.02 ? 'warn' : 'fail'
+        const bySource = async (dateRange: object) => {
+          const r = await report({
+            dateRanges: [dateRange],
+            dimensions: [{ name: 'sessionSource' }],
+            metrics: [{ name: 'sessions' }],
+            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+            limit: 50,
+          })
+          const rows = r.rows ?? []
+          const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
+          const selfSessions = rows
+            .filter((row: any) => row.dimensionValues?.[0]?.value?.includes(project.own_domain!))
+            .reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
+          return { ratio: total > 0 ? selfSessions / total : 0, selfSessions, total }
+        }
+        const [curr, prev] = await Promise.all([bySource(ranges.current), bySource(ranges.prev)])
+        const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
+        const status = curr.ratio === 0 ? 'pass' : curr.ratio < 0.02 ? 'warn' : 'fail'
         const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
         results.push({
           check_key: 'self_referral', check_level: 'core', status, score, weight: w,
-          value: { ratio: +(ratio * 100).toFixed(2), self_sessions: selfSessions, total },
-          message: ratio === 0 ? 'No self-referrals' : `Self-referral: ${(ratio * 100).toFixed(2)}% of sessions`,
+          value: { ratio: +(curr.ratio * 100).toFixed(2), ratio_prev: +(prev.ratio * 100).toFixed(2), delta, self_sessions: curr.selfSessions, total: curr.total },
+          message: curr.ratio === 0 ? 'No self-referrals' : `Self-referral: ${(curr.ratio * 100).toFixed(2)}% of sessions (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
         })
       } catch (e: any) {
         results.push({ check_key: 'self_referral', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -383,28 +387,32 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
     }
   }
 
-  // ── 6. PAGE_TITLE NULL RATE ──────────────────────────────
+  // ── 6. PAGE_TITLE NULL RATE (WoW) ────────────────────────
   {
     const w = WEIGHTS.page_title_null
     try {
-      const r = await report({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-        dimensions: [{ name: 'pageTitle' }],
-        metrics: [{ name: 'sessions' }],
-        limit: 100,
-      })
-      const rows = r.rows ?? []
-      const total = rows.reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
-      const nullSessions = rows
-        .filter((r: any) => !r.dimensionValues?.[0]?.value || r.dimensionValues?.[0]?.value === '(not set)')
-        .reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
-      const ratio = total > 0 ? nullSessions / total : 0
-      const status = ratio < 0.02 ? 'pass' : ratio < 0.10 ? 'warn' : 'fail'
+      const nullRateFor = async (dateRange: object) => {
+        const r = await report({
+          dateRanges: [dateRange],
+          dimensions: [{ name: 'pageTitle' }],
+          metrics: [{ name: 'sessions' }],
+          limit: 100,
+        })
+        const rows = r.rows ?? []
+        const total = rows.reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
+        const nullSessions = rows
+          .filter((r: any) => !r.dimensionValues?.[0]?.value || r.dimensionValues?.[0]?.value === '(not set)')
+          .reduce((s: number, r: any) => s + parseInt(r.metricValues?.[0]?.value ?? '0'), 0)
+        return { ratio: total > 0 ? nullSessions / total : 0, nullSessions, total }
+      }
+      const [curr, prev] = await Promise.all([nullRateFor(ranges.current), nullRateFor(ranges.prev)])
+      const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
+      const status = curr.ratio < 0.02 ? 'pass' : curr.ratio < 0.10 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
       results.push({
         check_key: 'page_title_null', check_level: 'core', status, score, weight: w,
-        value: { null_rate: +(ratio * 100).toFixed(2), null_sessions: nullSessions, total },
-        message: `page_title null rate: ${(ratio * 100).toFixed(2)}%`,
+        value: { null_rate: +(curr.ratio * 100).toFixed(2), null_rate_prev: +(prev.ratio * 100).toFixed(2), delta, null_sessions: curr.nullSessions, total: curr.total },
+        message: `page_title null rate: ${(curr.ratio * 100).toFixed(2)}% (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'page_title_null', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -495,26 +503,30 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
     }
   }
 
-  // ── OPTIONAL: SESSION WITHOUT EVENTS ─────────────────────
+  // ── OPTIONAL: SESSION WITHOUT EVENTS (WoW) ───────────────
   {
     const w = WEIGHTS.session_no_events
     try {
-      const r = await report({
-        dateRanges: [{ startDate: '7daysAgo', endDate: 'yesterday' }],
-        metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
-      })
       // Proxy: używamy engagementRate — sesje bez zaangażowania ≈ sesje bez eventów
-      const rows = r.rows ?? []
-      const total = parseInt(rows?.[0]?.metricValues?.[0]?.value ?? '0')
-      const bounceRate = parseFloat(rows?.[0]?.metricValues?.[1]?.value ?? '0')
-      const emptyEstimate = Math.round(total * bounceRate)
-      const ratio = total > 0 ? emptyEstimate / total : 0
-      const status = ratio < 0.05 ? 'pass' : ratio < 0.15 ? 'warn' : 'fail'
+      const emptyRatioFor = async (dateRange: object) => {
+        const r = await report({
+          dateRanges: [dateRange],
+          metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
+        })
+        const rows = r.rows ?? []
+        const total = parseInt(rows?.[0]?.metricValues?.[0]?.value ?? '0')
+        const bounceRate = parseFloat(rows?.[0]?.metricValues?.[1]?.value ?? '0')
+        const emptyEstimate = Math.round(total * bounceRate)
+        return { ratio: total > 0 ? emptyEstimate / total : 0, emptyEstimate, total }
+      }
+      const [curr, prev] = await Promise.all([emptyRatioFor(ranges.current), emptyRatioFor(ranges.prev)])
+      const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
+      const status = curr.ratio < 0.05 ? 'pass' : curr.ratio < 0.15 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
       results.push({
         check_key: 'session_no_events', check_level: 'optional', status, score, weight: w,
-        value: { estimated_empty: emptyEstimate, total_sessions: total, ratio: +(ratio * 100).toFixed(1) },
-        message: `Estimated sessions without engagement: ${(ratio * 100).toFixed(1)}%`,
+        value: { estimated_empty: curr.emptyEstimate, total_sessions: curr.total, ratio: +(curr.ratio * 100).toFixed(1), ratio_prev: +(prev.ratio * 100).toFixed(1), delta },
+        message: `Estimated sessions without engagement: ${(curr.ratio * 100).toFixed(1)}% (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'session_no_events', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })

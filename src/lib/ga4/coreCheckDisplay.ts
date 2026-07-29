@@ -6,15 +6,15 @@ import { checkLabel, CORE_CHECK_SECTION, type CoreSection } from './checkLabels'
 // on-demand checks instead of living in a separate, duplicate-looking block.
 
 const DESCRIPTIONS: Record<string, string> = {
-  expected_events: 'Configured events expected to appear at least once in the last 30 days.',
+  expected_events: 'Configured events expected to appear at least once yesterday.',
   self_referral: 'Share of sessions where your own domain shows up as the referrer — a sign of broken cross-domain or UTM tracking.',
-  direct_traffic_spike: 'Change in Direct traffic share week-over-week — spikes often signal missing UTM parameters or dark traffic.',
-  bounce_rate_anomaly: 'Change in bounce rate week-over-week.',
-  conversion_rate: 'Change in conversion rate week-over-week.',
+  direct_traffic_spike: 'Change in Direct traffic share, yesterday vs the same day last week — spikes often signal missing UTM parameters or dark traffic.',
+  bounce_rate_anomaly: 'Change in bounce rate, yesterday vs the same day last week.',
+  conversion_rate: 'Change in conversion rate, yesterday vs the same day last week.',
   page_title_null: 'Share of sessions with a missing or blank page title.',
   session_no_events: 'Estimated sessions with no engagement — a proxy for missing event tracking.',
-  geo_anomaly: 'New countries entering the Top 5 by sessions, week-over-week.',
-  bot_traffic_night: 'Change in night-time (0–5h) traffic share, week-over-week — a common bot signal.',
+  geo_anomaly: 'New countries entering the Top 5 by sessions, yesterday vs the same day last week.',
+  bot_traffic_night: 'Change in night-time (0–5h) traffic share, yesterday vs the same day last week — a common bot signal.',
 }
 
 export interface PanelCheck {
@@ -58,7 +58,7 @@ export function formatCoreCheckForPanel(row: { check_key: string; status: string
     case 'self_referral':
       return v.not_configured
         ? { ...base, valueLabel: 'Not configured', prevLabel: '', deltaLabel: '' }
-        : { ...base, valueLabel: pct(v.ratio), prevLabel: '', deltaLabel: '' }
+        : { ...base, valueLabel: pct(v.ratio), prevLabel: pct(v.ratio_prev), deltaLabel: signed(v.delta) }
     case 'direct_traffic_spike':
       return { ...base, valueLabel: pct(v.direct_ratio_current), prevLabel: pct(v.direct_ratio_prev), deltaLabel: signed(v.delta) }
     case 'bounce_rate_anomaly':
@@ -66,9 +66,9 @@ export function formatCoreCheckForPanel(row: { check_key: string; status: string
     case 'conversion_rate':
       return { ...base, valueLabel: pct(v.cr_current), prevLabel: pct(v.cr_prev), deltaLabel: signed(v.delta) }
     case 'page_title_null':
-      return { ...base, valueLabel: pct(v.null_rate), prevLabel: '', deltaLabel: '' }
+      return { ...base, valueLabel: pct(v.null_rate), prevLabel: pct(v.null_rate_prev), deltaLabel: signed(v.delta) }
     case 'session_no_events':
-      return { ...base, valueLabel: pct(v.ratio), prevLabel: '', deltaLabel: '' }
+      return { ...base, valueLabel: pct(v.ratio), prevLabel: pct(v.ratio_prev), deltaLabel: signed(v.delta) }
     case 'geo_anomaly':
       return { ...base, valueLabel: !v.new_countries || v.new_countries.length === 0 ? 'No change' : `${v.new_countries.length} new`, prevLabel: '', deltaLabel: '', detail: v.new_countries?.join(', ') }
     case 'bot_traffic_night':
