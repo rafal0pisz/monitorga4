@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 
-type Status = 'pass' | 'warn' | 'check'
+type Status = 'pass' | 'warn' | 'check' | 'skip'
 
 export interface CheckResult {
   id: string
@@ -21,6 +21,7 @@ const STATUS: Record<Status, { label: string; color: string; bg: string; border:
   pass:  { label: 'Pass',  color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
   warn:  { label: 'Warn',  color: '#ca8a04', bg: '#fefce8', border: '#fde68a' },
   check: { label: 'Check', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  skip:  { label: 'Skip',  color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb' },
 }
 
 const SECTION: Record<string, { label: string; accent: string }> = {

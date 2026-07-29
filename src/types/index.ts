@@ -3,7 +3,7 @@
 // Odpowiadają dokładnie tabelom w Supabase
 // ============================================================
 
-export type CheckStatus = 'pass' | 'warn' | 'fail'
+export type CheckStatus = 'pass' | 'warn' | 'fail' | 'skip'
 export type RunStatus = 'completed' | 'failed' | 'running'
 export type AuthType = 'service_account' | 'oauth'
 export type ProjectStatus = 'active' | 'paused'

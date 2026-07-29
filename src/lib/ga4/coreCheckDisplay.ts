@@ -22,7 +22,7 @@ export interface PanelCheck {
   section: CoreSection
   label: string
   description: string
-  status: 'pass' | 'warn' | 'check'
+  status: 'pass' | 'warn' | 'check' | 'skip'
   valueLabel: string
   prevLabel: string
   deltaLabel: string
@@ -42,7 +42,7 @@ export function formatCoreCheckForPanel(row: { check_key: string; status: string
   const section = CORE_CHECK_SECTION[row.check_key]
   if (!section) return null
 
-  const status: PanelCheck['status'] = row.status === 'fail' ? 'check' : (row.status as 'pass' | 'warn')
+  const status: PanelCheck['status'] = row.status === 'fail' ? 'check' : (row.status as 'pass' | 'warn' | 'skip')
   const v = row.value ?? {}
   const base = {
     id: row.check_key,
@@ -56,7 +56,9 @@ export function formatCoreCheckForPanel(row: { check_key: string; status: string
     case 'expected_events':
       return { ...base, valueLabel: !v.missing || v.missing.length === 0 ? 'All present' : `${v.missing.length} missing`, prevLabel: '', deltaLabel: '' }
     case 'self_referral':
-      return { ...base, valueLabel: pct(v.ratio), prevLabel: '', deltaLabel: '' }
+      return v.not_configured
+        ? { ...base, valueLabel: 'Not configured', prevLabel: '', deltaLabel: '' }
+        : { ...base, valueLabel: pct(v.ratio), prevLabel: '', deltaLabel: '' }
     case 'direct_traffic_spike':
       return { ...base, valueLabel: pct(v.direct_ratio_current), prevLabel: pct(v.direct_ratio_prev), deltaLabel: signed(v.delta) }
     case 'bounce_rate_anomaly':

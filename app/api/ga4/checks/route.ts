@@ -108,8 +108,8 @@ export async function POST(req: NextRequest) {
   ]
 
   try {
-    // 6 separate calls — one period per call, no ambiguity
-    const [chC, chP, engC, engP, coC, coP] = await Promise.all([
+    // 8 separate calls — one period per call, no ambiguity
+    const [chC, chP, smC, smP, engC, engP, coC, coP] = await Promise.all([
 
       ga4Post(propertyId, token, {
         dateRanges: [current],
@@ -121,6 +121,23 @@ export async function POST(req: NextRequest) {
         dateRanges: [prev],
         dimensions: [{ name: 'sessionDefaultChannelGroup' }],
         metrics:    [{ name: 'sessions' }], limit: 50,
+      }).then(d => d.rows ?? []),
+
+      // Raw sessionSource/sessionMedium — used for the (not set)/Direct-None/
+      // Organic Search/Google Ads share checks below instead of GA4's own
+      // sessionDefaultChannelGroup, per an explicit decision to verify these
+      // against the actual source/medium pair rather than Google's channel
+      // grouping rules (which can shift and don't expose the raw values).
+      ga4Post(propertyId, token, {
+        dateRanges: [current],
+        dimensions: [{ name: 'sessionSource' }, { name: 'sessionMedium' }],
+        metrics:    [{ name: 'sessions' }], limit: 200,
+      }).then(d => d.rows ?? []),
+
+      ga4Post(propertyId, token, {
+        dateRanges: [prev],
+        dimensions: [{ name: 'sessionSource' }, { name: 'sessionMedium' }],
+        metrics:    [{ name: 'sessions' }], limit: 200,
       }).then(d => d.rows ?? []),
 
       ga4Post(propertyId, token, {
@@ -147,7 +164,8 @@ export async function POST(req: NextRequest) {
     ])
 
     const checks: CheckResult[] = [
-      ...trafficChecks(chC, chP, label),
+      ...trafficShareChecks(smC, smP, label),
+      channelDistributionShift(chC, chP, label),
       ...engagementChecks(engC, engP, label),
       ...usersChecks(coC, coP, engC, engP, chC),
     ]
@@ -161,7 +179,93 @@ export async function POST(req: NextRequest) {
 
 // ─── TRAFFIC ─────────────────────────────────────────────────────────────────
 
-function trafficChecks(chC: any[], chP: any[], label: string): CheckResult[] {
+interface SMRow { source: string; medium: string; sessions: number }
+
+function toSMRows(rows: any[]): SMRow[] {
+  return (rows ?? []).map(r => ({
+    source: r.dimensionValues?.[0]?.value ?? '',
+    medium: r.dimensionValues?.[1]?.value ?? '',
+    sessions: m0(r),
+  }))
+}
+
+function shareOf(rows: SMRow[], total: number, predicate: (r: SMRow) => boolean): number {
+  if (total <= 0) return 0
+  return rows.filter(predicate).reduce((s, r) => s + r.sessions, 0) / total * 100
+}
+
+// Google's own auto-tagging always writes exactly source=google/medium=cpc,
+// but some accounts also see paid-Google traffic labeled ppc/paid (manual
+// UTMs, older setups) — matching all three catches those without also
+// catching organic (medium=organic is handled separately below).
+const GOOGLE_ADS_MEDIUMS = new Set(['cpc', 'ppc', 'paid'])
+
+// Verified against raw sessionSource/sessionMedium rather than GA4's own
+// sessionDefaultChannelGroup — channel grouping is a moving target Google
+// controls and doesn't expose the underlying source/medium pair, so these
+// shares are computed directly instead. Numbers will differ from the old
+// channel-group-based version; that's an intentional, accepted tradeoff.
+function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[] {
+  const rowsC = toSMRows(smC)
+  const rowsP = toSMRows(smP)
+  const totC  = rowsC.reduce((s, r) => s + r.sessions, 0)
+  const totP  = rowsP.reduce((s, r) => s + r.sessions, 0)
+
+  const isNotSet     = (r: SMRow) => r.source === '(not set)' || r.medium === '(not set)'
+  const isDirectNone = (r: SMRow) => r.source === '(direct)' && r.medium === '(none)'
+  const isOrganic    = (r: SMRow) => r.medium === 'organic'
+  const isGoogleAds  = (r: SMRow) => r.source === 'google' && GOOGLE_ADS_MEDIUMS.has(r.medium.toLowerCase())
+
+  const notSetC = shareOf(rowsC, totC, isNotSet);     const notSetP = shareOf(rowsP, totP, isNotSet)
+  const dirC    = shareOf(rowsC, totC, isDirectNone); const dirP    = shareOf(rowsP, totP, isDirectNone)
+  const orgC    = shareOf(rowsC, totC, isOrganic);    const orgP    = shareOf(rowsP, totP, isOrganic)
+  const adsC    = shareOf(rowsC, totC, isGoogleAds);  const adsP    = shareOf(rowsP, totP, isGoogleAds)
+
+  const notSetΔ = ppΔ(notSetC, notSetP)
+  const dirΔ    = ppΔ(dirC, dirP)
+  const orgΔ    = ppΔ(orgC, orgP)
+  const adsΔ    = ppΔ(adsC, adsP)
+
+  return [
+    {
+      id: 'not_set_share', section: 'traffic',
+      label: '(not set) share',
+      description: 'Sessions where source or medium is (not set) — indicates missing UTM parameters or broken tracking.',
+      status: stAbove(notSetC, 2, 5),
+      valueLabel: `${r1(notSetC)}%`, prevLabel: `${r1(notSetP)}%`,
+      deltaLabel: `${sign(notSetΔ)}${notSetΔ}pp`,
+    },
+    {
+      id: 'direct_none_share', section: 'traffic',
+      label: 'Direct/None share',
+      description: `Change in (direct)/(none) traffic share ${label} — spikes often signal missing UTMs, email/app dark traffic, or HTTPS stripping.`,
+      status: stDelta(dirΔ, 15, 30),
+      valueLabel: `${r1(dirC)}%`, prevLabel: `${r1(dirP)}%`,
+      deltaLabel: `${sign(dirΔ)}${dirΔ}pp`,
+    },
+    {
+      id: 'organic_search_share', section: 'traffic',
+      label: 'Organic Search share',
+      description: `Change in Organic Search (medium=organic) traffic share ${label} — drops may indicate a Google penalty or indexing issues.`,
+      status: stDelta(orgΔ, 20, 35),
+      valueLabel: `${r1(orgC)}%`, prevLabel: `${r1(orgP)}%`,
+      deltaLabel: `${sign(orgΔ)}${orgΔ}pp`,
+    },
+    {
+      id: 'google_ads_share', section: 'traffic',
+      label: 'Google Ads share',
+      description: `Change in Google Ads (google/cpc) traffic share ${label}.`,
+      status: stDelta(adsΔ, 20, 35),
+      valueLabel: `${r1(adsC)}%`, prevLabel: `${r1(adsP)}%`,
+      deltaLabel: `${sign(adsΔ)}${adsΔ}pp`,
+    },
+  ]
+}
+
+// Kept on sessionDefaultChannelGroup — this check is about the largest
+// shift across the WHOLE channel mix, which is exactly what channel
+// grouping is for, unlike the single-bucket share checks above.
+function channelDistributionShift(chC: any[], chP: any[], label: string): CheckResult {
   const mapC = rowsByDim(chC)
   const mapP = rowsByDim(chP)
 
@@ -173,54 +277,20 @@ function trafficChecks(chC: any[], chP: any[], label: string): CheckResult[] {
 
   const channels = [...new Set([...Object.keys(mapC), ...Object.keys(mapP)])]
 
-  const notSetC = shC('(not set)'); const notSetP = shP('(not set)')
-  const dirC    = shC('Direct');    const dirP    = shP('Direct')
-  const orgC    = shC('Organic Search'); const orgP = shP('Organic Search')
-
-  const notSetΔ = ppΔ(notSetC, notSetP)
-  const dirΔ    = ppΔ(dirC, dirP)
-  const orgΔ    = ppΔ(orgC, orgP)
-
   const maxShift = channels
     .map(c => ({ c, δ: ppΔ(shC(c), shP(c)) }))
     .reduce((m, x) => Math.abs(x.δ) > Math.abs(m.δ) ? x : m, { c: '', δ: 0 })
 
-  return [
-    {
-      id: 'not_set_share', section: 'traffic',
-      label: '(not set) share',
-      description: 'Sessions without an assigned channel — indicates missing UTM parameters or broken tracking.',
-      status: stAbove(notSetC, 2, 5),
-      valueLabel: `${r1(notSetC)}%`, prevLabel: `${r1(notSetP)}%`,
-      deltaLabel: `${sign(notSetΔ)}${notSetΔ}pp`,
-    },
-    {
-      id: 'direct_shift', section: 'traffic',
-      label: 'Direct channel shift',
-      description: `Change in Direct traffic share ${label} — spikes often signal missing UTMs, email/app dark traffic, or HTTPS stripping.`,
-      status: stDelta(dirΔ, 15, 30),
-      valueLabel: `${r1(dirC)}%`, prevLabel: `${r1(dirP)}%`,
-      deltaLabel: `${sign(dirΔ)}${dirΔ}pp`,
-    },
-    {
-      id: 'organic_shift', section: 'traffic',
-      label: 'Organic Search shift',
-      description: `Change in Organic Search share ${label} — drops may indicate a Google penalty or indexing issues.`,
-      status: stDelta(orgΔ, 20, 35),
-      valueLabel: `${r1(orgC)}%`, prevLabel: `${r1(orgP)}%`,
-      deltaLabel: `${sign(orgΔ)}${orgΔ}pp`,
-    },
-    {
-      id: 'all_channels_shift', section: 'traffic',
-      label: 'Channel distribution shift',
-      description: `Largest single-channel share change ${label} — flags unusual shifts in the attribution mix.`,
-      status: stDelta(maxShift.δ, 20, 35),
-      valueLabel: `${Math.abs(maxShift.δ)}pp max`,
-      prevLabel: '',
-      deltaLabel: maxShift.c ? `${maxShift.c}: ${sign(maxShift.δ)}${maxShift.δ}pp` : '—',
-      detail: maxShift.c ? `Largest: ${maxShift.c}` : undefined,
-    },
-  ]
+  return {
+    id: 'all_channels_shift', section: 'traffic',
+    label: 'Channel distribution shift',
+    description: `Largest single-channel share change ${label} — flags unusual shifts in the attribution mix.`,
+    status: stDelta(maxShift.δ, 20, 35),
+    valueLabel: `${Math.abs(maxShift.δ)}pp max`,
+    prevLabel: '',
+    deltaLabel: maxShift.c ? `${maxShift.c}: ${sign(maxShift.δ)}${maxShift.δ}pp` : '—',
+    detail: maxShift.c ? `Largest: ${maxShift.c}` : undefined,
+  }
 }
 
 // ─── ENGAGEMENT ───────────────────────────────────────────────────────────────

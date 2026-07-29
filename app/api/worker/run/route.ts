@@ -263,7 +263,11 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
   {
     const w = WEIGHTS.self_referral
     if (!project.own_domain) {
-      results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No domain configured — check skipped' })
+      // Doesn't cost any score (same score/weight as a pass) — this only
+      // changes how it's displayed, from a misleading green "Pass" (which
+      // read as "no self-referral detected") to an explicit nudge to
+      // configure it.
+      results.push({ check_key: 'self_referral', check_level: 'core', status: 'skip', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
     } else {
       try {
         const r = await report({
