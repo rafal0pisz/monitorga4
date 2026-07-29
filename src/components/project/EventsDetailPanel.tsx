@@ -19,7 +19,12 @@ function fmtGA4Date(d: string) {
 }
 
 function MiniBarChart({ current, prev }: { current: DayCount[]; prev: DayCount[] }) {
-  const days = Math.min(Math.max(current.length, prev.length, 7), 14)
+  // Used to force a minimum of 7 slots regardless of how much data actually
+  // existed — harmless when periodDays was always ≥7, but with Period: 1d
+  // selected, current/prev each hold exactly one day, so it padded out 6
+  // empty slots next to the one real bar, stranding the date label (always
+  // right-aligned) far away from it and making the chart look broken.
+  const days = Math.min(Math.max(current.length, prev.length, 1), 14)
   // Sort oldest→newest first, then keep only the most recent `days` entries
   // — otherwise slicing before sorting could keep the OLDEST days instead
   // of the most recent ones whenever there's more history than `days`.
@@ -27,6 +32,30 @@ function MiniBarChart({ current, prev }: { current: DayCount[]; prev: DayCount[]
   const sortedPrev = sortAscending(prev).slice(-days)
   const maxCount = Math.max(...sortedCurrent.map(d => d.count), ...sortedPrev.map(d => d.count), 1)
   const latestDate = sortedCurrent[sortedCurrent.length - 1]?.date
+
+  if (days === 1) {
+    // Single day (Period: 1d) — a full-width row would stretch one bar
+    // pair across the whole card; show it compact and centered instead,
+    // with the date directly underneath rather than floated to the right.
+    const c = sortedCurrent[0]?.count ?? 0
+    const p = sortedPrev[0]?.count ?? 0
+    const cH = Math.round((c / maxCount) * 36)
+    const pH = Math.round((p / maxCount) * 36)
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 36 }}>
+          <div style={{ width: 14, height: pH || 1, background: '#d1d5db', borderRadius: '2px 2px 0 0' }} />
+          <div style={{ width: 14, height: cH || 1, background: c > 0 ? '#16a34a' : '#f3f4f6', borderRadius: '2px 2px 0 0' }} />
+        </div>
+        {latestDate && (
+          <div style={{ fontSize: 8, color: 'var(--color-text-secondary)' }}>
+            {fmtGA4Date(latestDate)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 36 }}>
