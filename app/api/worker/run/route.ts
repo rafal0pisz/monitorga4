@@ -83,20 +83,25 @@ const WEIGHTS: Record<string, number> = {
 // GA4 Data API helper
 // ============================================================
 // ============================================================
-// Zakresy dat WoW
+// Zakresy dat dla checków porównawczych (current vs prev): zawsze 1 dzień
+// (wczoraj) vs ten sam dzień tydzień wcześniej — niezależnie od okresu
+// wybranego w Period selectorze na ekranie. To jest jedyne co faktycznie
+// trafia do dqs_runs/dqs_results (i napędza score/trend/alerty mailowe),
+// żeby historia była spójna bez względu na to, kto/co odpalił run i co
+// akurat było zaznaczone w UI. Widoki live (Traffic/Engagement/Users/
+// Events/Parameters, patrz /api/ga4/checks i /api/ga4/events) reagują na
+// Period osobno, nigdy nie nadpisując tej historii.
 // ============================================================
-function getWoWRanges() {
+function getDailyRanges() {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
   const today = new Date()
 
-  const endC = new Date(today); endC.setDate(today.getDate() - 1)
-  const startC = new Date(endC); startC.setDate(endC.getDate() - 6)
-  const endP = new Date(startC); endP.setDate(startC.getDate() - 1)
-  const startP = new Date(endP); startP.setDate(endP.getDate() - 6)
+  const yday     = new Date(today); yday.setDate(today.getDate() - 1)
+  const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 8)
 
   return {
-    current: { startDate: fmt(startC), endDate: fmt(endC), name: 'current' },
-    prev:    { startDate: fmt(startP), endDate: fmt(endP), name: 'prev' },
+    current: { startDate: fmt(yday), endDate: fmt(yday), name: 'current' },
+    prev:    { startDate: fmt(lastWeek), endDate: fmt(lastWeek), name: 'prev' },
   }
 }
 
@@ -223,7 +228,7 @@ async function checkParameters(
 
 async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
   const results: CheckResult[] = []
-  const ranges = getWoWRanges()
+  const ranges = getDailyRanges()
 
   // ── 1. EXPECTED EVENTS ──────────────────────────────────
   {
@@ -774,15 +779,7 @@ async function processProject(
 
     const [results, paramResults] = await Promise.all([
       runAllChecks(project, report, ecomEvents, customEventChecks),
-      checkParameters(project, report, paramChecks, (() => {
-        const _today = new Date()
-        const _fmt = (d: Date) => d.toISOString().split('T')[0]
-        const _endC = new Date(_today); _endC.setDate(_today.getDate() - 1)
-        const _startC = new Date(_endC); _startC.setDate(_endC.getDate() - 6)
-        const _endP = new Date(_startC); _endP.setDate(_startC.getDate() - 1)
-        const _startP = new Date(_endP); _startP.setDate(_endP.getDate() - 6)
-        return { current: { startDate: _fmt(_startC), endDate: _fmt(_endC) }, prev: { startDate: _fmt(_startP), endDate: _fmt(_endP) } }
-      })()),
+      checkParameters(project, report, paramChecks, getDailyRanges()),
     ])
     const allResults = [...results, ...paramResults]
 

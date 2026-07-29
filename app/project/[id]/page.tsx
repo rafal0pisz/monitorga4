@@ -5,6 +5,7 @@ import PeriodSelector    from '@/components/project/PeriodSelector'
 import RunNowButton      from '@/components/project/RunNowButton'
 import LiveChecksPanel   from '@/components/project/LiveChecksPanel'
 import EventsDetailPanel from '@/components/project/EventsDetailPanel'
+import ParameterCoveragePanel from '@/components/project/ParameterCoveragePanel'
 import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import ScoreTrendChart from '@/components/project/ScoreTrendChart'
@@ -96,11 +97,17 @@ export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ period?: string }>
+  searchParams: Promise<{ period?: string; ran?: string }>
 }) {
-  const { id }     = await params
-  const { period } = await searchParams
+  const { id }       = await params
+  const { period, ran } = await searchParams
   const periodDays = Number(period) || 7
+  // Bumped by RunNowButton after a manual run completes — used as part of
+  // the live panels' React key below so they remount and refetch fresh GA4
+  // data instead of silently keeping whatever they'd already fetched
+  // (router.refresh() alone only re-renders server data, it doesn't make a
+  // client component's own useEffect re-fire).
+  const liveKey = `${periodDays}-${ran ?? ''}`
 
   const supabase = await createClient()
   const { data: authData } = await supabase.auth.getUser()
@@ -123,9 +130,17 @@ export default async function ProjectPage({
     ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
     : { data: [] }
 
-  const { data: ecomRaw } = await admin.rpc('get_ecommerce_config', { p_project_id: id })
+  // Independent queries — same project, no data dependency — run as one
+  // round trip instead of two sequential ones.
+  const [{ data: ecomRaw }, { data: paramRaw }] = await Promise.all([
+    admin.rpc('get_ecommerce_config', { p_project_id: id }),
+    admin.rpc('get_parameter_checks', { p_project_id: id }),
+  ])
   const ecomArr = Array.isArray(ecomRaw) ? ecomRaw : []
   const ecomEvents: string[] = ecomArr.filter((e: any) => e.is_enabled !== false).map((e: any) => e.event_name as string)
+  const paramArr = Array.isArray(paramRaw) ? paramRaw : []
+  const parameterChecks: { event_name: string; parameter_name: string }[] =
+    paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
 
   const bySection: Record<SectionId, any[]> = { traffic: [], engagement: [], users: [], ecommerce: [], custom_events: [], parameters: [] }
   for (const r of storedResults ?? []) {
@@ -160,7 +175,9 @@ export default async function ProjectPage({
             <Link href={`/project/${id}/config`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)' }}>
               Settings
             </Link>
-            <RunNowButton projectId={id} />
+            <Suspense fallback={<div style={{ width: 84, height: 26 }} />}>
+              <RunNowButton projectId={id} />
+            </Suspense>
           </div>
         </div>
       </nav>
@@ -203,7 +220,7 @@ export default async function ProjectPage({
             the 9 always-on checks from the last daily run, merged into the
             same sections rather than shown as a separate duplicate block. */}
         {project.ga4_property_id
-          ? <LiveChecksPanel projectId={id} period={periodDays} extraChecks={coreExtraChecks} />
+          ? <LiveChecksPanel key={liveKey} projectId={id} period={periodDays} extraChecks={coreExtraChecks} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 
@@ -233,12 +250,17 @@ export default async function ProjectPage({
               }
               {sectionId === 'custom_events' && expectedEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel projectId={id} expectedEvents={expectedEvents} periodDays={periodDays} />
+                  <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={expectedEvents} periodDays={periodDays} />
                 </div>
               )}
               {sectionId === 'ecommerce' && ecomEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel projectId={id} expectedEvents={ecomEvents} periodDays={periodDays} />
+                  <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={ecomEvents} periodDays={periodDays} />
+                </div>
+              )}
+              {sectionId === 'parameters' && parameterChecks.length > 0 && project.ga4_property_id && (
+                <div style={{ marginTop: 14 }}>
+                  <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
                 </div>
               )}
             </div>
