@@ -233,6 +233,29 @@ export default async function ProjectPage({
             custom_events: 'No custom events configured — add expected events in settings.',
             parameters:    'No parameter checks configured — set up in project settings.',
           }[sectionId]
+          // Parameters is live-only now — the stored daily check (fixed at
+          // yesterday-vs-same-day-last-week, same as every other stored
+          // check) was confusingly showing next to Ecommerce/Custom Events'
+          // cards that DO react to Period, making it look like Parameters
+          // was stuck on "weekly" data no matter what Period was selected.
+          // Ecommerce/Custom Events keep their stored card (it reflects the
+          // real daily score) plus a live chart alongside it; Parameters
+          // instead shows only the live, Period-reactive view below.
+          if (sectionId === 'parameters') {
+            return (
+              <div key={sectionId} style={{ marginBottom: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                  <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
+                  <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
+                </div>
+                {parameterChecks.length === 0 || !project.ga4_property_id
+                  ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
+                  : <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
+                }
+              </div>
+            )
+          }
+
           return (
             <div key={sectionId} style={{ marginBottom: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
@@ -256,11 +279,6 @@ export default async function ProjectPage({
               {sectionId === 'ecommerce' && ecomEvents.length > 0 && project.ga4_property_id && (
                 <div style={{ marginTop: 14 }}>
                   <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={ecomEvents} periodDays={periodDays} />
-                </div>
-              )}
-              {sectionId === 'parameters' && parameterChecks.length > 0 && project.ga4_property_id && (
-                <div style={{ marginTop: 14 }}>
-                  <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
                 </div>
               )}
             </div>

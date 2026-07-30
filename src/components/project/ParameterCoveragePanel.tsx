@@ -139,17 +139,15 @@ interface Props {
 }
 
 export default function ParameterCoveragePanel({ projectId, parameterChecks, periodDays }: Props) {
-  // Collapsed by default — this is a detailed drill-down (one GA4 call per
-  // configured parameter), not something every visitor to the page needs
-  // to see immediately. Gating the fetch below on `expanded` too means
-  // nothing is queried until the button's actually clicked.
-  const [expanded, setExpanded] = useState(false)
+  // This is now the only Period-reactive parameter view (the stored daily
+  // card was dropped — see the project page), so it fetches eagerly rather
+  // than waiting on a click; the per-parameter "Top values" breakdown below
+  // still stays collapsed per-card since that's the genuinely extra detail.
   const [data, setData] = useState<Record<string, ParameterData>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    if (!expanded) return
     for (const pc of parameterChecks) {
       const key = `${pc.event_name}_${pc.parameter_name}`
       setLoading(prev => ({ ...prev, [key]: true }))
@@ -170,21 +168,9 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
         .catch(err => setErrors(prev => ({ ...prev, [key]: err.message })))
         .finally(() => setLoading(prev => ({ ...prev, [key]: false })))
     }
-  }, [expanded, projectId, JSON.stringify(parameterChecks), periodDays])
+  }, [projectId, JSON.stringify(parameterChecks), periodDays])
 
   if (parameterChecks.length === 0) return null
-
-  if (!expanded) {
-    return (
-      <button
-        type="button"
-        onClick={() => setExpanded(true)}
-        style={{ fontSize: 12, color: '#7c3aed', background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500 }}
-      >
-        More parameter details →
-      </button>
-    )
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

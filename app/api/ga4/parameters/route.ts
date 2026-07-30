@@ -28,6 +28,14 @@ interface CoverageResult {
   top_values: { value: string; count: number }[]
 }
 
+// GA4 can report a fired-but-empty parameter value as a blank string, not
+// just the literal "(not set)" — a row like that was previously counted as
+// "has a value" (inflating coverage to 100% while a chunk of the top-values
+// breakdown was silently blank), so both need treating as uncovered.
+function isEmptyDimValue(v: string | null | undefined): boolean {
+  return v == null || v === '(not set)' || v.trim() === ''
+}
+
 async function getCoverage(propertyId: string, token: string, eventName: string, parameterName: string, startDate: string, endDate: string): Promise<CoverageResult> {
   const dimName = ga4DimName(parameterName)
 
@@ -45,13 +53,13 @@ async function getCoverage(propertyId: string, token: string, eventName: string,
 
   const rows = r.rows ?? []
   const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues[0].value ?? '0'), 0)
-  const notSetRows = rows.filter((row: any) => row.dimensionValues[0].value === '(not set)')
-  const notSetCount = notSetRows.reduce((s: number, row: any) => s + parseInt(row.metricValues[0].value ?? '0'), 0)
-  const withValue = total - notSetCount
+  const emptyRows = rows.filter((row: any) => isEmptyDimValue(row.dimensionValues[0].value))
+  const emptyCount = emptyRows.reduce((s: number, row: any) => s + parseInt(row.metricValues[0].value ?? '0'), 0)
+  const withValue = total - emptyCount
   const coverage = total > 0 ? withValue / total : 0
 
   const topValues = rows
-    .filter((row: any) => row.dimensionValues[0].value !== '(not set)')
+    .filter((row: any) => !isEmptyDimValue(row.dimensionValues[0].value))
     .slice(0, 5)
     .map((row: any) => ({
       value: row.dimensionValues[0].value,
