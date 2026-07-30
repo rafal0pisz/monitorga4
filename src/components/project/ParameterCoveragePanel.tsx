@@ -41,27 +41,37 @@ function CoverageBar({ value, prev }: { value: number; prev: number }) {
   )
 }
 
-// Compact, single-line summary — shown eagerly (live, Period-reactive) for
-// every configured parameter. The fuller ParameterCard (coverage bar, date
-// ranges, top values) sits behind the "Show parameter details" button below
-// instead, using this same already-fetched data rather than a second fetch.
+// Matches StoredCheckCard's param-tile look (project page) — grid of
+// compact cards with a status badge, coverage %/prev, and a progress bar —
+// shown eagerly (live, Period-reactive) for every configured parameter.
+// The fuller ParameterCard (date ranges, top values) sits behind the "Show
+// parameter details" button below instead, reusing this same fetched data.
 function MiniParameterCard({ data }: { data: ParameterData }) {
-  const { current, delta_absolute } = data
+  const { current, prev, delta_absolute } = data
   const pct = Math.round(current.coverage * 100)
+  const prevPct = Math.round(prev.coverage * 100)
   const color = pct >= 95 ? '#16a34a' : pct >= 80 ? '#ca8a04' : '#dc2626'
+  const bg = pct >= 95 ? '#f0fdf4' : pct >= 80 ? '#fefce8' : '#fef2f2'
+  const border = pct >= 95 ? '#bbf7d0' : pct >= 80 ? '#fde68a' : '#fecaca'
+  const label = pct >= 95 ? 'Pass' : pct >= 80 ? 'Warn' : 'Check'
   const deltaPositive = delta_absolute >= 0
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${pct < 80 ? '#fecaca' : 'var(--color-border-tertiary)'}`, borderRadius: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-        <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data.event_name}</span>
-        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>›</span>
-        <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data.parameter_name}</span>
+    <div className="page-check-card" style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{data.event_name}.{data.parameter_name}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color, backgroundColor: bg, border: `1px solid ${border}` }}>{label}</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color }}>{pct}%</span>
-        <span style={{ fontSize: 10.5, fontWeight: 500, color: deltaPositive ? '#16a34a' : '#dc2626' }}>
-          {deltaPositive ? '▲' : '▼'} {Math.abs(delta_absolute).toFixed(1)}pp
-        </span>
+      <div style={{ marginBottom: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color }}>{pct}%</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>prev: {prevPct}%</span>
+        </div>
+        <div style={{ height: 5, borderRadius: 3, backgroundColor: 'var(--color-border-tertiary)' }}>
+          <div style={{ height: '100%', borderRadius: 3, backgroundColor: color, width: `${Math.min(pct, 100)}%` }} />
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+        {deltaPositive ? '▲' : '▼'} {Math.abs(delta_absolute).toFixed(1)}pp WoW
       </div>
     </div>
   )
@@ -201,7 +211,13 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   if (parameterChecks.length === 0) return null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div>
+      <div
+        className={expanded ? undefined : 'page-grid'}
+        style={expanded
+          ? { display: 'flex', flexDirection: 'column', gap: 10 }
+          : { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 10 }}
+      >
       {parameterChecks.map(pc => {
         const key = `${pc.event_name}_${pc.parameter_name}`
         const isLoading = loading[key]
@@ -240,10 +256,11 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
           </div>
         )
       })}
+      </div>
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        style={{ alignSelf: 'flex-start', fontSize: 12, color: '#7c3aed', background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500 }}
+        style={{ marginTop: 10, fontSize: 12, color: '#7c3aed', background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500 }}
       >
         {expanded ? '← Hide parameter details' : 'Show parameter details →'}
       </button>
