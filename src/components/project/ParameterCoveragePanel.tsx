@@ -41,6 +41,32 @@ function CoverageBar({ value, prev }: { value: number; prev: number }) {
   )
 }
 
+// Compact, single-line summary — shown eagerly (live, Period-reactive) for
+// every configured parameter. The fuller ParameterCard (coverage bar, date
+// ranges, top values) sits behind the "Show parameter details" button below
+// instead, using this same already-fetched data rather than a second fetch.
+function MiniParameterCard({ data }: { data: ParameterData }) {
+  const { current, delta_absolute } = data
+  const pct = Math.round(current.coverage * 100)
+  const color = pct >= 95 ? '#16a34a' : pct >= 80 ? '#ca8a04' : '#dc2626'
+  const deltaPositive = delta_absolute >= 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${pct < 80 ? '#fecaca' : 'var(--color-border-tertiary)'}`, borderRadius: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data.event_name}</span>
+        <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>›</span>
+        <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{data.parameter_name}</span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color }}>{pct}%</span>
+        <span style={{ fontSize: 10.5, fontWeight: 500, color: deltaPositive ? '#16a34a' : '#dc2626' }}>
+          {deltaPositive ? '▲' : '▼'} {Math.abs(delta_absolute).toFixed(1)}pp
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function ParameterCard({ data }: { data: ParameterData }) {
   const { current, prev, delta_absolute, delta_relative, ranges } = data
   const pct = Math.round(current.coverage * 100)
@@ -141,8 +167,10 @@ interface Props {
 export default function ParameterCoveragePanel({ projectId, parameterChecks, periodDays }: Props) {
   // This is now the only Period-reactive parameter view (the stored daily
   // card was dropped — see the project page), so it fetches eagerly rather
-  // than waiting on a click; the per-parameter "Top values" breakdown below
-  // still stays collapsed per-card since that's the genuinely extra detail.
+  // than waiting on a click. Shown as compact MiniParameterCards by
+  // default; "Show parameter details" reveals the fuller ParameterCard
+  // (coverage bar, date ranges, top values) using this same fetched data.
+  const [expanded, setExpanded] = useState(false)
   const [data, setData] = useState<Record<string, ParameterData>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -208,10 +236,17 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
                 )}
               </div>
             )}
-            {result && !isLoading && <ParameterCard data={result} />}
+            {result && !isLoading && (expanded ? <ParameterCard data={result} /> : <MiniParameterCard data={result} />)}
           </div>
         )
       })}
+      <button
+        type="button"
+        onClick={() => setExpanded(v => !v)}
+        style={{ alignSelf: 'flex-start', fontSize: 12, color: '#7c3aed', background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 500 }}
+      >
+        {expanded ? '← Hide parameter details' : 'Show parameter details →'}
+      </button>
     </div>
   )
 }
