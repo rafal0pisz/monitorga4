@@ -10,7 +10,7 @@ import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import ScoreTrendChart from '@/components/project/ScoreTrendChart'
 import AccountMismatch from '@/components/project/AccountMismatch'
-import { checkLabel, CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
+import { CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
 import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 import { scoreColor } from '@/types'
 
@@ -33,15 +33,6 @@ const SECTION_META = {
   custom_events: { label: 'Custom Events', accent: '#ca8a04' },
   parameters:    { label: 'Parameters',    accent: '#8b5cf6' },
 } as const
-
-type ST = { color: string; bg: string; border: string; label: string }
-const STATUS: Record<string, ST> = {
-  pass:  { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Pass'  },
-  warn:  { color: '#ca8a04', bg: '#fefce8', border: '#fde68a', label: 'Warn'  },
-  check: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
-  fail:  { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' },
-  skip:  { color: '#9ca3af', bg: '#f9fafb', border: '#e5e7eb', label: 'Skip'  },
-}
 
 
 // pageResponsive
@@ -84,7 +75,6 @@ function PageStyles() {
            Dropping the horizontal padding here brings this page in line
            with the rest of the dashboard and actually uses the screen. */
         .page-content-wrap { padding: 10px 0 !important; }
-        .page-check-card { padding: 10px 12px !important; }
       }
       @media (max-width: 480px) {
         .page-period-label { display: none !important; }
@@ -224,63 +214,39 @@ export default async function ProjectPage({
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 
-        {/* Stored checks: Ecommerce / Custom Events / Parameters */}
+        {/* Ecommerce / Custom Events / Parameters — all three are live-only
+            now, Period-reactive. They used to also show a stored daily card
+            (fixed at yesterday-vs-same-day-last-week) alongside the live
+            view below it — same summary info twice, one of them never
+            reacting to Period, which read as "stuck on weekly data" next to
+            a chart that visibly did react. EventsDetailPanel's EventCard and
+            ParameterCoveragePanel's mini cards already carry the same
+            per-item summary (name, total/coverage, WoW delta) the stored
+            cards did, so nothing is lost by dropping the stored one. The
+            checks are still computed and stored by the worker for scoring —
+            only the redundant, non-reactive display here is gone. */}
         {(['ecommerce', 'custom_events', 'parameters'] as const).map(sectionId => {
-          const meta   = SECTION_META[sectionId]
-          const checks = bySection[sectionId]
+          const meta = SECTION_META[sectionId]
           const emptyMsg = {
             ecommerce:     'No ecommerce checks — configure in project settings.',
             custom_events: 'No custom events configured — add expected events in settings.',
             parameters:    'No parameter checks configured — set up in project settings.',
           }[sectionId]
-          // Parameters is live-only now — the stored daily check (fixed at
-          // yesterday-vs-same-day-last-week, same as every other stored
-          // check) was confusingly showing next to Ecommerce/Custom Events'
-          // cards that DO react to Period, making it look like Parameters
-          // was stuck on "weekly" data no matter what Period was selected.
-          // Ecommerce/Custom Events keep their stored card (it reflects the
-          // real daily score) plus a live chart alongside it; Parameters
-          // instead shows only the live, Period-reactive view below.
-          if (sectionId === 'parameters') {
-            return (
-              <div key={sectionId} style={{ marginBottom: 28 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                  <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                  <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
-                </div>
-                {parameterChecks.length === 0 || !project.ga4_property_id
-                  ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
-                  : <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
-                }
-              </div>
-            )
-          }
+          const liveEvents = sectionId === 'ecommerce' ? ecomEvents : sectionId === 'custom_events' ? expectedEvents : []
+          const isEmpty = sectionId === 'parameters' ? parameterChecks.length === 0 : liveEvents.length === 0
 
           return (
             <div key={sectionId} style={{ marginBottom: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
-                  <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
-                </div>
-                {checks.length > 0 && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{checks.filter((c: any) => c.status === 'pass').length}/{checks.length} passed</span>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                <div style={{ width: 3, height: 16, borderRadius: 2, backgroundColor: meta.accent }} />
+                <span style={{ fontSize: 20, fontWeight: 700 }}>{meta.label}</span>
               </div>
-              {checks.length === 0
+              {isEmpty || !project.ga4_property_id
                 ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
-                : <div className="page-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px,100%), 1fr))', gap: 10 }}>
-                    {checks.map((c: any) => <StoredCheckCard key={c.check_key ?? c.id} check={c} />)}
-                  </div>
+                : sectionId === 'parameters'
+                  ? <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
+                  : <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={liveEvents} periodDays={periodDays} />
               }
-              {sectionId === 'custom_events' && expectedEvents.length > 0 && project.ga4_property_id && (
-                <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={expectedEvents} periodDays={periodDays} />
-                </div>
-              )}
-              {sectionId === 'ecommerce' && ecomEvents.length > 0 && project.ga4_property_id && (
-                <div style={{ marginTop: 14 }}>
-                  <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={ecomEvents} periodDays={periodDays} />
-                </div>
-              )}
             </div>
           )
         })}
@@ -289,60 +255,3 @@ export default async function ProjectPage({
   )
 }
 
-
-function StoredCheckCard({ check }: { check: any }) {
-  const st    = STATUS[check.status ?? 'skip'] ?? STATUS.skip
-  const rawKey = check.check_key ?? check.check_id ?? '—'
-  const isParam  = typeof rawKey === 'string' && rawKey.startsWith('param_')
-  const isCount  = typeof rawKey === 'string' && (rawKey.startsWith('ecom_') || rawKey.startsWith('custom_event_'))
-  // Parameter checks share one generic label ("Parameter coverage") — use
-  // the "event.parameter" prefix already in the message instead, so each
-  // card still reads as which check it actually is.
-  const paramLabel = isParam && typeof check.message === 'string' ? check.message.split(':')[0] : null
-  const label = paramLabel ?? (typeof rawKey === 'string' ? checkLabel(rawKey) : rawKey)
-  const val      = check.value && typeof check.value === 'object' ? check.value : null
-  const covCurr  = isParam  && val ? (val.coverage_current ?? null) : null
-  const covPrev  = isParam  && val ? (val.coverage_prev   ?? null) : null
-  const cntCurr  = isCount  && val ? (val.current ?? null) : null
-  const cntPrev  = isCount  && val ? (val.prev    ?? null) : null
-
-  return (
-    <div className="page-check-card" style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, flexShrink: 0, color: st.color, backgroundColor: st.bg, border: `1px solid ${st.border}` }}>{st.label}</span>
-      </div>
-
-      {/* Parameter — progress bar */}
-      {isParam && covCurr != null && (
-        <div style={{ marginBottom: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: st.color }}>{covCurr.toFixed(1)}%</span>
-            {covPrev != null && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>prev: {covPrev.toFixed(1)}%</span>}
-          </div>
-          <div style={{ height: 5, borderRadius: 3, backgroundColor: 'var(--color-border-tertiary)' }}>
-            <div style={{ height: '100%', borderRadius: 3, backgroundColor: st.color, width: `${Math.min(covCurr, 100)}%` }} />
-          </div>
-        </div>
-      )}
-
-      {/* Ecommerce / Custom event — counts */}
-      {isCount && cntCurr != null && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: st.color }}>{Number(cntCurr).toLocaleString()}</span>
-          {cntPrev != null && Number(cntPrev) > 0 && (
-            <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>prev: {Number(cntPrev).toLocaleString()}</span>
-          )}
-        </div>
-      )}
-
-      {/* Plain number */}
-      {typeof check.value === 'number' && (
-        <div style={{ fontSize: 18, fontWeight: 700, color: st.color, marginBottom: 4 }}>{check.value.toFixed(1)}</div>
-      )}
-
-      {check.message && <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>{check.message}</div>}
-    </div>
-  )
-}
