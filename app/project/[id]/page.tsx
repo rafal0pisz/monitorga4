@@ -162,6 +162,9 @@ export default async function ProjectPage({
               <PeriodSelector current={periodDays} />
             </Suspense>
             <PDFExportButton projectName={project.name} />
+            <Link href={`/project/${id}/history`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)' }}>
+              History
+            </Link>
             <Link href={`/project/${id}/config`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)' }}>
               Settings
             </Link>
