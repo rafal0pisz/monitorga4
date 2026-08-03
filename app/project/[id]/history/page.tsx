@@ -8,15 +8,16 @@ const HISTORY_RUNS = 30
 interface HistoryEntry {
   date: string
   eventName: string
-  kind: 'disappeared' | 'increase'
+  kind: 'disappeared' | 'increase' | 'drop'
   detail: string
 }
 
-// +50% is the same relative-change threshold the worker itself already
-// uses to flag a volume "drop" for custom events/ecommerce (just mirrored
-// for the increase direction) — keeps this view consistent with what the
-// daily checks already consider a meaningful swing, not a new arbitrary cutoff.
-const INCREASE_THRESHOLD = 50
+// ±50% relative change is the same threshold the worker itself already
+// uses to flag a volume "drop" for custom events/ecommerce — kept in both
+// directions here so this view stays consistent with what the daily
+// checks already consider a meaningful swing, not a new arbitrary cutoff.
+// A drop all the way to 0 is its own "disappeared" kind, not a -100% drop.
+const SWING_THRESHOLD = 50
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -77,8 +78,10 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
       const delta = v.delta ?? 0
       if (current === 0 && prev > 0) {
         entries.push({ date, eventName, kind: 'disappeared', detail: `0 events (was ${prev.toLocaleString('en')})` })
-      } else if (prev > 0 && delta >= INCREASE_THRESHOLD) {
+      } else if (prev > 0 && delta >= SWING_THRESHOLD) {
         entries.push({ date, eventName, kind: 'increase', detail: `+${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})` })
+      } else if (prev > 0 && delta <= -SWING_THRESHOLD) {
+        entries.push({ date, eventName, kind: 'drop', detail: `${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})` })
       }
       continue
     }
@@ -94,8 +97,10 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
           entries.push({ date, eventName: ev, kind: 'disappeared', detail: `0 events (was ${p.toLocaleString('en')})` })
         } else if (p > 0) {
           const delta = ((c - p) / p) * 100
-          if (delta >= INCREASE_THRESHOLD) {
+          if (delta >= SWING_THRESHOLD) {
             entries.push({ date, eventName: ev, kind: 'increase', detail: `+${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})` })
+          } else if (delta <= -SWING_THRESHOLD) {
+            entries.push({ date, eventName: ev, kind: 'drop', detail: `${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})` })
           }
         }
       }
@@ -122,12 +127,12 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
       </div>
       <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Events history</h1>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 24px' }}>
-        Disappeared events and volume spikes (+{INCREASE_THRESHOLD}% or more) across the last {HISTORY_RUNS} daily checks.
+        Disappeared events and volume swings (±{SWING_THRESHOLD}% or more) across the last {HISTORY_RUNS} daily checks.
       </p>
 
       {dates.length === 0 ? (
         <div style={{ padding: 24, borderRadius: 10, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          No disappearances or volume spikes recorded in the last {HISTORY_RUNS} daily checks.
+          No disappearances or volume swings recorded in the last {HISTORY_RUNS} daily checks.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -135,15 +140,20 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
             <div key={date}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{fmtDate(date)}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {byDate.get(date)!.map((e, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${e.kind === 'disappeared' ? '#fecaca' : '#bbf7d0'}`, borderRadius: 10 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: e.kind === 'disappeared' ? '#dc2626' : '#16a34a' }} />
-                    <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{e.eventName}</span>
-                    <span style={{ fontSize: 11, color: e.kind === 'disappeared' ? '#dc2626' : '#16a34a', marginLeft: 'auto' }}>
-                      {e.kind === 'disappeared' ? 'Disappeared' : 'Volume spike'} — {e.detail}
-                    </span>
-                  </div>
-                ))}
+                {byDate.get(date)!.map((e, i) => {
+                  const color = e.kind === 'disappeared' ? '#dc2626' : e.kind === 'drop' ? '#ca8a04' : '#16a34a'
+                  const borderColor = e.kind === 'disappeared' ? '#fecaca' : e.kind === 'drop' ? '#fde68a' : '#bbf7d0'
+                  const label = e.kind === 'disappeared' ? 'Disappeared' : e.kind === 'drop' ? 'Volume drop' : 'Volume spike'
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${borderColor}`, borderRadius: 10 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: color }} />
+                      <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{e.eventName}</span>
+                      <span style={{ fontSize: 11, color, marginLeft: 'auto' }}>
+                        {label} — {e.detail}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           ))}
