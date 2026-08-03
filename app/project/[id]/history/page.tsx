@@ -10,6 +10,12 @@ interface HistoryEntry {
   eventName: string
   kind: 'disappeared' | 'increase' | 'drop'
   detail: string
+  category: 'events' | 'parameters'
+}
+
+const CATEGORY_LABEL: Record<HistoryEntry['category'], string> = {
+  events: 'Events',
+  parameters: 'Parameters',
 }
 
 // ±50% relative change is the same threshold the worker itself already
@@ -72,7 +78,7 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
 
     if (row.check_key === 'expected_events') {
       for (const ev of v.missing ?? []) {
-        entries.push({ date, eventName: ev, kind: 'disappeared', detail: 'Missing from expected events' })
+        entries.push({ date, eventName: ev, kind: 'disappeared', detail: 'Missing from expected events', category: 'events' })
       }
       continue
     }
@@ -83,11 +89,11 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
       const prev = v.prev ?? 0
       const delta = v.delta ?? 0
       if (current === 0 && prev > 0) {
-        entries.push({ date, eventName, kind: 'disappeared', detail: `0 events (was ${prev.toLocaleString('en')})` })
+        entries.push({ date, eventName, kind: 'disappeared', detail: `0 events (was ${prev.toLocaleString('en')})`, category: 'events' })
       } else if (prev > 0 && delta >= SWING_THRESHOLD) {
-        entries.push({ date, eventName, kind: 'increase', detail: `+${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})` })
+        entries.push({ date, eventName, kind: 'increase', detail: `+${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})`, category: 'events' })
       } else if (prev > 0 && delta <= -SWING_THRESHOLD) {
-        entries.push({ date, eventName, kind: 'drop', detail: `${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})` })
+        entries.push({ date, eventName, kind: 'drop', detail: `${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})`, category: 'events' })
       }
       continue
     }
@@ -100,13 +106,13 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
         const c = current[ev] ?? 0
         const p = prev[ev] ?? 0
         if (c === 0 && p > 0) {
-          entries.push({ date, eventName: ev, kind: 'disappeared', detail: `0 events (was ${p.toLocaleString('en')})` })
+          entries.push({ date, eventName: ev, kind: 'disappeared', detail: `0 events (was ${p.toLocaleString('en')})`, category: 'events' })
         } else if (p > 0) {
           const delta = ((c - p) / p) * 100
           if (delta >= SWING_THRESHOLD) {
-            entries.push({ date, eventName: ev, kind: 'increase', detail: `+${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})` })
+            entries.push({ date, eventName: ev, kind: 'increase', detail: `+${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})`, category: 'events' })
           } else if (delta <= -SWING_THRESHOLD) {
-            entries.push({ date, eventName: ev, kind: 'drop', detail: `${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})` })
+            entries.push({ date, eventName: ev, kind: 'drop', detail: `${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})`, category: 'events' })
           }
         }
       }
@@ -124,11 +130,11 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
       const covPrev = v.coverage_prev ?? null
       const delta = v.delta ?? 0
       if (covCurrent === 0 && covPrev != null && covPrev > 0) {
-        entries.push({ date, eventName: label, kind: 'disappeared', detail: `0% coverage (was ${covPrev.toFixed(1)}%)` })
+        entries.push({ date, eventName: label, kind: 'disappeared', detail: `0% coverage (was ${covPrev.toFixed(1)}%)`, category: 'parameters' })
       } else if (covPrev != null && covPrev > 0 && delta >= PARAM_SWING_THRESHOLD_PP) {
-        entries.push({ date, eventName: label, kind: 'increase', detail: `+${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)` })
+        entries.push({ date, eventName: label, kind: 'increase', detail: `+${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)`, category: 'parameters' })
       } else if (covPrev != null && covPrev > 0 && delta <= -PARAM_SWING_THRESHOLD_PP) {
-        entries.push({ date, eventName: label, kind: 'drop', detail: `${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)` })
+        entries.push({ date, eventName: label, kind: 'drop', detail: `${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)`, category: 'parameters' })
       }
     }
   }
@@ -162,27 +168,40 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {dates.map(date => (
-            <div key={date}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{fmtDate(date)}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {byDate.get(date)!.map((e, i) => {
-                  const color = e.kind === 'disappeared' ? '#dc2626' : e.kind === 'drop' ? '#ca8a04' : '#16a34a'
-                  const borderColor = e.kind === 'disappeared' ? '#fecaca' : e.kind === 'drop' ? '#fde68a' : '#bbf7d0'
-                  const label = e.kind === 'disappeared' ? 'Disappeared' : e.kind === 'drop' ? 'Volume drop' : 'Volume spike'
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${borderColor}`, borderRadius: 10 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: color }} />
-                      <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{e.eventName}</span>
-                      <span style={{ fontSize: 11, color, marginLeft: 'auto' }}>
-                        {label} — {e.detail}
-                      </span>
+          {dates.map(date => {
+            const dayEntries = byDate.get(date)!
+            const categories = (['events', 'parameters'] as const).filter(cat => dayEntries.some(e => e.category === cat))
+            return (
+              <div key={date}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{fmtDate(date)}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {categories.map(cat => (
+                    <div key={cat}>
+                      <div style={{ fontSize: 10.5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-tertiary, var(--color-text-secondary))', marginBottom: 6 }}>
+                        {CATEGORY_LABEL[cat]}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {dayEntries.filter(e => e.category === cat).map((e, i) => {
+                          const color = e.kind === 'disappeared' ? '#dc2626' : e.kind === 'drop' ? '#ca8a04' : '#16a34a'
+                          const borderColor = e.kind === 'disappeared' ? '#fecaca' : e.kind === 'drop' ? '#fde68a' : '#bbf7d0'
+                          const label = e.kind === 'disappeared' ? 'Disappeared' : e.kind === 'drop' ? 'Volume drop' : 'Volume spike'
+                          return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${borderColor}`, borderRadius: 10 }}>
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: color }} />
+                              <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{e.eventName}</span>
+                              <span style={{ fontSize: 11, color, marginLeft: 'auto' }}>
+                                {label} — {e.detail}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  )
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
