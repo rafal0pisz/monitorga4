@@ -19,6 +19,12 @@ interface HistoryEntry {
 // A drop all the way to 0 is its own "disappeared" kind, not a -100% drop.
 const SWING_THRESHOLD = 50
 
+// Parameter coverage deltas are already in percentage POINTS (0-100 scale),
+// not a relative % like event counts — a ±20pp swing is a comparable
+// "meaningful change" on that scale, not directly comparable to the 50%
+// relative-change threshold above.
+const PARAM_SWING_THRESHOLD_PP = 20
+
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
@@ -52,9 +58,9 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
   const { data: results } = runIds.length > 0
     ? await supabase
         .from('dqs_results')
-        .select('run_id, check_key, value')
+        .select('run_id, check_key, value, message')
         .in('run_id', runIds)
-        .or('check_key.eq.expected_events,check_key.eq.ecommerce_events,check_key.like.custom_event_*')
+        .or('check_key.eq.expected_events,check_key.eq.ecommerce_events,check_key.like.custom_event_*,check_key.like.param_*')
     : { data: [] }
 
   const entries: HistoryEntry[] = []
@@ -103,6 +109,26 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
             entries.push({ date, eventName: ev, kind: 'drop', detail: `${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})` })
           }
         }
+      }
+      continue
+    }
+
+    if (typeof row.check_key === 'string' && row.check_key.startsWith('param_')) {
+      // check_key is underscore-joined ("param_<event>_<parameter>") and
+      // ambiguous to split back apart since event/parameter names can
+      // themselves contain underscores — the stored message already has
+      // "event.parameter: " as a clean, dot-separated prefix, same trick
+      // the old StoredCheckCard used.
+      const label = typeof row.message === 'string' ? row.message.split(':')[0] : row.check_key
+      const covCurrent = v.coverage_current ?? null
+      const covPrev = v.coverage_prev ?? null
+      const delta = v.delta ?? 0
+      if (covCurrent === 0 && covPrev != null && covPrev > 0) {
+        entries.push({ date, eventName: label, kind: 'disappeared', detail: `0% coverage (was ${covPrev.toFixed(1)}%)` })
+      } else if (covPrev != null && covPrev > 0 && delta >= PARAM_SWING_THRESHOLD_PP) {
+        entries.push({ date, eventName: label, kind: 'increase', detail: `+${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)` })
+      } else if (covPrev != null && covPrev > 0 && delta <= -PARAM_SWING_THRESHOLD_PP) {
+        entries.push({ date, eventName: label, kind: 'drop', detail: `${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)` })
       }
     }
   }
