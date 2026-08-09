@@ -225,8 +225,17 @@ function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[
   const dirΔ    = ppΔ(dirC, dirP)
   const orgΔ    = ppΔ(orgC, orgP)
   const adsΔ    = ppΔ(adsC, adsP)
+  const totΔ    = pctΔ(totC, totP)
 
   return [
+    {
+      id: 'total_sessions', section: 'traffic',
+      label: 'Sessions',
+      description: `Total sessions ${label} — a large drop can signal broken tracking or real traffic loss; a large spike may indicate bot traffic.`,
+      status: stDelta(totΔ, 20, 40),
+      valueLabel: totC.toLocaleString('en'), prevLabel: totP.toLocaleString('en'),
+      deltaLabel: `${sign(totΔ)}${totΔ}%`,
+    },
     {
       id: 'not_set_share', section: 'traffic',
       label: '(not set) share',
