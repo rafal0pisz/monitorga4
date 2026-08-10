@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
   const eventName   = searchParams.get('event')
   const paramName   = searchParams.get('parameter')
   const periodDays  = parseInt(searchParams.get('periodDays') ?? '7')
+  const anchorOffset = searchParams.get('anchorOffset') === '1' ? 1 : 0
 
   if (!projectId || !eventName || !paramName)
     return NextResponse.json({ error: 'Missing params: projectId, event, parameter' }, { status: 400 })
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
   // Compute date ranges
   const today = new Date()
   const fmt = (d: Date) => d.toISOString().split('T')[0]
-  const endC  = new Date(today); endC.setDate(today.getDate() - 1)
+  const endC  = new Date(today); endC.setDate(today.getDate() - 1 - anchorOffset)
   const startC = new Date(endC); startC.setDate(endC.getDate() - (periodDays - 1))
   const endP  = new Date(startC); endP.setDate(startC.getDate() - 1)
   const startP = new Date(endP); startP.setDate(endP.getDate() - (periodDays - 1))

@@ -172,9 +172,10 @@ interface Props {
   projectId: string
   parameterChecks: { event_name: string; parameter_name: string }[]
   periodDays: number
+  anchorOffset?: number
 }
 
-export default function ParameterCoveragePanel({ projectId, parameterChecks, periodDays }: Props) {
+export default function ParameterCoveragePanel({ projectId, parameterChecks, periodDays, anchorOffset = 0 }: Props) {
   // This is now the only Period-reactive parameter view (the stored daily
   // card was dropped — see the project page), so it fetches eagerly rather
   // than waiting on a click. Shown as compact MiniParameterCards by
@@ -195,6 +196,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
         event: pc.event_name,
         parameter: pc.parameter_name,
         periodDays: String(periodDays),
+        anchorOffset: String(anchorOffset),
       })
 
       ga4Fetch(`/api/ga4/parameters?${params}`)
@@ -206,7 +208,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
         .catch(err => setErrors(prev => ({ ...prev, [key]: err.message })))
         .finally(() => setLoading(prev => ({ ...prev, [key]: false })))
     }
-  }, [projectId, JSON.stringify(parameterChecks), periodDays])
+  }, [projectId, JSON.stringify(parameterChecks), periodDays, anchorOffset])
 
   if (parameterChecks.length === 0) return null
 

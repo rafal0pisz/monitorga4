@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   const projectId = searchParams.get('projectId')
   const events = searchParams.get('events')?.split(',').filter(Boolean) ?? []
   const periodDays = parseInt(searchParams.get('periodDays') ?? '7')
+  const anchorOffset = searchParams.get('anchorOffset') === '1' ? 1 : 0
 
   if (!projectId || events.length === 0)
     return NextResponse.json({ error: 'Missing params' }, { status: 400 })
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   const today = new Date()
   const fmt = (d: Date) => d.toISOString().split('T')[0]
-  const endC = new Date(today); endC.setDate(today.getDate() - 1)
+  const endC = new Date(today); endC.setDate(today.getDate() - 1 - anchorOffset)
   const startC = new Date(endC); startC.setDate(endC.getDate() - (periodDays - 1))
   const endP = new Date(startC); endP.setDate(startC.getDate() - 1)
   const startP = new Date(endP); startP.setDate(endP.getDate() - (periodDays - 1))

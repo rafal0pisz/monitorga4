@@ -87,17 +87,21 @@ export default async function ProjectPage({
   params, searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ period?: string; ran?: string }>
+  searchParams: Promise<{ period?: string; ran?: string; anchor?: string }>
 }) {
   const { id }       = await params
-  const { period, ran } = await searchParams
+  const { period, ran, anchor } = await searchParams
   const periodDays = Number(period) || 7
+  // '1' shifts every live panel's window back by one extra day (so it ends
+  // 2 days ago instead of yesterday) — a manual escape hatch for when
+  // yesterday's GA4 data is still processing and looks like a false anomaly.
+  const anchorOffset = anchor === '1' ? 1 : 0
   // Bumped by RunNowButton after a manual run completes — used as part of
   // the live panels' React key below so they remount and refetch fresh GA4
   // data instead of silently keeping whatever they'd already fetched
   // (router.refresh() alone only re-renders server data, it doesn't make a
   // client component's own useEffect re-fire).
-  const liveKey = `${periodDays}-${ran ?? ''}`
+  const liveKey = `${periodDays}-${anchorOffset}-${ran ?? ''}`
 
   const supabase = await createClient()
   const { data: authData } = await supabase.auth.getUser()
@@ -159,7 +163,7 @@ export default async function ProjectPage({
           </div>
           <div className="page-nav-actions" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Suspense fallback={<div style={{ width: 200, height: 24 }} />}>
-              <PeriodSelector current={periodDays} />
+              <PeriodSelector current={periodDays} excludeYesterday={anchorOffset === 1} />
             </Suspense>
             <PDFExportButton projectName={project.name} />
             <Link href={`/project/${id}/history`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none', padding: '4px 12px', borderRadius: 6, border: '1px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-primary)' }}>
@@ -213,7 +217,7 @@ export default async function ProjectPage({
             the 9 always-on checks from the last daily run, merged into the
             same sections rather than shown as a separate duplicate block. */}
         {project.ga4_property_id
-          ? <LiveChecksPanel key={liveKey} projectId={id} period={periodDays} extraChecks={coreExtraChecks} />
+          ? <LiveChecksPanel key={liveKey} projectId={id} period={periodDays} anchorOffset={anchorOffset} extraChecks={coreExtraChecks} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 
@@ -247,8 +251,8 @@ export default async function ProjectPage({
               {isEmpty || !project.ga4_property_id
                 ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
                 : sectionId === 'parameters'
-                  ? <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} />
-                  : <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={liveEvents} periodDays={periodDays} />
+                  ? <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} anchorOffset={anchorOffset} />
+                  : <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={liveEvents} periodDays={periodDays} anchorOffset={anchorOffset} />
               }
             </div>
           )

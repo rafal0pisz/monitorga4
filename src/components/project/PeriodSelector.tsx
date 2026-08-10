@@ -16,7 +16,7 @@ const LABELS: Record<number, string> = {
   30: 'Last 30 days vs prev 30 days',
 }
 
-export default function PeriodSelector({ current }: { current: number }) {
+export default function PeriodSelector({ current, excludeYesterday }: { current: number; excludeYesterday: boolean }) {
   const router       = useRouter()
   const pathname     = usePathname()
   const searchParams = useSearchParams()
@@ -24,6 +24,16 @@ export default function PeriodSelector({ current }: { current: number }) {
   function setPeriod(days: number) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('period', String(days))
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  // GA4 data for "yesterday" can still be incomplete/unprocessed when a
+  // check runs early in the day — this lets a user shift the whole window
+  // back by one extra day (e.g. Period 7d becomes 8 days ago .. 2 days ago
+  // instead of ending on yesterday) to verify against fully-settled data.
+  function setExcludeYesterday(v: boolean) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (v) params.set('anchor', '1'); else params.delete('anchor')
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -60,6 +70,16 @@ export default function PeriodSelector({ current }: { current: number }) {
       <span style={{ fontSize: 10, color: '#4B5563', marginLeft: 4 }}>
         {LABELS[current] ?? ''}
       </span>
+
+      <label title="Shift the whole period back by one extra day, in case yesterday's GA4 data is still processing" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#6B7280', cursor: 'pointer', marginLeft: 4 }}>
+        <input
+          type="checkbox"
+          checked={excludeYesterday}
+          onChange={e => setExcludeYesterday(e.target.checked)}
+          style={{ cursor: 'pointer' }}
+        />
+        Exclude yesterday
+      </label>
     </div>
   )
 }

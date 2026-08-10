@@ -25,18 +25,22 @@ interface Ranges { current: GA4Range; prev: GA4Range; label: string }
 
 const fmt = (d: Date) => d.toISOString().split('T')[0]
 
-function buildRanges(period: Period): Ranges {
+// anchorOffset shifts the whole window back by extra days (0 = end
+// yesterday, 1 = end 2 days ago) — an escape hatch for when yesterday's
+// GA4 data is still processing and would otherwise look like a false
+// anomaly in the checks below.
+function buildRanges(period: Period, anchorOffset: number): Ranges {
   const today = new Date()
   if (period === 1) {
-    const yday = new Date(today); yday.setDate(today.getDate() - 1)
-    const lwk  = new Date(today); lwk.setDate(today.getDate() - 8)
+    const yday = new Date(today); yday.setDate(today.getDate() - 1 - anchorOffset)
+    const lwk  = new Date(today); lwk.setDate(today.getDate() - 8 - anchorOffset)
     return {
       current: { startDate: fmt(yday), endDate: fmt(yday) },
       prev:    { startDate: fmt(lwk),  endDate: fmt(lwk)  },
       label: 'vs same day last week',
     }
   }
-  const endC   = new Date(today); endC.setDate(today.getDate() - 1)
+  const endC   = new Date(today); endC.setDate(today.getDate() - 1 - anchorOffset)
   const startC = new Date(endC);  startC.setDate(endC.getDate() - period + 1)
   const endP   = new Date(startC); endP.setDate(startC.getDate() - 1)
   const startP = new Date(endP);  startP.setDate(endP.getDate() - period + 1)
@@ -70,6 +74,7 @@ function stBelow(v: number, w: number, f: number): Status  { return v >= w ? 'pa
 export async function POST(req: NextRequest) {
   const body      = await req.json().catch(() => ({}))
   const period    = (Number(body.period) as Period) || 7
+  const anchorOffset = Number(body.anchorOffset) === 1 ? 1 : 0
   const projectId = body.projectId as string | undefined
 
   if (!projectId) return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
@@ -95,7 +100,7 @@ export async function POST(req: NextRequest) {
   const token = await getGa4Token()
   if (!token) return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
 
-  const { current, prev, label } = buildRanges(period)
+  const { current, prev, label } = buildRanges(period, anchorOffset)
 
   const ENG_METRICS = [
     { name: 'bounceRate' },               // 0

@@ -114,7 +114,7 @@ function EventCard({ name, data }: { name: string; data: EventData }) {
   )
 }
 
-export default function EventsDetailPanel({ projectId, expectedEvents, periodDays }: { projectId: string; expectedEvents: string[]; periodDays: number }) {
+export default function EventsDetailPanel({ projectId, expectedEvents, periodDays, anchorOffset = 0 }: { projectId: string; expectedEvents: string[]; periodDays: number; anchorOffset?: number }) {
   const [data, setData] = useState<Record<string, EventData> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -125,7 +125,7 @@ export default function EventsDetailPanel({ projectId, expectedEvents, periodDay
     async function load() {
       setLoading(true); setError(null)
       try {
-        const params = new URLSearchParams({ projectId, events: expectedEvents.join(','), periodDays: String(periodDays) })
+        const params = new URLSearchParams({ projectId, events: expectedEvents.join(','), periodDays: String(periodDays), anchorOffset: String(anchorOffset) })
         const res = await ga4Fetch(`/api/ga4/events?${params}`)
         const json = await res.json()
         if (!res.ok) throw new Error(json.error)
@@ -133,7 +133,7 @@ export default function EventsDetailPanel({ projectId, expectedEvents, periodDay
       } catch (e: any) { setError(e.message) } finally { setLoading(false) }
     }
     load()
-  }, [projectId, expectedEvents.join(','), periodDays])
+  }, [projectId, expectedEvents.join(','), periodDays, anchorOffset])
 
   if (!expectedEvents.length) return null
   return (
