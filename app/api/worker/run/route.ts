@@ -326,7 +326,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       results.push({
         check_key: 'bounce_rate_anomaly', check_level: 'core', status, score, weight: w,
         value: { current: +(curr * 100).toFixed(1), prev: +(prev * 100).toFixed(1), delta: +delta.toFixed(1) },
-        message: `Bounce rate: ${(curr * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
+        message: `Bounce rate: ${(curr * 100).toFixed(1)}% (prev: ${(prev * 100).toFixed(1)}%, WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'bounce_rate_anomaly', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
@@ -529,7 +529,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       results.push({
         check_key: 'session_no_events', check_level: 'optional', status, score, weight: w,
         value: { estimated_empty: curr.emptyEstimate, total_sessions: curr.total, ratio: +(curr.ratio * 100).toFixed(1), ratio_prev: +(prev.ratio * 100).toFixed(1), delta },
-        message: `Estimated sessions without engagement: ${(curr.ratio * 100).toFixed(1)}% (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
+        message: `Estimated sessions without engagement: ${(curr.ratio * 100).toFixed(1)}% (prev: ${(prev.ratio * 100).toFixed(1)}%, WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
       })
     } catch (e: any) {
       results.push({ check_key: 'session_no_events', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
