@@ -158,18 +158,28 @@ async function checkParameters(
         const stdDim    = GA4_STANDARD_PARAMS[parameter_name]
         const stdMetric = GA4_STANDARD_METRICS[parameter_name]
         const dimName   = stdDim ?? `customEvent:${parameter_name}`
+        const eventFilter = { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } }
 
         if (stdMetric) {
           // For value/price etc — check if metric > 0 (presence, not coverage)
           const data = await report({
             dateRanges: [dateRange],
             metrics:    [{ name: stdMetric }],
-            dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
+            dimensionFilter: eventFilter,
           })
           const val = parseFloat(data.rows?.[0]?.metricValues?.[0]?.value ?? '0')
           return val > 0 ? 100 : 0
         }
 
+        // total/withParam used to come from a `limit: 100`-bounded dimension
+        // breakdown — for a high-cardinality parameter (e.g. transaction_id,
+        // effectively unique per event) the real per-value rows have a
+        // count of ~1 each and get crowded out of that top-100 sample by the
+        // single aggregated "(not set)" bucket, understating coverage
+        // (a ~100%-covered parameter could read as ~25%). Querying the two
+        // aggregates directly — no dimension breakout, so no cardinality
+        // limit applies — is exact regardless of how many distinct values
+        // the parameter has.
         if (stdDim && ITEM_SCOPED_DIMENSIONS.has(stdDim)) {
           const itemMetric = ITEM_METRIC_BY_EVENT[event_name]
           if (!itemMetric) {
@@ -177,32 +187,31 @@ async function checkParameters(
           }
           // No eventName filter here — the item metric is already specific
           // to that event (e.g. itemsAddedToCart only counts add_to_cart).
-          const data = await report({
-            dateRanges: [dateRange],
-            dimensions: [{ name: stdDim }],
-            metrics:    [{ name: itemMetric }],
-            limit: 100,
-          })
-          const rows = data.rows ?? []
-          const total     = rows.reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
-          const withParam = rows
-            .filter((r: any) => r.dimensionValues?.[0]?.value !== '(not set)' && r.dimensionValues?.[0]?.value !== '')
-            .reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+          const [totalData, emptyData] = await Promise.all([
+            report({ dateRanges: [dateRange], metrics: [{ name: itemMetric }] }),
+            report({
+              dateRanges: [dateRange],
+              metrics:    [{ name: itemMetric }],
+              dimensionFilter: { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } },
+            }),
+          ])
+          const total     = parseFloat(totalData.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+          const emptyCount = parseFloat(emptyData.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+          const withParam = Math.max(0, total - emptyCount)
           return total > 0 ? (withParam / total) * 100 : 0
         }
 
-        const data = await report({
-          dateRanges: [dateRange],
-          dimensions: [{ name: dimName }],
-          metrics:    [{ name: 'eventCount' }],
-          dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } },
-          limit: 100,
-        })
-        const rows = data.rows ?? []
-        const total     = rows.reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
-        const withParam = rows
-          .filter((r: any) => r.dimensionValues?.[0]?.value !== '(not set)' && r.dimensionValues?.[0]?.value !== '')
-          .reduce((s: number, r: any) => s + parseFloat(r.metricValues?.[0]?.value ?? '0'), 0)
+        const [totalData, emptyData] = await Promise.all([
+          report({ dateRanges: [dateRange], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
+          report({
+            dateRanges: [dateRange],
+            metrics:    [{ name: 'eventCount' }],
+            dimensionFilter: { andGroup: { expressions: [eventFilter, { filter: { fieldName: dimName, inListFilter: { values: ['(not set)', ''] } } }] } },
+          }),
+        ])
+        const total     = parseFloat(totalData.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+        const emptyCount = parseFloat(emptyData.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+        const withParam = Math.max(0, total - emptyCount)
         return total > 0 ? (withParam / total) * 100 : 0
       }
 

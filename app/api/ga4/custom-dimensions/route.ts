@@ -17,16 +17,27 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(
-      `https://analyticsadmin.googleapis.com/v1beta/${propertyId}/customDimensions`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      throw new Error(`Admin API ${res.status}: ${err.error?.message ?? res.statusText}`)
-    }
-    const data = await res.json()
-    const parameterNames = (data.customDimensions ?? []).map((d: any) => d.parameterName as string)
+    // Google defaults customDimensions.list to a 50-item page with no
+    // pagination unless the caller asks for more — an account with 50+
+    // registered custom dimensions would silently lose everything past the
+    // first page, making genuinely-registered parameters look "not
+    // available on this account" here even though data is flowing for them.
+    // pageSize=200 (Google's max) plus a nextPageToken loop covers any size.
+    const parameterNames: string[] = []
+    let pageToken: string | undefined
+    do {
+      const url = new URL(`https://analyticsadmin.googleapis.com/v1beta/${propertyId}/customDimensions`)
+      url.searchParams.set('pageSize', '200')
+      if (pageToken) url.searchParams.set('pageToken', pageToken)
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(`Admin API ${res.status}: ${err.error?.message ?? res.statusText}`)
+      }
+      const data = await res.json()
+      parameterNames.push(...(data.customDimensions ?? []).map((d: any) => d.parameterName as string))
+      pageToken = data.nextPageToken
+    } while (pageToken)
     return NextResponse.json({ parameterNames })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

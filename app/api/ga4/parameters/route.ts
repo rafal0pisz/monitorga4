@@ -38,27 +38,48 @@ function isEmptyDimValue(v: string | null | undefined): boolean {
 
 async function getCoverage(propertyId: string, token: string, eventName: string, parameterName: string, startDate: string, endDate: string): Promise<CoverageResult> {
   const dimName = ga4DimName(parameterName)
+  const eventFilter = { filter: { fieldName: 'eventName', stringFilter: { value: eventName, matchType: 'EXACT' } } }
 
-  // Query: dimension = parameter value, filter = eventName, metric = eventCount
-  const r = await ga4Report(propertyId, token, {
-    dateRanges: [{ startDate, endDate }],
-    dimensions: [{ name: dimName }],
-    metrics: [{ name: 'eventCount' }],
-    dimensionFilter: {
-      filter: { fieldName: 'eventName', stringFilter: { value: eventName, matchType: 'EXACT' } }
-    },
-    orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
-    limit: 20,
-  })
+  // total/emptyCount used to be derived from a `limit: 20` dimension
+  // breakdown — fine for a low-cardinality parameter, but for a
+  // high-cardinality one (e.g. transaction_id, effectively unique per
+  // event) the real per-value rows each have a count of ~1 and get crowded
+  // out of the top 20 by the single aggregated "(not set)" bucket, which
+  // can easily outrank them. That made a ~100%-covered parameter look like
+  // it had ~25% coverage. Querying the two aggregates directly (no
+  // dimension breakout, so no cardinality limit applies) is exact
+  // regardless of how many distinct values the parameter has.
+  const [totalR, emptyR, topR] = await Promise.all([
+    ga4Report(propertyId, token, {
+      dateRanges: [{ startDate, endDate }],
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: eventFilter,
+    }),
+    ga4Report(propertyId, token, {
+      dateRanges: [{ startDate, endDate }],
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: {
+        andGroup: { expressions: [eventFilter, { filter: { fieldName: dimName, inListFilter: { values: ['(not set)', ''] } } }] },
+      },
+    }),
+    // Top values are still just a representative sample for display —
+    // that's fine, unlike the coverage math above.
+    ga4Report(propertyId, token, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: dimName }],
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: eventFilter,
+      orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+      limit: 20,
+    }),
+  ])
 
-  const rows = r.rows ?? []
-  const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues[0].value ?? '0'), 0)
-  const emptyRows = rows.filter((row: any) => isEmptyDimValue(row.dimensionValues[0].value))
-  const emptyCount = emptyRows.reduce((s: number, row: any) => s + parseInt(row.metricValues[0].value ?? '0'), 0)
-  const withValue = total - emptyCount
+  const total = parseInt(totalR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+  const emptyCount = parseInt(emptyR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+  const withValue = Math.max(0, total - emptyCount)
   const coverage = total > 0 ? withValue / total : 0
 
-  const topValues = rows
+  const topValues = (topR.rows ?? [])
     .filter((row: any) => !isEmptyDimValue(row.dimensionValues[0].value))
     .slice(0, 5)
     .map((row: any) => ({
