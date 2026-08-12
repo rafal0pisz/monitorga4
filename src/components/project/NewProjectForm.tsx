@@ -105,6 +105,7 @@ export default function NewProjectForm() {
   const [properties, setProperties] = useState<GA4Property[]>([])
   const [propertiesLoading, setPropertiesLoading] = useState(true)
   const [propertiesError, setPropertiesError] = useState<string | null>(null)
+  const [needsReconnect, setNeedsReconnect] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<GA4Property | null>(null)
   const [manualMode, setManualMode] = useState(false)
   const [manualPropertyId, setManualPropertyId] = useState('')
@@ -155,7 +156,16 @@ export default function NewProjectForm() {
       try {
         const res = await ga4Fetch('/api/ga4/properties')
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error ?? 'Failed to load')
+        if (!res.ok) {
+          // 401 here specifically means getGa4Token() found no usable
+          // Google connection for this signed-in user (never connected, or
+          // the refresh token was revoked/expired) — distinct from a 500,
+          // where Google's Admin API answered but rejected the request
+          // (e.g. API not enabled, wrong account, no GA4 access). Only the
+          // former is fixable by the user re-authenticating with Google.
+          setNeedsReconnect(res.status === 401)
+          throw new Error(data.error ?? 'Failed to load')
+        }
         const flat: GA4Property[] = []
         for (const account of data.accounts ?? []) {
           for (const prop of account.properties ?? []) {
@@ -169,9 +179,6 @@ export default function NewProjectForm() {
         setProperties(flat)
         if (flat.length === 0) setManualMode(true)
       } catch (e: any) {
-        // The UI only shows a generic fallback message — full detail (e.g.
-        // Google reporting the Admin API is disabled for this project) goes
-        // to the console so it's diagnosable without guessing.
         console.error('[ga4/properties] fetch failed:', e.message)
         setPropertiesError(e.message)
         setManualMode(true) // automatic fallback to manual entry
@@ -422,9 +429,20 @@ export default function NewProjectForm() {
             </>
           ) : (
             <>
-              {propertiesError && !manualMode && (
+              {needsReconnect ? (
+                <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '0.5px solid #fecaca', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span>⚠️ Your Google account connection is missing or has expired, so we can't load your GA4 properties automatically.</span>
+                  <a href="/login" style={{ color: '#dc2626', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                    Reconnect your Google account →
+                  </a>
+                </div>
+              ) : propertiesError ? (
                 <div style={{ fontSize: 12, color: '#ca8a04', background: '#fefce8', border: '0.5px solid #fef08a', borderRadius: 8, padding: '8px 12px' }}>
-                  ⚠️ Couldn't load the property list automatically. Enter the Property ID manually.
+                  ⚠️ Couldn't load the property list automatically ({propertiesError}). Enter the Property ID manually below.
+                </div>
+              ) : properties.length === 0 && (
+                <div style={{ fontSize: 12, color: '#6b7280', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 12px' }}>
+                  No GA4 accounts found on your connected Google account. Make sure you signed in with the Google account that has access to your GA4 property, or enter the Property ID manually below.
                 </div>
               )}
               <Field label="GA4 Property ID" hint="Found in GA4 Admin → Property Settings → Property ID">
