@@ -9,14 +9,17 @@ const ST = {
   icon:   { pass:'✓', warn:'!', fail:'✕' },
 }
 
-function getWoWRanges() {
+// The daily checks behind this report always compare yesterday vs. the
+// same day last week (see getDailyRanges() in app/api/worker/run/route.ts)
+// regardless of what this label used to show — it displayed a 7-day
+// range as if the whole report were a weekly rollup, which no longer
+// matches what's actually being verified underneath it.
+function getDailyRanges() {
   const today = new Date()
   const fmt = (d: Date) => d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
-  const endC = new Date(today); endC.setDate(today.getDate() - 1)
-  const startC = new Date(endC); startC.setDate(endC.getDate() - 6)
-  const endP = new Date(startC); endP.setDate(startC.getDate() - 1)
-  const startP = new Date(endP); startP.setDate(endP.getDate() - 6)
-  return { current: `${fmt(startC)} – ${fmt(endC)}`, prev: `${fmt(startP)} – ${fmt(endP)}` }
+  const yday = new Date(today); yday.setDate(today.getDate() - 1)
+  const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 8)
+  return { current: fmt(yday), prev: fmt(lastWeek) }
 }
 
 export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
@@ -40,7 +43,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   }
 
   const grade = getScoreGrade(run?.score_total ?? null)
-  const ranges = getWoWRanges()
+  const ranges = getDailyRanges()
   const passCount = results.filter(r => r.status === 'pass').length
   const failCount = results.filter(r => r.status === 'fail').length
 
