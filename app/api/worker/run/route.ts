@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'crypto'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
-import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
@@ -113,24 +113,6 @@ function getDailyRanges() {
 // ============================================================
 // Parameter coverage check
 // ============================================================
-
-// Item-scoped dimensions (product-level ecommerce fields) can't be combined
-// with the event-scoped `eventCount` metric — GA4 Data API rejects it
-// ("Please remove eventCount to make the request compatible"). Each needs
-// the item-scoped metric that matches the event it's reported against.
-const ITEM_SCOPED_DIMENSIONS = new Set(['itemId', 'itemName', 'itemBrand', 'itemCategory', 'itemVariant'])
-const ITEM_METRIC_BY_EVENT: Record<string, string> = {
-  view_item_list:    'itemListViewEvents',
-  select_item:       'itemsClickedInList',
-  view_item:         'itemsViewed',
-  add_to_cart:       'itemsAddedToCart',
-  begin_checkout:    'itemsCheckedOut',
-  add_shipping_info: 'itemsCheckedOut',
-  add_payment_info:  'itemsCheckedOut',
-  purchase:          'itemsPurchased',
-  view_promotion:    'itemListViewEvents',
-  select_promotion:  'itemsClickedInPromotion',
-}
 
 async function checkParameters(
   project: { ga4_property_id: string },

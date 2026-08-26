@@ -184,7 +184,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   const [expanded, setExpanded] = useState(false)
   const [data, setData] = useState<Record<string, ParameterData>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, { message: string; dimension?: string; hint?: string }>>({})
 
   useEffect(() => {
     for (const pc of parameterChecks) {
@@ -202,10 +202,19 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
       ga4Fetch(`/api/ga4/parameters?${params}`)
         .then(res => res.json())
         .then(json => {
-          if (json.error) throw new Error(json.error)
+          if (json.error) {
+            // Carry the server's own ga4_dimension/hint through instead of
+            // re-deriving "is this actually an unregistered custom
+            // dimension" from a client-side string match on the error text
+            // — a standard field that's simply unsupported for this event
+            // (e.g. item_id on remove_from_cart) isn't a registration
+            // problem and shouldn't get the "add it in GA4 Admin" hint.
+            setErrors(prev => ({ ...prev, [key]: { message: json.error, dimension: json.ga4_dimension, hint: json.hint } }))
+            return
+          }
           setData(prev => ({ ...prev, [key]: json }))
         })
-        .catch(err => setErrors(prev => ({ ...prev, [key]: err.message })))
+        .catch(err => setErrors(prev => ({ ...prev, [key]: { message: err.message } })))
         .finally(() => setLoading(prev => ({ ...prev, [key]: false })))
     }
   }, [projectId, JSON.stringify(parameterChecks), periodDays, anchorOffset])
@@ -242,15 +251,19 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
                 <p style={{ fontSize: 12, fontWeight: 500, color: '#92400e', margin: '0 0 6px', fontFamily: 'monospace' }}>
                   {pc.event_name} › {pc.parameter_name}
                 </p>
-                <p style={{ fontSize: 11, color: '#ca8a04', margin: '0 0 6px' }}>
-                  GA4 dimension queried: <code style={{ background: '#fef9c3', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>customEvent:{pc.parameter_name}</code>
-                </p>
-                {(error.includes('400') || error.includes('INVALID') || error.includes('not found') || error.includes('Unknown')) ? (
-                  <p style={{ fontSize: 11, color: '#6b7280', margin: 0 }}>
-                    This dimension is not registered in GA4. Go to <strong>GA4 Admin → Custom definitions → Create custom dimension</strong>, scope: Event, parameter name: <code style={{ background: '#fef9c3', padding: '1px 5px', borderRadius: 3 }}>{pc.parameter_name}</code>
-                  </p>
+                {error.hint ? (
+                  <>
+                    {error.dimension && (
+                      <p style={{ fontSize: 11, color: '#ca8a04', margin: '0 0 6px' }}>
+                        GA4 dimension queried: <code style={{ background: '#fef9c3', padding: '1px 5px', borderRadius: 3, fontSize: 11 }}>{error.dimension}</code>
+                      </p>
+                    )}
+                    <p style={{ fontSize: 11, color: '#6b7280', margin: 0 }}>
+                      This dimension is not registered in GA4. Go to <strong>GA4 Admin → Custom definitions → Create custom dimension</strong>, scope: Event, parameter name: <code style={{ background: '#fef9c3', padding: '1px 5px', borderRadius: 3 }}>{pc.parameter_name}</code>
+                    </p>
+                  </>
                 ) : (
-                  <p style={{ fontSize: 11, color: '#ca8a04', margin: 0 }}>{error}</p>
+                  <p style={{ fontSize: 11, color: '#ca8a04', margin: 0 }}>{error.message}</p>
                 )}
               </div>
             )}

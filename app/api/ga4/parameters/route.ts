@@ -2,23 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
 
-// GA4 dimension name for a custom event parameter
-// Standard item dimensions use camelCase (itemName, transactionId)
-// Custom event parameters use customEvent:param_name
-const STANDARD_ITEM_DIMS: Record<string, string> = {
-  item_name:        'itemName',
-  item_id:          'itemId',
-  item_brand:       'itemBrand',
-  item_category:    'itemCategory',
-  item_variant:     'itemVariant',
-  transaction_id:   'transactionId',
-  affiliation:      'transactionId', // fallback
-  currency:         'currency',
-}
-
+// GA4 dimension name for a custom event parameter — shared with the worker
+// (src/lib/ga4/standardParams.ts) so this endpoint can't silently diverge
+// from what the worker/config-form validation consider "standard" (this
+// used to keep its own separate, drifted copy — e.g. mapping currency to a
+// dimension name GA4 doesn't have, and missing coupon entirely).
 function ga4DimName(parameterName: string): string {
-  return STANDARD_ITEM_DIMS[parameterName] ?? `customEvent:${parameterName}`
+  return GA4_STANDARD_PARAMS[parameterName] ?? `customEvent:${parameterName}`
 }
 
 interface CoverageResult {
@@ -37,8 +29,70 @@ function isEmptyDimValue(v: string | null | undefined): boolean {
 }
 
 async function getCoverage(propertyId: string, token: string, eventName: string, parameterName: string, startDate: string, endDate: string): Promise<CoverageResult> {
-  const dimName = ga4DimName(parameterName)
   const eventFilter = { filter: { fieldName: 'eventName', stringFilter: { value: eventName, matchType: 'EXACT' } } }
+  const stdDim = GA4_STANDARD_PARAMS[parameterName]
+  const stdMetric = GA4_STANDARD_METRICS[parameterName]
+
+  // Standard GA4 metrics (value, price, quantity, shipping, tax) aren't
+  // dimensions at all — there's no per-event "value" to break down, so
+  // coverage here is a coarse presence check (did this metric register
+  // anything in the period), matching how the worker treats the same
+  // standard-metric params.
+  if (stdMetric) {
+    const [totalR, metricR] = await Promise.all([
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),
+    ])
+    const total = parseInt(totalR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+    const covered = parseFloat(metricR.rows?.[0]?.metricValues?.[0]?.value ?? '0') > 0
+    return { total_events: total, events_with_value: covered ? total : 0, coverage: covered ? 1 : 0, top_values: [] }
+  }
+
+  // Item-scoped dimensions (item_id, item_name, ...) can't be combined
+  // with an event-scoped metric like eventCount — GA4 Data API rejects
+  // that combination outright ("Please remove eventCount..."), which used
+  // to surface here as a generic 400 telling the user to register a
+  // custom dimension for a standard field that was never missing, just
+  // queried with the wrong metric. Route through the item-scoped metric
+  // that matches this event instead, same as the worker.
+  if (stdDim && ITEM_SCOPED_DIMENSIONS.has(stdDim)) {
+    const itemMetric = ITEM_METRIC_BY_EVENT[eventName]
+    if (!itemMetric) {
+      throw new Error(`Coverage check not supported for item-scoped parameter "${parameterName}" on event "${eventName}" — GA4 has no matching item-level metric for this event.`)
+    }
+    // No eventName filter — the item metric is already specific to that
+    // event (e.g. itemsAddedToCart only counts add_to_cart).
+    const [totalR, emptyR, topR] = await Promise.all([
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: itemMetric }] }),
+      ga4Report(propertyId, token, {
+        dateRanges: [{ startDate, endDate }],
+        metrics: [{ name: itemMetric }],
+        dimensionFilter: { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } },
+      }),
+      ga4Report(propertyId, token, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: stdDim }],
+        metrics: [{ name: itemMetric }],
+        orderBys: [{ metric: { metricName: itemMetric }, desc: true }],
+        limit: 20,
+      }),
+    ])
+    const total = parseInt(totalR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+    const emptyCount = parseInt(emptyR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
+    const withValue = Math.max(0, total - emptyCount)
+    const coverage = total > 0 ? withValue / total : 0
+    const topValues = (topR.rows ?? [])
+      .filter((row: any) => !isEmptyDimValue(row.dimensionValues[0].value))
+      .slice(0, 5)
+      .map((row: any) => ({ value: row.dimensionValues[0].value, count: parseInt(row.metricValues[0].value ?? '0') }))
+    return { total_events: total, events_with_value: withValue, coverage, top_values: topValues }
+  }
+
+  // Event-scoped dimension — either a standard one (transactionId,
+  // currencyCode, orderCoupon) or a genuinely custom event parameter
+  // (customEvent:x). Both are compatible with the event-scoped eventCount
+  // metric.
+  const dimName = stdDim ?? `customEvent:${parameterName}`
 
   // total/emptyCount used to be derived from a `limit: 20` dimension
   // breakdown — fine for a low-cardinality parameter, but for a
