@@ -199,7 +199,15 @@ async function checkParameters(
 
       const [covC, covP] = await Promise.all([getCoverage(rangeC), getCoverage(rangeP)])
       const delta  = +(covC - covP).toFixed(1)
-      const status = covC >= 90 ? 'pass' : covC >= 70 ? 'warn' : 'fail'
+      // Coupon usage is inherently partial — most purchases don't use one,
+      // so near-100% coverage was never a realistic bar. Unlike every other
+      // parameter, this only checks the field is wired up at all (a
+      // non-trivial share of events actually carry a coupon value), not
+      // how many customers happened to use one — never scored as a hard
+      // 'fail', just a 'warn' when essentially nobody has one on record.
+      const status = parameter_name === 'coupon'
+        ? (covC >= 1 ? 'pass' : 'warn')
+        : (covC >= 90 ? 'pass' : covC >= 70 ? 'warn' : 'fail')
       const score  = status === 'pass' ? w : status === 'warn' ? Math.round(w * 0.5) : 0
 
       results.push({

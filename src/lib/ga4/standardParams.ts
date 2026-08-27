@@ -9,6 +9,10 @@ export const GA4_STANDARD_PARAMS: Record<string, string> = {
   item_name:      'itemName',
   item_brand:     'itemBrand',
   item_category:  'itemCategory',
+  item_category2: 'itemCategory2',
+  item_category3: 'itemCategory3',
+  item_category4: 'itemCategory4',
+  item_category5: 'itemCategory5',
   item_variant:   'itemVariant',
   affiliation:    'orderCoupon',
   coupon:         'orderCoupon',
@@ -31,7 +35,7 @@ export const GA4_STANDARD_METRICS: Record<string, string> = {
 // to route through itemsAddedToCart, not eventCount — shared between the
 // worker (stored daily checks) and the live parameter-coverage endpoint so
 // they can't silently diverge on which events/dimensions are handled.
-export const ITEM_SCOPED_DIMENSIONS = new Set(['itemId', 'itemName', 'itemBrand', 'itemCategory', 'itemVariant'])
+export const ITEM_SCOPED_DIMENSIONS = new Set(['itemId', 'itemName', 'itemBrand', 'itemCategory', 'itemCategory2', 'itemCategory3', 'itemCategory4', 'itemCategory5', 'itemVariant'])
 export const ITEM_METRIC_BY_EVENT: Record<string, string> = {
   view_item_list:    'itemListViewEvents',
   select_item:       'itemsClickedInList',

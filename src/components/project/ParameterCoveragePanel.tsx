@@ -21,10 +21,25 @@ interface ParameterData {
   ranges: { current: { start: string; end: string }; prev: { start: string; end: string } }
 }
 
-function CoverageBar({ value, prev }: { value: number; prev: number }) {
+// Coupon usage is inherently partial — most purchases don't use one, so
+// near-100% coverage was never a realistic bar for it. Unlike every other
+// parameter here, this only checks the field is wired up at all (some
+// non-trivial share of events actually carry a coupon value), not how
+// many customers happened to use one.
+function coverageStyle(parameterName: string, pct: number): { color: string; bg: string; border: string; label: 'Pass' | 'Warn' | 'Check' } {
+  if (parameterName === 'coupon') {
+    return pct >= 1
+      ? { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Pass' }
+      : { color: '#ca8a04', bg: '#fefce8', border: '#fde68a', label: 'Warn' }
+  }
+  if (pct >= 95) return { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', label: 'Pass' }
+  if (pct >= 80) return { color: '#ca8a04', bg: '#fefce8', border: '#fde68a', label: 'Warn' }
+  return { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', label: 'Check' }
+}
+
+function CoverageBar({ value, prev, color }: { value: number; prev: number; color: string }) {
   const pct = Math.round(value * 100)
   const prevPct = Math.round(prev * 100)
-  const color = pct >= 95 ? '#16a34a' : pct >= 80 ? '#ca8a04' : '#dc2626'
   return (
     <div>
       <div style={{ height: 6, background: 'var(--color-background-secondary)', borderRadius: 3, overflow: 'hidden', marginBottom: 3, position: 'relative' }}>
@@ -50,10 +65,7 @@ function MiniParameterCard({ data }: { data: ParameterData }) {
   const { current, prev, delta_absolute } = data
   const pct = Math.round(current.coverage * 100)
   const prevPct = Math.round(prev.coverage * 100)
-  const color = pct >= 95 ? '#16a34a' : pct >= 80 ? '#ca8a04' : '#dc2626'
-  const bg = pct >= 95 ? '#f0fdf4' : pct >= 80 ? '#fefce8' : '#fef2f2'
-  const border = pct >= 95 ? '#bbf7d0' : pct >= 80 ? '#fde68a' : '#fecaca'
-  const label = pct >= 95 ? 'Pass' : pct >= 80 ? 'Warn' : 'Check'
+  const { color, bg, border, label } = coverageStyle(data.parameter_name, pct)
   const deltaPositive = delta_absolute >= 0
   return (
     <div className="page-check-card" style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 10, padding: '12px 14px' }}>
@@ -81,12 +93,13 @@ function ParameterCard({ data }: { data: ParameterData }) {
   const { current, prev, delta_absolute, delta_relative, ranges } = data
   const pct = Math.round(current.coverage * 100)
   const prevPct = Math.round(prev.coverage * 100)
-  const color = pct >= 95 ? '#16a34a' : pct >= 80 ? '#ca8a04' : '#dc2626'
+  const { color, label } = coverageStyle(data.parameter_name, pct)
+  const isCoupon = data.parameter_name === 'coupon'
   const deltaPositive = delta_absolute >= 0
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div style={{ background: 'var(--color-background-primary)', border: `0.5px solid ${pct < 80 ? '#fecaca' : 'var(--color-border-tertiary)'}`, borderRadius: 10, overflow: 'hidden' }}>
+    <div style={{ background: 'var(--color-background-primary)', border: `0.5px solid ${label === 'Check' ? '#fecaca' : 'var(--color-border-tertiary)'}`, borderRadius: 10, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 16px', borderBottom: expanded ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
@@ -117,7 +130,7 @@ function ParameterCard({ data }: { data: ParameterData }) {
         </div>
 
         {/* Coverage bar */}
-        <CoverageBar value={current.coverage} prev={prev.coverage} />
+        <CoverageBar value={current.coverage} prev={prev.coverage} color={color} />
 
         {/* Period labels */}
         <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
@@ -133,9 +146,17 @@ function ParameterCard({ data }: { data: ParameterData }) {
 
         {/* Status badge */}
         <div style={{ marginTop: 8 }}>
-          {pct >= 95 && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '0.5px solid #bbf7d0' }}>✓ Excellent coverage</span>}
-          {pct >= 80 && pct < 95 && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#fefce8', color: '#ca8a04', border: '0.5px solid #fef08a' }}>⚠ Coverage below 95%</span>}
-          {pct < 80 && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#fef2f2', color: '#dc2626', border: '0.5px solid #fecaca' }}>✕ Low coverage — check implementation</span>}
+          {isCoupon ? (
+            label === 'Pass'
+              ? <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '0.5px solid #bbf7d0' }}>✓ Coupon parameter is present</span>
+              : <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#fefce8', color: '#ca8a04', border: '0.5px solid #fef08a' }}>⚠ No coupon usage detected — verify the coupon parameter is wired up</span>
+          ) : (
+            <>
+              {label === 'Pass' && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#f0fdf4', color: '#16a34a', border: '0.5px solid #bbf7d0' }}>✓ Excellent coverage</span>}
+              {label === 'Warn' && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#fefce8', color: '#ca8a04', border: '0.5px solid #fef08a' }}>⚠ Coverage below 95%</span>}
+              {label === 'Check' && <span style={{ fontSize: 10, padding: '1px 8px', borderRadius: 20, background: '#fef2f2', color: '#dc2626', border: '0.5px solid #fecaca' }}>✕ Low coverage — check implementation</span>}
+            </>
+          )}
         </div>
       </div>
 
