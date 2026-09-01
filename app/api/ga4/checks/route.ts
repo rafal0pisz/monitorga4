@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
   ]
 
   try {
-    // 8 separate calls — one period per call, no ambiguity
-    const [chC, chP, smC, smP, engC, engP, coC, coP] = await Promise.all([
+    // 10 separate calls — one period per call, no ambiguity
+    const [chC, chP, smC, smP, engC, engP, coC, coP, hostC, hostP] = await Promise.all([
 
       ga4Post(propertyId, token, {
         dateRanges: [current],
@@ -166,11 +166,28 @@ export async function POST(req: NextRequest) {
         dimensions: [{ name: 'country' }],
         metrics:    [{ name: 'sessions' }], limit: 100,
       }).then(d => d.rows ?? []),
+
+      // hostName — the actual domain a hit was collected on. Used to catch
+      // a brand-new domain/subdomain sending real traffic that wasn't
+      // there in the previous period (a stolen/cloned tag, a forgotten
+      // staging/dev domain going live, a misconfigured cross-domain setup).
+      ga4Post(propertyId, token, {
+        dateRanges: [current],
+        dimensions: [{ name: 'hostName' }],
+        metrics:    [{ name: 'sessions' }], limit: 100,
+      }).then(d => d.rows ?? []),
+
+      ga4Post(propertyId, token, {
+        dateRanges: [prev],
+        dimensions: [{ name: 'hostName' }],
+        metrics:    [{ name: 'sessions' }], limit: 100,
+      }).then(d => d.rows ?? []),
     ])
 
     const checks: CheckResult[] = [
       ...trafficShareChecks(smC, smP, label),
       channelDistributionShift(chC, chP, label),
+      newHostnameCheck(hostC, hostP, label),
       ...engagementChecks(engC, engP, label),
       ...usersChecks(coC, coP, engC, engP, chC),
     ]
@@ -304,6 +321,31 @@ function channelDistributionShift(chC: any[], chP: any[], label: string): CheckR
     prevLabel: '',
     deltaLabel: maxShift.c ? `${maxShift.c}: ${sign(maxShift.δ)}${maxShift.δ}pp` : '—',
     detail: maxShift.c ? `Largest: ${maxShift.c}` : undefined,
+  }
+}
+
+// Sessions this new hostname needs in the current period before it's
+// flagged — filters out one-off test/dev hits so this only fires on
+// genuinely new, meaningful traffic (a hijacked/cloned tag, a forgotten
+// staging domain going live, a broken cross-domain setup), not noise.
+const NEW_HOSTNAME_MIN_SESSIONS = 100
+
+function newHostnameCheck(hostC: any[], hostP: any[], label: string): CheckResult {
+  const prevHosts = new Set(hostP.map(dim))
+  const newHosts = hostC
+    .filter(r => !prevHosts.has(dim(r)) && m0(r) >= NEW_HOSTNAME_MIN_SESSIONS)
+    .map(r => ({ host: dim(r), sessions: m0(r) }))
+    .sort((a, b) => b.sessions - a.sessions)
+
+  return {
+    id: 'new_hostname', section: 'traffic',
+    label: 'New hostname',
+    description: `Flags any hostname with ${NEW_HOSTNAME_MIN_SESSIONS}+ sessions ${label} that wasn't seen in the previous period — a sign of a hijacked/cloned tag, a staging/dev domain going live, or a broken cross-domain setup.`,
+    status: newHosts.length === 0 ? 'pass' : 'check',
+    valueLabel: newHosts.length === 0 ? 'None' : `${newHosts.length} new`,
+    prevLabel: '',
+    deltaLabel: newHosts.length === 0 ? 'All clear' : newHosts.map(h => h.host).join(', '),
+    detail: newHosts.length > 0 ? newHosts.map(h => `${h.host}: ${h.sessions.toLocaleString('en')} sessions`).join(' · ') : undefined,
   }
 }
 
