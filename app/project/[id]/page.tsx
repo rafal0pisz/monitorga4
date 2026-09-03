@@ -78,10 +78,13 @@ export default async function ProjectPage({
   const { id }       = await params
   const { period, ran, anchor } = await searchParams
   const periodDays = Number(period) || 7
-  // '1' shifts every live panel's window back by one extra day (so it ends
-  // 2 days ago instead of yesterday) — a manual escape hatch for when
-  // yesterday's GA4 data is still processing and looks like a false anomaly.
-  const anchorOffset = anchor === '1' ? 1 : 0
+  // Shifts every live panel's window back by one extra day (so it ends 2
+  // days ago instead of yesterday) — checked by default, since yesterday's
+  // GA4 data is often still incomplete/processing and would otherwise look
+  // like a false anomaly. '0' is the explicit opt-out (unchecking the box
+  // sets anchor=0 rather than just removing it, so the choice persists in
+  // the URL instead of reverting to the checked default).
+  const anchorOffset = anchor === '0' ? 0 : 1
   // Bumped by RunNowButton after a manual run completes — used as part of
   // the live panels' React key below so they remount and refetch fresh GA4
   // data instead of silently keeping whatever they'd already fetched
@@ -169,6 +172,9 @@ export default async function ProjectPage({
                   : 'No sampling. 100% of data read.'}
               </div>
             )}
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              "Exclude yesterday" is checked by default below — GA4 often doesn't have complete data for yesterday yet.
+            </div>
           </div>
           {latestRun?.score_total != null && (
             <div style={{ textAlign: 'right', flexShrink: 0 }}>

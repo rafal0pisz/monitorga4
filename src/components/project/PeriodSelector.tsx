@@ -31,9 +31,13 @@ export default function PeriodSelector({ current, excludeYesterday }: { current:
   // check runs early in the day — this lets a user shift the whole window
   // back by one extra day (e.g. Period 7d becomes 8 days ago .. 2 days ago
   // instead of ending on yesterday) to verify against fully-settled data.
+  // Checked by default (page.tsx treats a missing/'1' anchor as checked),
+  // so unchecking has to explicitly write anchor=0 — removing the param
+  // entirely would just fall back to the checked default instead of
+  // persisting the opt-out.
   function setExcludeYesterday(v: boolean) {
     const params = new URLSearchParams(searchParams.toString())
-    if (v) params.set('anchor', '1'); else params.delete('anchor')
+    if (v) params.delete('anchor'); else params.set('anchor', '0')
     router.push(`${pathname}?${params.toString()}`)
   }
 
