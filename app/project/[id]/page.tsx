@@ -10,23 +10,9 @@ import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import ScoreTrendChart from '@/components/project/ScoreTrendChart'
 import AccountMismatch from '@/components/project/AccountMismatch'
-import { CORE_CHECK_SECTION } from '@/lib/ga4/checkLabels'
-import { formatCoreCheckForPanel } from '@/lib/ga4/coreCheckDisplay'
 import { scoreColor } from '@/types'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
-type SectionId = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
-
-// Worker saves results with column check_key (not check_id)
-function storedSection(checkKey: string | null | undefined): SectionId | null {
-  if (!checkKey) return null
-  if (CORE_CHECK_SECTION[checkKey]) return CORE_CHECK_SECTION[checkKey]
-  if (['purchase_duplicates','ecommerce_events','ecommerce_presence'].includes(checkKey)) return 'ecommerce'
-  if (checkKey.startsWith('ecom_')) return 'ecommerce'
-  if (checkKey.startsWith('evt_')||checkKey.startsWith('event_')||checkKey.startsWith('custom_event')||checkKey.includes('_presence')) return 'custom_events'
-  if (checkKey === 'custom_events_check') return 'custom_events'
-  return 'parameters'
-}
 
 const SECTION_META = {
   ecommerce:     { label: 'Ecommerce',     accent: '#f97316' },
@@ -120,10 +106,6 @@ export default async function ProjectPage({
   const runs = (runsRaw ?? []) as RunRow[]
   const latestRun = runs[0] ?? null
 
-  const { data: storedResults } = latestRun
-    ? await admin.from('dqs_results').select('*').eq('run_id', latestRun.id)
-    : { data: [] }
-
   // Independent queries — same project, no data dependency — run as one
   // round trip instead of two sequential ones.
   const [{ data: ecomRaw }, { data: paramRaw }] = await Promise.all([
@@ -136,20 +118,7 @@ export default async function ProjectPage({
   const parameterChecks: { event_name: string; parameter_name: string }[] =
     paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
 
-  const bySection: Record<SectionId, any[]> = { traffic: [], engagement: [], users: [], ecommerce: [], custom_events: [], parameters: [] }
-  for (const r of storedResults ?? []) {
-    try {
-      // Worker uses check_key column
-      const s = storedSection(r.check_key)
-      if (s) bySection[s].push(r)
-    } catch { /* skip malformed rows */ }
-  }
-
   const expectedEvents: string[] = Array.isArray(project.expected_events) ? project.expected_events : []
-
-  const coreExtraChecks = [...bySection.traffic, ...bySection.engagement, ...bySection.users]
-    .map(r => formatCoreCheckForPanel(r))
-    .filter((c): c is NonNullable<typeof c> => c != null)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
@@ -213,11 +182,17 @@ export default async function ProjectPage({
         {/* Score sparkline */}
         {runs.length > 1 && <ScoreTrendChart runs={runs} alertThreshold={project.alert_threshold} />}
 
-        {/* Traffic Source / Engagement / Users — live on-demand checks plus
-            the 9 always-on checks from the last daily run, merged into the
-            same sections rather than shown as a separate duplicate block. */}
+        {/* Traffic Source / Engagement / Users — fully live/on-demand, same
+            as Ecommerce/Custom Events/Parameters below. Used to also merge
+            in 9 "core" checks from the last stored daily run, but those were
+            frozen at yesterday-vs-last-week regardless of Period or the
+            "Exclude yesterday" toggle — confusing next to cards that did
+            react. Every one of those 9 concepts now has a live equivalent
+            here instead (built to match the worker's own thresholds), so
+            the stored version is no longer shown. The daily run itself is
+            unaffected — still computed and stored for scoring/history/alerts. */}
         {project.ga4_property_id
-          ? <LiveChecksPanel key={liveKey} projectId={id} period={periodDays} anchorOffset={anchorOffset} extraChecks={coreExtraChecks} />
+          ? <LiveChecksPanel key={liveKey} projectId={id} period={periodDays} anchorOffset={anchorOffset} />
           : <div style={{ padding: '12px 16px', borderRadius: 10, marginBottom: 24, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 13, color: '#92400e' }}>No GA4 property configured. <Link href={`/project/${id}/config`} style={{ color: '#16a34a' }}>Open Settings →</Link></div>
         }
 

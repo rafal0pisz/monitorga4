@@ -272,8 +272,8 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       // batch insert for the day fail (Postgres rejects the entire insert
       // on one constraint violation), silently wiping every check for that
       // run, not just this one. The "not configured" treatment is display
-      // -only: formatCoreCheckForPanel() overrides the badge to "Skip"
-      // based on value.not_configured instead of the stored status.
+      // -only, driven off value.not_configured (the live self-referral
+      // check on the project page does the same — see /api/ga4/checks).
       results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
     } else {
       try {

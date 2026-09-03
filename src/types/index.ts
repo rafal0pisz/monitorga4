@@ -4,8 +4,9 @@
 // ============================================================
 
 // Matches the dqs_results.status column's actual constraint — 'skip' is a
-// display-only concept (see PanelCheck in coreCheckDisplay.ts), it must
-// never be written here or the whole day's batch insert fails.
+// display-only concept used by the live checks panel (e.g. self-referral
+// when no domain is configured), it must never be written here or the
+// whole day's batch insert fails.
 export type CheckStatus = 'pass' | 'warn' | 'fail'
 export type RunStatus = 'completed' | 'failed' | 'running'
 export type AuthType = 'service_account' | 'oauth'

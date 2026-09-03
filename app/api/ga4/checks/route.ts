@@ -6,7 +6,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 export const runtime = 'nodejs'
 
 type Period = 1 | 7 | 14 | 30
-type Status = 'pass' | 'warn' | 'check'
+type Status = 'pass' | 'warn' | 'check' | 'skip'
 
 export interface CheckResult {
   id: string
@@ -63,6 +63,7 @@ function rowsByDim(rows: any[]): Record<string, any> {
 }
 
 const r1   = (n: number) => Math.round(n * 10) / 10
+const r2   = (n: number) => Math.round(n * 100) / 100
 const sign = (n: number) => n >= 0 ? '+' : ''
 const ppΔ  = (c: number, p: number) => r1(c - p)
 const pctΔ = (c: number, p: number) => p === 0 ? (c > 0 ? 100 : 0) : Math.round((c - p) / Math.abs(p) * 100)
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient()
   const { data: project } = await admin
     .from('projects')
-    .select('ga4_property_id, owner_id')
+    .select('ga4_property_id, owner_id, own_domain')
     .eq('id', projectId)
     .single()
 
@@ -110,11 +111,12 @@ export async function POST(req: NextRequest) {
     { name: 'sessions' },                  // 4
     { name: 'newUsers' },                  // 5
     { name: 'totalUsers' },               // 6
+    { name: 'conversions' },              // 7
   ]
 
   try {
-    // 10 separate calls — one period per call, no ambiguity
-    const [chC, chP, smC, smP, engC, engP, coC, coP, hostC, hostP] = await Promise.all([
+    // 14 separate calls — one period per call, no ambiguity
+    const [chC, chP, smC, smP, engC, engP, coC, coP, hostC, hostP, ptC, ptP, hrC, hrP] = await Promise.all([
 
       ga4Post(propertyId, token, {
         dateRanges: [current],
@@ -182,14 +184,46 @@ export async function POST(req: NextRequest) {
         dimensions: [{ name: 'hostName' }],
         metrics:    [{ name: 'sessions' }], limit: 100,
       }).then(d => d.rows ?? []),
+
+      // pageTitle — used for the "Page title coverage" check (missing/blank
+      // page titles hurt readability of Behavior reports).
+      ga4Post(propertyId, token, {
+        dateRanges: [current],
+        dimensions: [{ name: 'pageTitle' }],
+        metrics:    [{ name: 'sessions' }], limit: 100,
+      }).then(d => d.rows ?? []),
+
+      ga4Post(propertyId, token, {
+        dateRanges: [prev],
+        dimensions: [{ name: 'pageTitle' }],
+        metrics:    [{ name: 'sessions' }], limit: 100,
+      }).then(d => d.rows ?? []),
+
+      // hour — used for the "Night traffic spike" bot-signal check.
+      ga4Post(propertyId, token, {
+        dateRanges: [current],
+        dimensions: [{ name: 'hour' }],
+        metrics:    [{ name: 'sessions' }], limit: 24,
+      }).then(d => d.rows ?? []),
+
+      ga4Post(propertyId, token, {
+        dateRanges: [prev],
+        dimensions: [{ name: 'hour' }],
+        metrics:    [{ name: 'sessions' }], limit: 24,
+      }).then(d => d.rows ?? []),
     ])
 
     const checks: CheckResult[] = [
+      selfReferralCheck(smC, smP, project.own_domain, label),
       ...trafficShareChecks(smC, smP, label),
       channelDistributionShift(chC, chP, label),
       newHostnameCheck(hostC, hostP, label),
       ...engagementChecks(engC, engP, label),
+      conversionRateCheck(engC, engP, label),
+      pageTitleNullCheck(ptC, ptP, label),
+      sessionsWithoutEngagementCheck(engC, engP, label),
       ...usersChecks(coC, coP, engC, engP, chC),
+      botTrafficNightCheck(hrC, hrP, label),
     ]
 
     return NextResponse.json({ checks, comparisonLabel: label })
@@ -209,6 +243,42 @@ function toSMRows(rows: any[]): SMRow[] {
     medium: r.dimensionValues?.[1]?.value ?? '',
     sessions: m0(r),
   }))
+}
+
+// Derived from the same sessionSource/sessionMedium rows as
+// trafficShareChecks below (summed across all mediums for a given source,
+// same as the worker's own single-dimension sessionSource query) — no
+// extra GA4 call needed. Uses the worker's own thresholds (absolute
+// share, not a delta) so this reads identically to the stored daily
+// version, just live/Period-reactive instead of frozen at yesterday.
+function selfReferralCheck(smC: any[], smP: any[], ownDomain: string | null | undefined, label: string): CheckResult {
+  const description = 'Share of sessions where your own domain shows up as the referrer — a sign of broken cross-domain or UTM tracking.'
+  if (!ownDomain) {
+    return {
+      id: 'self_referral', section: 'traffic',
+      label: 'Self-referral',
+      description,
+      status: 'skip',
+      valueLabel: 'Not configured', prevLabel: '', deltaLabel: '',
+    }
+  }
+  const rowsC = toSMRows(smC)
+  const rowsP = toSMRows(smP)
+  const totC = rowsC.reduce((s, r) => s + r.sessions, 0)
+  const totP = rowsP.reduce((s, r) => s + r.sessions, 0)
+  const selfC = rowsC.filter(r => r.source.includes(ownDomain)).reduce((s, r) => s + r.sessions, 0)
+  const selfP = rowsP.filter(r => r.source.includes(ownDomain)).reduce((s, r) => s + r.sessions, 0)
+  const ratioC = totC > 0 ? selfC / totC * 100 : 0
+  const ratioP = totP > 0 ? selfP / totP * 100 : 0
+  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  return {
+    id: 'self_referral', section: 'traffic',
+    label: 'Self-referral',
+    description,
+    status: ratioC === 0 ? 'pass' : ratioC < 2 ? 'warn' : 'check',
+    valueLabel: `${r2(ratioC)}%`, prevLabel: `${r2(ratioP)}%`,
+    deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
+  }
 }
 
 function shareOf(rows: SMRow[], total: number, predicate: (r: SMRow) => boolean): number {
@@ -401,6 +471,71 @@ function engagementChecks(engC: any, engP: any, label: string): CheckResult[] {
   ]
 }
 
+// Reuses the same combined metrics-only query as engagementChecks above
+// (index 4 = sessions, 7 = conversions) — no extra GA4 call needed.
+// Thresholds match the worker's stored daily version exactly.
+function conversionRateCheck(engC: any, engP: any, label: string): CheckResult {
+  const sessC = mi(engC, 4), convC = mi(engC, 7)
+  const sessP = mi(engP, 4), convP = mi(engP, 7)
+  const crC = sessC > 0 ? convC / sessC * 100 : 0
+  const crP = sessP > 0 ? convP / sessP * 100 : 0
+  const delta = crP > 0 ? ((crC - crP) / crP) * 100 : 0
+  return {
+    id: 'conversion_rate', section: 'engagement',
+    label: 'Conversion rate',
+    description: `Change in session conversion rate ${label}.`,
+    status: stDelta(delta, 25, 40),
+    valueLabel: `${r2(crC)}%`, prevLabel: `${r2(crP)}%`,
+    deltaLabel: `${sign(r1(delta))}${r1(delta)}%`,
+  }
+}
+
+// pageTitle rows: a missing/blank title comes back as either no dimension
+// value at all or the literal "(not set)". Status is an absolute-value
+// threshold (not a delta) — same as the worker's stored version.
+function pageTitleNullCheck(ptC: any[], ptP: any[], label: string): CheckResult {
+  const isNullTitle = (r: any) => !dim(r) || dim(r) === '(not set)'
+  const totalC = ptC.reduce((s, r) => s + m0(r), 0)
+  const totalP = ptP.reduce((s, r) => s + m0(r), 0)
+  const nullC = ptC.filter(isNullTitle).reduce((s, r) => s + m0(r), 0)
+  const nullP = ptP.filter(isNullTitle).reduce((s, r) => s + m0(r), 0)
+  const ratioC = totalC > 0 ? nullC / totalC * 100 : 0
+  const ratioP = totalP > 0 ? nullP / totalP * 100 : 0
+  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  return {
+    id: 'page_title_null', section: 'engagement',
+    label: 'Page title coverage',
+    description: 'Share of sessions with a missing or blank page title.',
+    status: ratioC < 2 ? 'pass' : ratioC < 10 ? 'warn' : 'check',
+    valueLabel: `${r2(ratioC)}%`, prevLabel: `${r2(ratioP)}%`,
+    deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
+  }
+}
+
+// Proxy for "sessions with no engagement": estimated empty sessions =
+// sessions × bounceRate, same approximation the worker uses (GA4 doesn't
+// expose an "engaged sessions" count directly at this granularity). Reuses
+// engagementChecks' combined query (index 0 = bounceRate, 4 = sessions) —
+// no extra GA4 call needed. Status is an absolute-value threshold, not a
+// delta — same as the worker's stored version.
+function sessionsWithoutEngagementCheck(engC: any, engP: any, label: string): CheckResult {
+  const sessC = mi(engC, 4), bounceC = mi(engC, 0)
+  const sessP = mi(engP, 4), bounceP = mi(engP, 0)
+  const emptyC = Math.round(sessC * bounceC)
+  const emptyP = Math.round(sessP * bounceP)
+  const ratioC = sessC > 0 ? emptyC / sessC * 100 : 0
+  const ratioP = sessP > 0 ? emptyP / sessP * 100 : 0
+  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  return {
+    id: 'session_no_events', section: 'engagement',
+    label: 'Sessions without engagement',
+    description: 'Estimated sessions with no engagement — a proxy for missing event tracking.',
+    status: ratioC < 5 ? 'pass' : ratioC < 15 ? 'warn' : 'check',
+    valueLabel: `${r1(ratioC)}%`, prevLabel: `${r1(ratioP)}%`,
+    deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
+  }
+}
+
 // ─── USERS ───────────────────────────────────────────────────────────────────
 
 function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): CheckResult[] {
@@ -471,4 +606,28 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
       detail: triggered.length ? triggered.join(' · ') : 'No signals triggered',
     },
   ]
+}
+
+// Night-time (0–5h) traffic share — a common bot signal (real visitors
+// cluster around normal waking hours; bots don't). Only a rise is treated
+// as a problem — a drop in night share is never itself suspicious — same
+// as the worker's stored version.
+const NIGHT_HOURS = new Set(['0', '1', '2', '3', '4', '5'])
+
+function botTrafficNightCheck(hrC: any[], hrP: any[], label: string): CheckResult {
+  const totalC = hrC.reduce((s, r) => s + m0(r), 0)
+  const totalP = hrP.reduce((s, r) => s + m0(r), 0)
+  const nightC = hrC.filter(r => NIGHT_HOURS.has(dim(r))).reduce((s, r) => s + m0(r), 0)
+  const nightP = hrP.filter(r => NIGHT_HOURS.has(dim(r))).reduce((s, r) => s + m0(r), 0)
+  const ratioC = totalC > 0 ? nightC / totalC * 100 : 0
+  const ratioP = totalP > 0 ? nightP / totalP * 100 : 0
+  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  return {
+    id: 'bot_traffic_night', section: 'users',
+    label: 'Night traffic spike',
+    description: `Change in night-time (0–5h) traffic share ${label} — a common bot signal.`,
+    status: delta <= 50 ? 'pass' : delta <= 100 ? 'warn' : 'check',
+    valueLabel: `${r1(ratioC)}%`, prevLabel: `${r1(ratioP)}%`,
+    deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
+  }
 }
