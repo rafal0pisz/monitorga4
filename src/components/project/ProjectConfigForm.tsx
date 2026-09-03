@@ -7,10 +7,22 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 import { parseEmailList } from '@/lib/email/shared'
+import { checkLabel } from '@/lib/ga4/checkLabels'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
+
+// The 10 core checks that always run for every project, regardless of
+// config — matches the worker's check_key values exactly (see
+// app/api/worker/run/route.ts). Custom events, ecommerce, and parameter
+// checks are added dynamically below since they depend on what this
+// project has configured.
+const CORE_CRITICAL_CHECKS = [
+  'expected_events', 'self_referral', 'direct_traffic_spike', 'bounce_rate_anomaly',
+  'conversion_rate', 'page_title_null', 'bot_traffic_night', 'purchase_duplicates',
+  'geo_anomaly', 'session_no_events',
+]
 
 interface CustomEvent { event_name: string; check_type: string; is_enabled: boolean }
 interface ParamCheck  { event_name: string; parameter_name: string }
@@ -25,6 +37,8 @@ interface Props {
     expected_events?: string[] | null
     alert_threshold?: number | null
     alert_email?: string | null
+    critical_alert_email?: string | null
+    critical_alert_checks?: string[] | null
     status?: string | null
     auto_run?: boolean | null
   }
@@ -46,6 +60,8 @@ export default function ProjectConfigForm({ project }: Props) {
   const [ownDomain,   setOwnDomain]   = useState(project.own_domain ?? '')
   const [alertEmails, setAlertEmails] = useState<string[]>(() => parseEmailList(project.alert_email))
   const [alertThresh, setAlertThresh] = useState(String(project.alert_threshold ?? 70))
+  const [criticalAlertEmails, setCriticalAlertEmails] = useState<string[]>(() => parseEmailList(project.critical_alert_email))
+  const [criticalChecks, setCriticalChecks] = useState<Set<string>>(() => new Set(project.critical_alert_checks ?? []))
   const [status,      setStatus]      = useState(project.status ?? 'active')
   const [autoRun,     setAutoRun]     = useState(project.auto_run ?? false)
 
@@ -58,6 +74,8 @@ export default function ProjectConfigForm({ project }: Props) {
   const [newParamName,setNewParamName]= useState('')
   const [newAlertEmail, setNewAlertEmail] = useState('')
   const [alertEmailError, setAlertEmailError] = useState<string | null>(null)
+  const [newCriticalAlertEmail, setNewCriticalAlertEmail] = useState('')
+  const [criticalAlertEmailError, setCriticalAlertEmailError] = useState<string | null>(null)
 
   // null = not loaded yet (or couldn't load) — validation is skipped rather
   // than blocking adds when we can't confirm either way.
@@ -164,6 +182,36 @@ export default function ProjectConfigForm({ project }: Props) {
     setAlertEmailError(null)
   }
 
+  function addCriticalAlertEmail() {
+    const e = newCriticalAlertEmail.trim()
+    if (!e) return
+    if (!EMAIL_RE.test(e)) { setCriticalAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
+    if (criticalAlertEmails.includes(e)) { setNewCriticalAlertEmail(''); setCriticalAlertEmailError(null); return }
+    setCriticalAlertEmails(prev => [...prev, e])
+    setNewCriticalAlertEmail('')
+    setCriticalAlertEmailError(null)
+  }
+
+  function toggleCriticalCheck(key: string) {
+    setCriticalChecks(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  // Every check this project could possibly trigger today — core checks
+  // (always present) plus whatever's currently configured. Recomputed from
+  // live form state (not the initial project prop) so removing a custom
+  // event/parameter immediately drops it from the list instead of leaving
+  // a stale, unselectable-but-still-saved entry.
+  const criticalCheckOptions: { key: string; label: string }[] = [
+    ...CORE_CRITICAL_CHECKS.map(key => ({ key, label: checkLabel(key) })),
+    ...(ecomEnabled.size > 0 ? [{ key: 'ecommerce_events', label: 'Ecommerce events' }] : []),
+    ...customEvents.filter(e => e.is_enabled).map(e => ({ key: `custom_event_${e.event_name}`, label: `Custom event: ${e.event_name}` })),
+    ...params.map(p => ({ key: `param_${p.event_name}_${p.parameter_name}`, label: `Parameter: ${p.event_name}.${p.parameter_name}` })),
+  ]
+
   async function openSuggestions() {
     setShowSuggestions(true)
     if (discovered !== null || discoverLoading || !project.ga4_property_id) return
@@ -252,12 +300,20 @@ export default function ProjectConfigForm({ project }: Props) {
       const pidClean = propertyId.startsWith('properties/')
         ? propertyId : propertyId ? `properties/${propertyId.replace(/\D/g, '')}` : ''
 
+      // Only keep critical-alert selections that still refer to a check
+      // this project can actually trigger — a custom event or parameter
+      // removed above shouldn't leave a stale, unselectable check_key saved.
+      const validCriticalKeys = new Set(criticalCheckOptions.map(o => o.key))
+      const prunedCriticalChecks = [...criticalChecks].filter(k => validCriticalKeys.has(k))
+
       const { error: projErr } = await supabase.from('projects').update({
         name: name.trim(),
         ga4_property_id: pidClean || null,
         own_domain: ownDomain.trim() || null,
         alert_email: alertEmails.length > 0 ? alertEmails.join(', ') : null,
         alert_threshold: Number(alertThresh) || 70,
+        critical_alert_email: criticalAlertEmails.length > 0 ? criticalAlertEmails.join(', ') : null,
+        critical_alert_checks: prunedCriticalChecks,
         status,
         auto_run: autoRun,
         expected_events: customEvents.filter(e => e.is_enabled).map(e => e.event_name),
@@ -656,6 +712,68 @@ export default function ProjectConfigForm({ project }: Props) {
               <label style={lbl}>Alert threshold (score)</label>
               <input value={alertThresh} onChange={e => setAlertThresh(e.target.value)} type="number" min="0" max="100" style={inp} />
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── CRITICAL METRIC ALERT ────────────────────────────────────────── */}
+      <div style={card}>
+        <SectionHeader id="critical_alert" title="Critical Metric Alert" subtitle="A separate alert that fires only when specific metrics you pick go Warn or Fail" count={criticalChecks.size} />
+        {openSection === 'critical_alert' && (
+          <div style={{ padding: 18 }}>
+            <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '0 0 16px' }}>
+              This is in addition to the Email Alert above, which fires on the overall score. Pick specific metrics below — this alert goes out to its own address whenever any of them shows Warn or Fail, regardless of the overall score.
+            </p>
+            <div style={{ marginBottom: 16 }}>
+              <label style={lbl}>Critical alert email(s)</label>
+              {criticalAlertEmails.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                  {criticalAlertEmails.map((e, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
+                      <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e}</span>
+                      <button onClick={() => setCriticalAlertEmails(prev => prev.filter((_, j) => j !== i))}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={newCriticalAlertEmail} onChange={e => { setNewCriticalAlertEmail(e.target.value); setCriticalAlertEmailError(null) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCriticalAlertEmail() } }}
+                  placeholder="lead@company.com" type="email" style={{ ...inp, flex: 1 }} />
+                <button onClick={addCriticalAlertEmail}
+                  style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
+                  Add
+                </button>
+              </div>
+              {criticalAlertEmailError && <p style={{ fontSize: 11, color: '#dc2626', margin: '4px 0 0' }}>{criticalAlertEmailError}</p>}
+            </div>
+
+            <label style={lbl}>Metrics that trigger this alert</label>
+            {criticalCheckOptions.length === 0 ? (
+              <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>No metrics available yet.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {criticalCheckOptions.map(opt => {
+                  const checked = criticalChecks.has(opt.key)
+                  return (
+                    <label key={opt.key} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                      border: `0.5px solid ${checked ? '#fecaca' : 'var(--color-border-tertiary)'}`,
+                      backgroundColor: checked ? '#fef2f2' : 'var(--color-background-secondary)',
+                    }}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleCriticalCheck(opt.key)} style={{ accentColor: '#dc2626' }} />
+                      <span style={{ fontSize: 13, color: checked ? '#dc2626' : 'var(--color-text-primary)' }}>{opt.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            {criticalChecks.size > 0 && criticalAlertEmails.length === 0 && (
+              <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 8, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 11.5, color: '#854d0e' }}>
+                ⚠ Add at least one email above — metrics are selected but there's nowhere to send this alert yet.
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -40,6 +40,8 @@ export interface Project {
   expected_events: string[]
   alert_threshold: number
   alert_email: string | null // comma-separated list — see parseEmailList()
+  critical_alert_email?: string | null // comma-separated list — see parseEmailList()
+  critical_alert_checks?: string[] | null // check_keys that trigger the critical alert on warn/fail
   share_token: string
   status: ProjectStatus
   auto_run?: boolean | null

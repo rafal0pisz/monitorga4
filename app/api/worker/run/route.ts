@@ -7,6 +7,7 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
+import { renderCriticalAlertEmail } from '@/lib/email/criticalAlert'
 import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import { parseEmailList } from '@/lib/email/shared'
 import type { Project, CheckResult } from '@/types'
@@ -899,6 +900,40 @@ async function processProject(
             passingLabels: passing.slice(0, 10).map(r => r.check_key),
           }),
         })
+      }
+    }
+
+    // Critical metric alert — a second, separate alert channel, independent
+    // of the score threshold above. Fires only when one of the specific
+    // checks hand-picked in project settings (core, custom events,
+    // ecommerce, parameters) shows warn/fail, so a stakeholder who only
+    // cares about a handful of metrics isn't stuck watching the overall
+    // score to notice a problem in just those.
+    const criticalAlertEmails = parseEmailList(project.critical_alert_email)
+    const criticalCheckKeys = new Set(project.critical_alert_checks ?? [])
+    if (criticalAlertEmails.length > 0 && criticalCheckKeys.size > 0) {
+      const criticalIssues = allResults
+        .filter(r => criticalCheckKeys.has(r.check_key) && (r.status === 'fail' || r.status === 'warn'))
+        .map(r => ({ checkKey: r.check_key, status: r.status as 'fail' | 'warn', message: r.message }))
+
+      if (criticalIssues.length > 0) {
+        const { data: lastCriticalAlert } = await supabase.from('critical_alert_log')
+          .select('sent_at').eq('project_id', project.id)
+          .order('sent_at', { ascending: false }).limit(1).single()
+        const lastCriticalDate = lastCriticalAlert?.sent_at ? new Date(lastCriticalAlert.sent_at).toISOString().split('T')[0] : null
+        if (lastCriticalDate !== runDate) {
+          await supabase.from('critical_alert_log').insert({ project_id: project.id, run_id: run.id })
+          await sendEmail({
+            to: criticalAlertEmails,
+            ...renderCriticalAlertEmail({
+              projectId: project.id,
+              projectName: project.name,
+              shareToken: project.share_token,
+              dataDate: checkedDate,
+              issues: criticalIssues,
+            }),
+          })
+        }
       }
     }
 
