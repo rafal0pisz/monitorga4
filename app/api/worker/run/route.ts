@@ -83,24 +83,31 @@ const WEIGHTS: Record<string, number> = {
 // GA4 Data API helper
 // ============================================================
 // ============================================================
-// Zakresy dat dla checków porównawczych (current vs prev): zawsze 1 dzień
-// (wczoraj) vs ten sam dzień tydzień wcześniej — niezależnie od okresu
+// Zakresy dat dla checków porównawczych (current vs prev): zawsze 2 dni
+// wstecz vs ten sam dzień tydzień wcześniej — niezależnie od okresu
 // wybranego w Period selectorze na ekranie. To jest jedyne co faktycznie
 // trafia do dqs_runs/dqs_results (i napędza score/trend/alerty mailowe),
 // żeby historia była spójna bez względu na to, kto/co odpalił run i co
 // akurat było zaznaczone w UI. Widoki live (Traffic/Engagement/Users/
 // Events/Parameters, patrz /api/ga4/checks i /api/ga4/events) reagują na
 // Period osobno, nigdy nie nadpisując tej historii.
+//
+// -2 dni, nie -1 (wczoraj): to jest automatyczny, bezobsługowy przebieg —
+// nie ma tu użytkownika, który mógłby zaznaczyć "Exclude yesterday" tak
+// jak w live UI, gdy dane za wczoraj są jeszcze niekompletne/przetwarzane
+// przez GA4. Domyślne pomijanie wczoraj tutaj jest więc na stałe, nie
+// opcjonalne — codzienny automatyczny run zawsze sprawdza dane sprzed
+// 2 dni, o które GA4 zdążyło się już w pełni "domknąć".
 // ============================================================
 function getDailyRanges() {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
   const today = new Date()
 
-  const yday     = new Date(today); yday.setDate(today.getDate() - 1)
-  const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 8)
+  const checkedDate = new Date(today); checkedDate.setDate(today.getDate() - 2)
+  const lastWeek     = new Date(today); lastWeek.setDate(today.getDate() - 9)
 
   return {
-    current: { startDate: fmt(yday), endDate: fmt(yday), name: 'current' },
+    current: { startDate: fmt(checkedDate), endDate: fmt(checkedDate), name: 'current' },
     prev:    { startDate: fmt(lastWeek), endDate: fmt(lastWeek), name: 'prev' },
   }
 }
@@ -677,7 +684,8 @@ async function processProject(
   project: Project,
   runDate: string,
   prevDate: string,
-  isAutoRunPass: boolean
+  isAutoRunPass: boolean,
+  checkedDate: string
 ): Promise<ProjectRunOutcome | null> {
   // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
   // per-projekt na podstawie jego właściciela — każdy projekt może
@@ -883,6 +891,7 @@ async function processProject(
             scoreTotal: finalScore,
             prevScore: prevRun?.score_total ?? null,
             alertThreshold: project.alert_threshold,
+            dataDate: checkedDate,
             trend,
             failing,
             warning,
@@ -977,6 +986,11 @@ export async function POST(request: NextRequest) {
 async function runWorker(projectId: string | null) {
   const supabase = createAdminClient()
   const runDate = new Date().toISOString().split('T')[0]
+  // The actual GA4 date every check in this run covers — always 2 days
+  // before the run, not "today"/"yesterday" (see getDailyRanges()). Passed
+  // through to the alert/digest emails so they state which day's data they
+  // reflect instead of implying it's yesterday's traffic.
+  const checkedDate = getDailyRanges().current.startDate
 
   // Fetch projects — manualny run bierze konkretny projekt niezależnie od
   // auto_run; automatyczny (cron) run bierze tylko projekty z auto_run = true.
@@ -996,7 +1010,7 @@ async function runWorker(projectId: string | null) {
   const outcomes = await runWithConcurrency(
     (projects ?? []) as Project[],
     WORKER_CONCURRENCY,
-    project => processProject(supabase, project, runDate, prevDate, isAutoRunPass)
+    project => processProject(supabase, project, runDate, prevDate, isAutoRunPass, checkedDate)
   )
 
   for (const outcome of outcomes) {
@@ -1009,7 +1023,7 @@ async function runWorker(projectId: string | null) {
   // Owner digest — only for the automatic (cron) pass across all projects,
   // never for a single-project manual "Run now".
   if (!projectId && digestEntries.length > 0 && process.env.DIGEST_EMAIL) {
-    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate) })
+    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate) })
   }
 
   return NextResponse.json({ ok: true, processed, errors, run_date: runDate })

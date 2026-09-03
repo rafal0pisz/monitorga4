@@ -11,6 +11,11 @@ export interface ClientAlertData {
   scoreTotal: number
   prevScore: number | null
   alertThreshold: number
+  // YYYY-MM-DD — the GA4 date these checks actually cover. The daily
+  // worker always checks data from 2 days ago, not "yesterday" (GA4 data
+  // for yesterday is often still incomplete/processing) — showing this
+  // explicitly avoids the report implying it reflects yesterday's traffic.
+  dataDate: string
   trend: TrendPoint[] // chronological, oldest → newest, includes today
   failing: CheckIssue[]
   warning: CheckIssue[]
@@ -93,7 +98,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
 
     <div style="padding:6px 32px 22px;border-bottom:1px solid ${BRAND.line};">
       <div class="serif" style="font-size:26px;font-weight:600;color:${BRAND.ink};margin:4px 0 2px;">${d.projectName}</div>
-      <p style="font-size:13px;color:#6b7278;margin:0 0 18px;">GA4 property health check · ${fmtDate(new Date())}</p>
+      <p style="font-size:13px;color:#6b7278;margin:0 0 18px;">GA4 property health check · data for ${fmtDate(d.dataDate)}</p>
       ${scoreHero}
     </div>
 

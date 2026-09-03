@@ -73,10 +73,15 @@ function scoreRow(e: DigestEntry): string {
   return `<div style="padding:14px 0;border-bottom:1px solid #f2f3f3;">${row}</div>`
 }
 
-export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string): { subject: string; html: string } {
+// checkedDate: YYYY-MM-DD — the GA4 date every project's checks in this
+// digest actually cover. The daily worker always checks data from 2 days
+// ago, not "yesterday" (GA4 data for yesterday is often still incomplete/
+// processing) — distinct from runDate (the day this digest was generated).
+export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, checkedDate: string): { subject: string; html: string } {
   const attention = entries.filter(e => e.runStatus === 'failed' || e.belowThreshold)
   const healthy = entries.length - attention.length
   const dateLabel = fmtDate(runDate)
+  const checkedDateLabel = fmtDate(checkedDate)
 
   const subject = attention.length === 0
     ? `AlertGA4 Daily Report — ${dateLabel} · all projects healthy`
@@ -101,7 +106,10 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string):
   ])
 
   const body = `
-    <div style="padding:28px 32px 22px;border-bottom:1px solid ${BRAND.line};">${masthead}</div>
+    <div style="padding:28px 32px 22px;border-bottom:1px solid ${BRAND.line};">
+      ${masthead}
+      <div style="margin-top:6px;font-size:12px;color:${BRAND.soft};">Data checked: <b style="color:${BRAND.ink};">${checkedDateLabel}</b> (vs. the same day last week)</div>
+    </div>
 
     <div style="padding:18px 32px;background:#fafafa;border-bottom:1px solid ${BRAND.line};font-size:14px;color:#3a4046;">
       <span class="serif" style="font-size:16px;color:${BRAND.ink};font-weight:600;">${entries.length} project${entries.length === 1 ? '' : 's'} checked</span>

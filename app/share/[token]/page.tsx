@@ -9,17 +9,17 @@ const ST = {
   icon:   { pass:'✓', warn:'!', fail:'✕' },
 }
 
-// The daily checks behind this report always compare yesterday vs. the
-// same day last week (see getDailyRanges() in app/api/worker/run/route.ts)
-// regardless of what this label used to show — it displayed a 7-day
-// range as if the whole report were a weekly rollup, which no longer
-// matches what's actually being verified underneath it.
+// The daily checks behind this report always compare data from 2 days ago
+// vs. the same day last week (see getDailyRanges() in
+// app/api/worker/run/route.ts — not "yesterday": GA4 data for yesterday is
+// often still incomplete/processing, so the automated daily run always
+// skips it) regardless of what this label used to show.
 function getDailyRanges() {
   const today = new Date()
   const fmt = (d: Date) => d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
-  const yday = new Date(today); yday.setDate(today.getDate() - 1)
-  const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 8)
-  return { current: fmt(yday), prev: fmt(lastWeek) }
+  const checkedDate = new Date(today); checkedDate.setDate(today.getDate() - 2)
+  const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 9)
+  return { current: fmt(checkedDate), prev: fmt(lastWeek) }
 }
 
 export default async function SharePage({ params }: { params: Promise<{ token: string }> }) {
