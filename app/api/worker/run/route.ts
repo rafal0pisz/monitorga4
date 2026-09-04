@@ -531,7 +531,12 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       }
       const [curr, prev] = await Promise.all([emptyRatioFor(ranges.current), emptyRatioFor(ranges.prev)])
       const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
-      const status = curr.ratio < 0.05 ? 'pass' : curr.ratio < 0.15 ? 'warn' : 'fail'
+      // Was an absolute-level threshold (fail once the ratio itself passed
+      // 15%) — flagged a stable, unusually-high-but-unchanging baseline the
+      // same as a real anomaly. Switched to a relative WoW-change threshold,
+      // consistent with how the other WoW checks in this file work.
+      const absDelta = Math.abs(delta)
+      const status = absDelta <= 10 ? 'pass' : absDelta <= 20 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
       results.push({
         check_key: 'session_no_events', check_level: 'optional', status, score, weight: w,

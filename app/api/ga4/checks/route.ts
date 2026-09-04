@@ -516,8 +516,9 @@ function pageTitleNullCheck(ptC: any[], ptP: any[], label: string): CheckResult 
 // sessions × bounceRate, same approximation the worker uses (GA4 doesn't
 // expose an "engaged sessions" count directly at this granularity). Reuses
 // engagementChecks' combined query (index 0 = bounceRate, 4 = sessions) —
-// no extra GA4 call needed. Status is an absolute-value threshold, not a
-// delta — same as the worker's stored version.
+// no extra GA4 call needed. Status is a relative WoW-change threshold —
+// a stable, unusually-high-but-unchanging baseline used to fail here just
+// for being above an absolute cutoff, same as the worker's stored version.
 function sessionsWithoutEngagementCheck(engC: any, engP: any, label: string): CheckResult {
   const sessC = mi(engC, 4), bounceC = mi(engC, 0)
   const sessP = mi(engP, 4), bounceP = mi(engP, 0)
@@ -526,11 +527,12 @@ function sessionsWithoutEngagementCheck(engC: any, engP: any, label: string): Ch
   const ratioC = sessC > 0 ? emptyC / sessC * 100 : 0
   const ratioP = sessP > 0 ? emptyP / sessP * 100 : 0
   const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  const absDelta = Math.abs(delta)
   return {
     id: 'session_no_events', section: 'engagement',
     label: 'Sessions without engagement',
     description: 'Estimated sessions with no engagement — a proxy for missing event tracking.',
-    status: ratioC < 5 ? 'pass' : ratioC < 15 ? 'warn' : 'check',
+    status: absDelta <= 10 ? 'pass' : absDelta <= 20 ? 'warn' : 'check',
     valueLabel: `${r1(ratioC)}%`, prevLabel: `${r1(ratioP)}%`,
     deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
   }
