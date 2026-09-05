@@ -215,12 +215,14 @@ export async function POST(req: NextRequest) {
 
     const checks: CheckResult[] = [
       selfReferralCheck(smC, smP, project.own_domain, label),
+      directTrafficSpikeCheck(smC, smP, label),
       ...trafficShareChecks(smC, smP, label),
       channelDistributionShift(chC, chP, label),
       newHostnameCheck(hostC, hostP, label),
       ...engagementChecks(engC, engP, label),
       conversionRateCheck(engC, engP, label),
       pageTitleNullCheck(ptC, ptP, label),
+      geoAnomalyCheck(coC, coP, label),
       ...usersChecks(coC, coP, engC, engP, chC),
       botTrafficNightCheck(hrC, hrP, label),
     ]
@@ -362,6 +364,34 @@ function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[
   ]
 }
 
+// Mirrors the worker's stored direct_traffic_spike check exactly — same
+// filter (medium=(none), regardless of source — broader than
+// direct_none_share's stricter source=(direct)+medium=(none) combo above),
+// same relative-% delta, same 15/30 thresholds, same one-directional check
+// (only a rise counts, a drop is always 'pass'). A different, real
+// discrepancy between this and direct_none_share previously let the live
+// panel show 100% pass while the worker's own (different) formula still
+// failed and dragged the stored score down.
+function directTrafficSpikeCheck(smC: any[], smP: any[], label: string): CheckResult {
+  const rowsC = toSMRows(smC)
+  const rowsP = toSMRows(smP)
+  const totC = rowsC.reduce((s, r) => s + r.sessions, 0)
+  const totP = rowsP.reduce((s, r) => s + r.sessions, 0)
+  const directC = rowsC.filter(r => r.medium === '(none)').reduce((s, r) => s + r.sessions, 0)
+  const directP = rowsP.filter(r => r.medium === '(none)').reduce((s, r) => s + r.sessions, 0)
+  const ratioC = totC > 0 ? directC / totC * 100 : 0
+  const ratioP = totP > 0 ? directP / totP * 100 : 0
+  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
+  return {
+    id: 'direct_traffic_spike', section: 'traffic',
+    label: 'Direct traffic spike',
+    description: `Change in Direct (medium=none) traffic share ${label} — spikes often signal missing UTM parameters or dark traffic.`,
+    status: delta <= 15 ? 'pass' : delta <= 30 ? 'warn' : 'check',
+    valueLabel: `${r1(ratioC)}%`, prevLabel: `${r1(ratioP)}%`,
+    deltaLabel: `${sign(r1(delta))}${r1(delta)}%`,
+  }
+}
+
 // Kept on sessionDefaultChannelGroup — this check is about the largest
 // shift across the WHOLE channel mix, which is exactly what channel
 // grouping is for, unlike the single-bucket share checks above.
@@ -429,7 +459,13 @@ function engagementChecks(engC: any, engP: any, label: string): CheckResult[] {
   const ppsC    = gC(2);       const ppsP    = gP(2)
   const durC    = gC(3);       const durP    = gP(3)
 
-  const bounceΔ = ppΔ(bounceC, bounceP)
+  // Relative % change, not a pp delta — matches the worker's stored
+  // bounce_rate_anomaly exactly (thresholds 20/35, same formula). This
+  // used to be pp-based with different (10/20) thresholds, a leftover
+  // from before this was meant to mirror the stored check — the two
+  // disagreeing meant the live panel could show 100% pass while the
+  // stored score (which the worker's own formula still drives) did not.
+  const bounceRelΔ = pctΔ(bounceC, bounceP)
   const engRΔ   = ppΔ(engRC, engRP)
   const ppsΔ    = pctΔ(ppsC, ppsP)
   const durΔ    = pctΔ(durC, durP)
@@ -439,9 +475,9 @@ function engagementChecks(engC: any, engP: any, label: string): CheckResult[] {
       id: 'bounce_rate', section: 'engagement',
       label: 'Bounce rate shift',
       description: `Change in bounce rate ${label} — a spike may indicate a broken page or misconfigured engagement events.`,
-      status: stDelta(bounceΔ, 10, 20),
+      status: stDelta(bounceRelΔ, 20, 35),
       valueLabel: `${r1(bounceC)}%`, prevLabel: `${r1(bounceP)}%`,
-      deltaLabel: `${sign(bounceΔ)}${bounceΔ}pp`,
+      deltaLabel: `${sign(bounceRelΔ)}${bounceRelΔ}%`,
     },
     {
       id: 'engagement_rate', section: 'engagement',
@@ -513,6 +549,29 @@ function pageTitleNullCheck(ptC: any[], ptP: any[], label: string): CheckResult 
 }
 
 // ─── USERS ───────────────────────────────────────────────────────────────────
+
+// Mirrors the worker's stored geo_anomaly check exactly: which countries
+// are new to the Top 5 by sessions, not how much any single country's
+// share shifted (that's geo_spike below — a different, complementary
+// signal, not a duplicate of this one). coC/coP aren't pre-sorted here
+// (unlike the worker's own ordered+limited query), so this sorts and
+// takes the top 5 itself to get the same set.
+function geoAnomalyCheck(coC: any[], coP: any[], label: string): CheckResult {
+  const top5 = (rows: any[]) => new Set([...rows].sort((a, b) => m0(b) - m0(a)).slice(0, 5).map(dim))
+  const top5C = top5(coC)
+  const top5P = top5(coP)
+  const newCountries = [...top5C].filter(c => !top5P.has(c))
+  return {
+    id: 'geo_anomaly', section: 'users',
+    label: 'Geographic anomaly',
+    description: `New countries entering the Top 5 by sessions ${label}.`,
+    status: newCountries.length === 0 ? 'pass' : newCountries.length === 1 ? 'warn' : 'check',
+    valueLabel: newCountries.length === 0 ? 'No change' : `${newCountries.length} new`,
+    prevLabel: '',
+    deltaLabel: newCountries.length === 0 ? 'All clear' : newCountries.join(', '),
+    detail: newCountries.length > 0 ? `New: ${newCountries.join(', ')}` : undefined,
+  }
+}
 
 function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): CheckResult[] {
   const mapCoC = rowsByDim(coC)

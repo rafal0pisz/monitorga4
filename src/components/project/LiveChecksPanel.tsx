@@ -34,7 +34,7 @@ function CheckCard({ check }: { check: CheckResult }) {
   const st = STATUS[check.status]
 
   // Invert delta colour for metrics where higher = worse
-  const invertIds = ['not_set_share', 'unknown_country', 'bounce_rate', 'self_referral', 'page_title_null', 'bot_traffic_night']
+  const invertIds = ['not_set_share', 'unknown_country', 'bounce_rate', 'self_referral', 'page_title_null', 'bot_traffic_night', 'direct_traffic_spike']
   const isPositive = check.deltaLabel.startsWith('+')
   const deltaColor = !check.deltaLabel || ['—', 'All clear'].includes(check.deltaLabel)
     ? 'var(--color-text-secondary)'
