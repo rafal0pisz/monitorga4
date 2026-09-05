@@ -76,7 +76,6 @@ const WEIGHTS: Record<string, number> = {
   page_title_null:       8,
   bot_traffic_night:    12,
   geo_anomaly:           7,
-  session_no_events:    10,
   parameter_checks:      8,
 }
 
@@ -510,41 +509,6 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       })
     } catch (e: any) {
       results.push({ check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
-    }
-  }
-
-  // ── OPTIONAL: SESSION WITHOUT EVENTS (WoW) ───────────────
-  {
-    const w = WEIGHTS.session_no_events
-    try {
-      // Proxy: używamy engagementRate — sesje bez zaangażowania ≈ sesje bez eventów
-      const emptyRatioFor = async (dateRange: object) => {
-        const r = await report({
-          dateRanges: [dateRange],
-          metrics: [{ name: 'sessions' }, { name: 'bounceRate' }],
-        })
-        const rows = r.rows ?? []
-        const total = parseInt(rows?.[0]?.metricValues?.[0]?.value ?? '0')
-        const bounceRate = parseFloat(rows?.[0]?.metricValues?.[1]?.value ?? '0')
-        const emptyEstimate = Math.round(total * bounceRate)
-        return { ratio: total > 0 ? emptyEstimate / total : 0, emptyEstimate, total }
-      }
-      const [curr, prev] = await Promise.all([emptyRatioFor(ranges.current), emptyRatioFor(ranges.prev)])
-      const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
-      // Was an absolute-level threshold (fail once the ratio itself passed
-      // 15%) — flagged a stable, unusually-high-but-unchanging baseline the
-      // same as a real anomaly. Switched to a relative WoW-change threshold,
-      // consistent with how the other WoW checks in this file work.
-      const absDelta = Math.abs(delta)
-      const status = absDelta <= 10 ? 'pass' : absDelta <= 20 ? 'warn' : 'fail'
-      const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
-        check_key: 'session_no_events', check_level: 'optional', status, score, weight: w,
-        value: { estimated_empty: curr.emptyEstimate, total_sessions: curr.total, ratio: +(curr.ratio * 100).toFixed(1), ratio_prev: +(prev.ratio * 100).toFixed(1), delta },
-        message: `Estimated sessions without engagement: ${(curr.ratio * 100).toFixed(1)}% (prev: ${(prev.ratio * 100).toFixed(1)}%, WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
-      })
-    } catch (e: any) {
-      results.push({ check_key: 'session_no_events', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
     }
   }
 

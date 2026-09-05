@@ -69,7 +69,15 @@ export default async function AdminDashboardPage() {
   const projectDates = projects.map(p => new Date(p.created_at))
   const activeCount = projects.filter(p => p.status === 'active').length
   const pausedCount = projects.filter(p => p.status === 'paused').length
-  const ownerIdsWithProject = new Set(projects.map(p => p.owner_id).filter((id): id is string => !!id))
+
+  // How many ACTIVE projects each user owns — shown per-row in the
+  // Registered users list below, instead of just a boolean "has a project"
+  // badge, so it's visible at a glance who's actually using the product.
+  const activeProjectCountByOwner = new Map<string, number>()
+  for (const p of projects) {
+    if (p.status !== 'active' || !p.owner_id) continue
+    activeProjectCountByOwner.set(p.owner_id, (activeProjectCountByOwner.get(p.owner_id) ?? 0) + 1)
+  }
 
   const userDates = users.map(u => new Date(u.created_at))
   const growth = buildGrowthSeries(userDates, projectDates)
@@ -134,14 +142,14 @@ export default async function AdminDashboardPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
-                const hasProject = u.id ? ownerIdsWithProject.has(u.id) : false
+                const activeProjects = u.id ? activeProjectCountByOwner.get(u.id) ?? 0 : 0
                 return (
                   <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
                     <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>{u.email ?? '—'}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {hasProject && (
+                      {activeProjects > 0 && (
                         <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                          project
+                          {activeProjects} active project{activeProjects !== 1 ? 's' : ''}
                         </span>
                       )}
                       <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>

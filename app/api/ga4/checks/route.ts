@@ -221,7 +221,6 @@ export async function POST(req: NextRequest) {
       ...engagementChecks(engC, engP, label),
       conversionRateCheck(engC, engP, label),
       pageTitleNullCheck(ptC, ptP, label),
-      sessionsWithoutEngagementCheck(engC, engP, label),
       ...usersChecks(coC, coP, engC, engP, chC),
       botTrafficNightCheck(hrC, hrP, label),
     ]
@@ -447,7 +446,8 @@ function engagementChecks(engC: any, engP: any, label: string): CheckResult[] {
     {
       id: 'engagement_rate', section: 'engagement',
       label: 'Engagement rate',
-      description: 'Share of sessions lasting 10+ seconds or triggering a conversion — below 20% suggests bot traffic or broken tracking.',
+      description: 'Share of sessions lasting 10+ seconds or triggering a conversion — below 20% suggests bot traffic or broken tracking.'
+        + (engRC > 75 ? ' Note: above 75% can be artificially inflated — check your Engagement Rate / engaged-session settings in GA4.' : ''),
       status: stBelow(engRC, 40, 20),
       valueLabel: `${r1(engRC)}%`, prevLabel: `${r1(engRP)}%`,
       deltaLabel: `${sign(engRΔ)}${engRΔ}pp`,
@@ -508,32 +508,6 @@ function pageTitleNullCheck(ptC: any[], ptP: any[], label: string): CheckResult 
     description: 'Share of sessions with a missing or blank page title.',
     status: ratioC < 2 ? 'pass' : ratioC < 10 ? 'warn' : 'check',
     valueLabel: `${r2(ratioC)}%`, prevLabel: `${r2(ratioP)}%`,
-    deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
-  }
-}
-
-// Proxy for "sessions with no engagement": estimated empty sessions =
-// sessions × bounceRate, same approximation the worker uses (GA4 doesn't
-// expose an "engaged sessions" count directly at this granularity). Reuses
-// engagementChecks' combined query (index 0 = bounceRate, 4 = sessions) —
-// no extra GA4 call needed. Status is a relative WoW-change threshold —
-// a stable, unusually-high-but-unchanging baseline used to fail here just
-// for being above an absolute cutoff, same as the worker's stored version.
-function sessionsWithoutEngagementCheck(engC: any, engP: any, label: string): CheckResult {
-  const sessC = mi(engC, 4), bounceC = mi(engC, 0)
-  const sessP = mi(engP, 4), bounceP = mi(engP, 0)
-  const emptyC = Math.round(sessC * bounceC)
-  const emptyP = Math.round(sessP * bounceP)
-  const ratioC = sessC > 0 ? emptyC / sessC * 100 : 0
-  const ratioP = sessP > 0 ? emptyP / sessP * 100 : 0
-  const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
-  const absDelta = Math.abs(delta)
-  return {
-    id: 'session_no_events', section: 'engagement',
-    label: 'Sessions without engagement',
-    description: 'Estimated sessions with no engagement — a proxy for missing event tracking.',
-    status: absDelta <= 10 ? 'pass' : absDelta <= 20 ? 'warn' : 'check',
-    valueLabel: `${r1(ratioC)}%`, prevLabel: `${r1(ratioP)}%`,
     deltaLabel: ratioC === 0 ? 'All clear' : `${sign(r1(delta))}${r1(delta)}%`,
   }
 }

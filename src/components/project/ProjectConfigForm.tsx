@@ -13,7 +13,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
 
-// The 10 core checks that always run for every project, regardless of
+// The 9 core checks that always run for every project, regardless of
 // config — matches the worker's check_key values exactly (see
 // app/api/worker/run/route.ts). Custom events, ecommerce, and parameter
 // checks are added dynamically below since they depend on what this
@@ -21,7 +21,7 @@ const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
 const CORE_CRITICAL_CHECKS = [
   'expected_events', 'self_referral', 'direct_traffic_spike', 'bounce_rate_anomaly',
   'conversion_rate', 'page_title_null', 'bot_traffic_night', 'purchase_duplicates',
-  'geo_anomaly', 'session_no_events',
+  'geo_anomaly',
 ]
 
 interface CustomEvent { event_name: string; check_type: string; is_enabled: boolean }
