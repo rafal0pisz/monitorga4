@@ -1063,7 +1063,12 @@ async function runWorker(projectId: string | null) {
   // Owner digest — only for the automatic (cron) pass across all projects,
   // never for a single-project manual "Run now".
   if (!projectId && digestEntries.length > 0 && process.env.DIGEST_EMAIL) {
-    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate) })
+    // Total active projects across the whole account — distinct from
+    // digestEntries.length, which only counts projects with auto_run
+    // enabled (the ones this cron pass actually checked).
+    const { count: totalActiveProjects } = await supabase
+      .from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active')
+    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0) })
   }
 
   return NextResponse.json({ ok: true, processed, errors, run_date: runDate })

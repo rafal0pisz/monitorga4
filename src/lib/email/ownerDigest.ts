@@ -77,7 +77,9 @@ function scoreRow(e: DigestEntry): string {
 // digest actually cover. The daily worker always checks data from 2 days
 // ago, not "yesterday" (GA4 data for yesterday is often still incomplete/
 // processing) — distinct from runDate (the day this digest was generated).
-export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, checkedDate: string): { subject: string; html: string } {
+// totalActiveProjects: every active project account-wide, not just the
+// ones with auto_run enabled (entries.length covers only those).
+export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, checkedDate: string, totalActiveProjects: number): { subject: string; html: string } {
   const attention = entries.filter(e => e.runStatus === 'failed' || e.belowThreshold)
   const healthy = entries.length - attention.length
   const dateLabel = fmtDate(runDate)
@@ -115,6 +117,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
       <span class="serif" style="font-size:16px;color:${BRAND.ink};font-weight:600;">${entries.length} project${entries.length === 1 ? '' : 's'} checked</span>
       <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:8px;">${healthy} healthy</span>
       ${attention.length > 0 ? `<span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:${BRAND.alert};color:${BRAND.ink};margin-left:6px;">${attention.length} needs attention</span>` : ''}
+      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:6px;">${totalActiveProjects} active total</span>
     </div>
 
     <div style="padding:24px 32px 4px;">
