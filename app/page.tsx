@@ -151,11 +151,7 @@ export default async function HomePage() {
         .readout { background: #fff; border: 1px solid #e2e6e8; border-radius: 16px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 12px 32px -16px rgba(35,43,49,0.18); overflow: hidden; }
         .readout-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #e2e6e8; }
         .readout-prop { display: flex; align-items: center; gap: 10px; }
-        .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; position: relative; flex-shrink: 0; }
-        .live-dot::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1.5px solid #16a34a; opacity: 0.5; animation: lpRing 2s ease-out infinite; }
-        @keyframes lpRing { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(1.8); opacity: 0; } }
         .readout-prop-name { font-family: var(--font-mono), monospace; font-size: 13.5px; font-weight: 600; }
-        .readout-status { font-family: var(--font-mono), monospace; font-size: 11.5px; color: #8b939a; }
         .readout-body { padding: 26px 20px 22px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
         .score-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: clamp(42px, 11vw, 56px); line-height: 0.9; color: #166534; }
         .score-of { font-family: var(--font-mono), monospace; font-size: 18px; color: #8b939a; padding-bottom: 8px; }
@@ -259,10 +255,8 @@ export default async function HomePage() {
           <div className="readout">
             <div className="readout-head">
               <div className="readout-prop">
-                <span className="live-dot" aria-hidden="true" />
-                <span className="readout-prop-name">sklep-rowerowy.pl</span>
+                <span className="readout-prop-name">Twoja usługa GA4</span>
               </div>
-              <span className="readout-status">sprawdzanie na żywo</span>
             </div>
             <div className="readout-body">
               <span className="score-num">94</span>
