@@ -7,7 +7,7 @@ import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { TRIAL_DAYS } from '@/lib/billing/plans'
 
 const STEPS = [
-  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz AlertGA4 z dostępem wyłącznie do odczytu, jak rola „Viewer" w GA4.' },
+  { t: 'Logujesz się kontem Google', d: 'Autoryzujesz się mailem, który ma dostęp do usługi. Nie zmieniamy żadnych ustawień na koncie, a nasza aplikacja jest zaufanym dostawcą po certyfikacji Google.' },
   { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
   { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane. Dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
   { t: 'Podsumowanie na maila', d: 'Wynik spada poniżej progu? Aplikacja poinformuje Cię mailowo z opisem kategorii, która wymaga weryfikacji.' },
