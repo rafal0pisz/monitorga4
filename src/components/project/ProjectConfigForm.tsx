@@ -716,16 +716,16 @@ export default function ProjectConfigForm({ project }: Props) {
         )}
       </div>
 
-      {/* ── CRITICAL METRIC ALERT ────────────────────────────────────────── */}
+      {/* ── CUSTOM METRIC ALERT (displayed name; internals still use "critical") ── */}
       <div style={card}>
-        <SectionHeader id="critical_alert" title="Critical Metric Alert" subtitle="A separate alert that fires only when specific metrics you pick go Warn or Fail" count={criticalChecks.size} />
+        <SectionHeader id="critical_alert" title="Custom Metric Alert" subtitle="A separate alert that fires only when specific metrics you pick go Warn or Fail" count={criticalChecks.size} />
         {openSection === 'critical_alert' && (
           <div style={{ padding: 18 }}>
             <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '0 0 16px' }}>
               This is in addition to the Email Alert above, which fires on the overall score. Pick specific metrics below — this alert goes out to its own address whenever any of them shows Warn or Fail, regardless of the overall score.
             </p>
             <div style={{ marginBottom: 16 }}>
-              <label style={lbl}>Critical alert email(s)</label>
+              <label style={lbl}>Custom alert email(s)</label>
               {criticalAlertEmails.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                   {criticalAlertEmails.map((e, i) => (

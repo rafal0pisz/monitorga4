@@ -34,22 +34,22 @@ function issueRow(issue: CriticalIssue): string {
 export function renderCriticalAlertEmail(d: CriticalAlertData): { subject: string; html: string } {
   const failing = d.issues.filter(i => i.status === 'fail')
   const warning = d.issues.filter(i => i.status === 'warn')
-  const subject = `⚠ Critical metric alert — ${d.projectName}: ${d.issues.length} metric${d.issues.length > 1 ? 's' : ''} need${d.issues.length > 1 ? '' : 's'} attention`
+  const subject = `⚠ Custom metric alert — ${d.projectName}: ${d.issues.length} metric${d.issues.length > 1 ? 's' : ''} need${d.issues.length > 1 ? '' : 's'} attention`
 
   const body = `
-    <div style="padding:16px 32px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND.soft};">AlertGA4 critical metric alert · issued by Bettersteps</div>
+    <div style="padding:16px 32px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND.soft};">AlertGA4 custom metric alert · issued by Bettersteps</div>
 
     <div style="padding:6px 32px 22px;border-bottom:1px solid ${BRAND.line};">
       <div class="serif" style="font-size:26px;font-weight:600;color:${BRAND.ink};margin:4px 0 2px;">${d.projectName}</div>
       <p style="font-size:13px;color:#6b7278;margin:0 0 8px;">GA4 property health check · data for ${fmtDate(d.dataDate)}</p>
       <p style="font-size:13px;color:#6b7278;margin:0;">
-        <b style="color:${BRAND.ink};">${d.issues.length}</b> of your selected critical metric${d.issues.length > 1 ? 's' : ''}
+        <b style="color:${BRAND.ink};">${d.issues.length}</b> of your selected custom metric${d.issues.length > 1 ? 's' : ''}
         ${d.issues.length > 1 ? 'are' : 'is'} showing a problem today — this alert only fires for the metrics you specifically chose to watch here, regardless of the overall score.
       </p>
     </div>
 
     <div style="padding:22px 32px 6px;">
-      <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 4px;font-weight:700;">Critical metrics</h2>
+      <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 4px;font-weight:700;">Custom metrics</h2>
       <p style="font-size:12.5px;color:#6b7278;margin:0 0 12px;"><b style="color:${BRAND.ink};">${failing.length} failing</b> · <b style="color:${BRAND.ink};">${warning.length} warning</b></p>
       ${failing.map(issueRow).join('')}
       ${warning.map(issueRow).join('')}
@@ -58,8 +58,8 @@ export function renderCriticalAlertEmail(d: CriticalAlertData): { subject: strin
     ${ctaHtml('View full report →', `${APP_URL}/share/${d.shareToken}`)}
 
     ${footerHtml([
-      `This automated critical-metric alert is issued by AlertGA4 on behalf of Bettersteps for ${d.projectName}.`,
-      'You are receiving this because this address is configured for critical metric alerts on this project.',
+      `This automated custom-metric alert is issued by AlertGA4 on behalf of Bettersteps for ${d.projectName}.`,
+      'You are receiving this because this address is configured for custom metric alerts on this project.',
     ])}
   `
 
