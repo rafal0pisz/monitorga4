@@ -2,34 +2,42 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import AccountMismatch from '@/components/project/AccountMismatch'
+import { checkLabel } from '@/lib/ga4/checkLabels'
 
 const HISTORY_RUNS = 30
 
-interface HistoryEntry {
-  date: string
-  eventName: string
-  kind: 'disappeared' | 'increase' | 'drop'
-  detail: string
-  category: 'events' | 'parameters'
-}
+type Category = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
 
-const CATEGORY_LABEL: Record<HistoryEntry['category'], string> = {
-  events: 'Events',
+const CATEGORY_LABEL: Record<Category, string> = {
+  traffic: 'Traffic',
+  engagement: 'Engagement',
+  users: 'Users',
+  ecommerce: 'Ecommerce',
+  custom_events: 'Custom Events',
   parameters: 'Parameters',
 }
 
-// ±50% relative change is the same threshold the worker itself already
-// uses to flag a volume "drop" for custom events/ecommerce — kept in both
-// directions here so this view stays consistent with what the daily
-// checks already consider a meaningful swing, not a new arbitrary cutoff.
-// A drop all the way to 0 is its own "disappeared" kind, not a -100% drop.
-const SWING_THRESHOLD = 50
+const CATEGORY_ORDER: Category[] = ['traffic', 'engagement', 'users', 'ecommerce', 'custom_events', 'parameters']
 
-// Parameter coverage deltas are already in percentage POINTS (0-100 scale),
-// not a relative % like event counts — a ±20pp swing is a comparable
-// "meaningful change" on that scale, not directly comparable to the 50%
-// relative-change threshold above.
-const PARAM_SWING_THRESHOLD_PP = 20
+// Mirrors how the app already groups these same check_keys elsewhere
+// (live checks panel sections) — kept local to this page rather than a
+// shared module since nothing else needs it anymore.
+function categoryFor(checkKey: string): Category {
+  if (checkKey.startsWith('custom_event_')) return 'custom_events'
+  if (checkKey.startsWith('param_')) return 'parameters'
+  if (checkKey === 'ecommerce_events' || checkKey === 'purchase_duplicates') return 'ecommerce'
+  if (checkKey === 'self_referral' || checkKey === 'direct_traffic_spike') return 'traffic'
+  if (checkKey === 'geo_anomaly' || checkKey === 'bot_traffic_night') return 'users'
+  return 'engagement' // expected_events, bounce_rate_anomaly, conversion_rate, page_title_null
+}
+
+interface HistoryEntry {
+  date: string
+  label: string
+  kind: 'warn' | 'fail'
+  detail: string
+  category: Category
+}
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -61,82 +69,30 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
   const runDateById = new Map<string, string>(runList.map(r => [r.id, r.run_date]))
   const runIds = runList.map(r => r.id)
 
+  // Every check the daily run computes carries its own status, already
+  // thresholded by the worker (see app/api/worker/run/route.ts) — no need
+  // to re-derive "is this a meaningful change" here per check type.
+  // Anything that came back Warn or Fail on a given day is worth showing,
+  // with the check's own message as the description of what happened.
   const { data: results } = runIds.length > 0
     ? await supabase
         .from('dqs_results')
-        .select('run_id, check_key, value, message')
+        .select('run_id, check_key, message, status')
         .in('run_id', runIds)
-        .or('check_key.eq.expected_events,check_key.eq.ecommerce_events,check_key.like.custom_event_*,check_key.like.param_*')
+        .in('status', ['warn', 'fail'])
     : { data: [] }
 
   const entries: HistoryEntry[] = []
-
   for (const row of results ?? []) {
     const date = runDateById.get(row.run_id)
-    if (!date) continue
-    const v = (row.value ?? {}) as Record<string, any>
-
-    if (row.check_key === 'expected_events') {
-      for (const ev of v.missing ?? []) {
-        entries.push({ date, eventName: ev, kind: 'disappeared', detail: 'Missing from expected events', category: 'events' })
-      }
-      continue
-    }
-
-    if (typeof row.check_key === 'string' && row.check_key.startsWith('custom_event_')) {
-      const eventName = row.check_key.slice('custom_event_'.length)
-      const current = v.current ?? 0
-      const prev = v.prev ?? 0
-      const delta = v.delta ?? 0
-      if (current === 0 && prev > 0) {
-        entries.push({ date, eventName, kind: 'disappeared', detail: `0 events (was ${prev.toLocaleString('en')})`, category: 'events' })
-      } else if (prev > 0 && delta >= SWING_THRESHOLD) {
-        entries.push({ date, eventName, kind: 'increase', detail: `+${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})`, category: 'events' })
-      } else if (prev > 0 && delta <= -SWING_THRESHOLD) {
-        entries.push({ date, eventName, kind: 'drop', detail: `${delta.toFixed(1)}% (${prev.toLocaleString('en')} → ${current.toLocaleString('en')})`, category: 'events' })
-      }
-      continue
-    }
-
-    if (row.check_key === 'ecommerce_events') {
-      const current: Record<string, number> = v.current ?? {}
-      const prev: Record<string, number> = v.prev ?? {}
-      const configured: string[] = v.configured ?? []
-      for (const ev of configured) {
-        const c = current[ev] ?? 0
-        const p = prev[ev] ?? 0
-        if (c === 0 && p > 0) {
-          entries.push({ date, eventName: ev, kind: 'disappeared', detail: `0 events (was ${p.toLocaleString('en')})`, category: 'events' })
-        } else if (p > 0) {
-          const delta = ((c - p) / p) * 100
-          if (delta >= SWING_THRESHOLD) {
-            entries.push({ date, eventName: ev, kind: 'increase', detail: `+${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})`, category: 'events' })
-          } else if (delta <= -SWING_THRESHOLD) {
-            entries.push({ date, eventName: ev, kind: 'drop', detail: `${delta.toFixed(1)}% (${p.toLocaleString('en')} → ${c.toLocaleString('en')})`, category: 'events' })
-          }
-        }
-      }
-      continue
-    }
-
-    if (typeof row.check_key === 'string' && row.check_key.startsWith('param_')) {
-      // check_key is underscore-joined ("param_<event>_<parameter>") and
-      // ambiguous to split back apart since event/parameter names can
-      // themselves contain underscores — the stored message already has
-      // "event.parameter: " as a clean, dot-separated prefix, same trick
-      // the old StoredCheckCard used.
-      const label = typeof row.message === 'string' ? row.message.split(':')[0] : row.check_key
-      const covCurrent = v.coverage_current ?? null
-      const covPrev = v.coverage_prev ?? null
-      const delta = v.delta ?? 0
-      if (covCurrent === 0 && covPrev != null && covPrev > 0) {
-        entries.push({ date, eventName: label, kind: 'disappeared', detail: `0% coverage (was ${covPrev.toFixed(1)}%)`, category: 'parameters' })
-      } else if (covPrev != null && covPrev > 0 && delta >= PARAM_SWING_THRESHOLD_PP) {
-        entries.push({ date, eventName: label, kind: 'increase', detail: `+${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)`, category: 'parameters' })
-      } else if (covPrev != null && covPrev > 0 && delta <= -PARAM_SWING_THRESHOLD_PP) {
-        entries.push({ date, eventName: label, kind: 'drop', detail: `${delta.toFixed(1)}pp coverage (${covPrev.toFixed(1)}% → ${covCurrent?.toFixed(1)}%)`, category: 'parameters' })
-      }
-    }
+    if (!date || (row.status !== 'warn' && row.status !== 'fail')) continue
+    entries.push({
+      date,
+      label: checkLabel(row.check_key),
+      kind: row.status,
+      detail: row.message ?? '',
+      category: categoryFor(row.check_key),
+    })
   }
 
   entries.sort((a, b) => b.date.localeCompare(a.date))
@@ -157,20 +113,20 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
         <span>/</span>
         <span style={{ color: 'var(--color-text-primary)' }}>History</span>
       </div>
-      <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Events history</h1>
+      <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Check history</h1>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 24px' }}>
-        Disappeared events and volume swings (±{SWING_THRESHOLD}% or more) across the last {HISTORY_RUNS} daily checks.
+        Every check that came back Warn or Fail across the last {HISTORY_RUNS} daily runs — traffic, engagement, users, ecommerce, custom events, and parameters — with what happened.
       </p>
 
       {dates.length === 0 ? (
         <div style={{ padding: 24, borderRadius: 10, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-          No disappearances or volume swings recorded in the last {HISTORY_RUNS} daily checks.
+          No Warn or Fail checks recorded in the last {HISTORY_RUNS} daily runs.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {dates.map(date => {
             const dayEntries = byDate.get(date)!
-            const categories = (['events', 'parameters'] as const).filter(cat => dayEntries.some(e => e.category === cat))
+            const categories = CATEGORY_ORDER.filter(cat => dayEntries.some(e => e.category === cat))
             return (
               <div key={date}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{fmtDate(date)}</div>
@@ -182,16 +138,18 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {dayEntries.filter(e => e.category === cat).map((e, i) => {
-                          const color = e.kind === 'disappeared' ? '#dc2626' : e.kind === 'drop' ? '#ca8a04' : '#16a34a'
-                          const borderColor = e.kind === 'disappeared' ? '#fecaca' : e.kind === 'drop' ? '#fde68a' : '#bbf7d0'
-                          const label = e.kind === 'disappeared' ? 'Disappeared' : e.kind === 'drop' ? 'Volume drop' : 'Volume spike'
+                          const color = e.kind === 'fail' ? '#dc2626' : '#ca8a04'
+                          const borderColor = e.kind === 'fail' ? '#fecaca' : '#fde68a'
                           return (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${borderColor}`, borderRadius: 10 }}>
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: color }} />
-                              <span style={{ fontSize: 12, fontWeight: 500, fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' }}>{e.eventName}</span>
-                              <span style={{ fontSize: 11, color, marginLeft: 'auto' }}>
-                                {label} — {e.detail}
-                              </span>
+                            <div key={i} style={{ display: 'flex', gap: 10, padding: '9px 14px', background: 'var(--color-background-primary)', border: `0.5px solid ${borderColor}`, borderRadius: 10 }}>
+                              <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5, background: color }} />
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>{e.label}</span>
+                                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color }}>{e.kind}</span>
+                                </div>
+                                <div style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{e.detail}</div>
+                              </div>
                             </div>
                           )
                         })}
