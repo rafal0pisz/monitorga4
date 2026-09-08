@@ -250,7 +250,7 @@ export const DEMO_PROJECTS: DemoProjectSummary[] = [
   {
     id: BLOG_ID, name: 'Blog Techniczny (Demo)', ga4_property_id: 'properties/219873305',
     status: 'active', alert_threshold: 70, alert_email: 'demo@example.com', auto_run: true,
-    last_score: 74, prev_week_score: 82,
+    last_score: 58, prev_week_score: 71,
     ecommerce_events_count: 0, custom_events_count: 6, parameter_checks_count: 6,
   },
 ]
@@ -267,7 +267,7 @@ export const DEMO_PROJECT_DETAIL: Record<string, DemoProjectDetail> = {
   },
   [BLOG_ID]: {
     summary: DEMO_PROJECTS[1],
-    runs: scoreRuns(BLOG_ID, 30, 80, 5, 74),
+    runs: scoreRuns(BLOG_ID, 30, 68, 6, 58),
     checks: blogChecks,
     ecommerce: [],
     customEvents: blogCustomEvents,
