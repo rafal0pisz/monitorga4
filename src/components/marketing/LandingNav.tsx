@@ -34,6 +34,12 @@ export default function LandingNav({
           {NAV_LINKS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
         </div>
         <div className="lp-nav-cta">
+          {!user && (
+            <Link href="/demo" className="demo-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+              Demo Dashboard
+            </Link>
+          )}
           {secondaryCta && <Link href={secondaryCta.href} className="login-link">{secondaryCta.label}</Link>}
           <Link href={primaryCta.href} className="btn btn--primary btn--sm">
             <span className="nav-cta-full">{primaryCta.label}</span>
@@ -59,6 +65,7 @@ export default function LandingNav({
             <a key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
           ))}
           <div className="lp-nav-mobile-cta">
+            {!user && <Link href="/demo" className="demo-link" onClick={() => setOpen(false)}>Demo Dashboard</Link>}
             {secondaryCta && <Link href={secondaryCta.href} onClick={() => setOpen(false)}>{secondaryCta.label}</Link>}
             <Link href={primaryCta.href} className="btn btn--primary" onClick={() => setOpen(false)}>{primaryCta.label}</Link>
           </div>

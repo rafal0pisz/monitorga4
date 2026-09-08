@@ -15,7 +15,21 @@ function scoreDotColor(score: number | null): string {
   return score === null ? '#d1d5db' : scoreColor(score)
 }
 
-export default function SidebarNav({ projects }: { projects: Project[] }) {
+interface ToolLink { href: string; icon: string; label: string }
+
+const DEFAULT_TOOLS: ToolLink[] = [
+  { href: '/dashboard/new',     icon: '＋', label: 'New project' },
+  { href: '/dashboard',         icon: '⊞', label: 'All projects' },
+  { href: '/dashboard/billing', icon: '◈', label: 'Billing' },
+]
+
+export default function SidebarNav({
+  projects, projectHrefBase = '/project', tools = DEFAULT_TOOLS,
+}: {
+  projects: Project[]
+  projectHrefBase?: string
+  tools?: ToolLink[]
+}) {
   const pathname = usePathname()
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/')
 
@@ -28,9 +42,9 @@ export default function SidebarNav({ projects }: { projects: Project[] }) {
           </p>
           <div style={{ overflowY: 'auto', maxHeight: 360 }}>
             {projects.map(p => {
-              const active = isActive(`/project/${p.id}`)
+              const active = isActive(`${projectHrefBase}/${p.id}`)
               return (
-                <Link key={p.id} href={`/project/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                <Link key={p.id} href={`${projectHrefBase}/${p.id}`} style={{ textDecoration: 'none', display: 'block' }}>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 9, padding: '7px 16px',
                     borderLeft: active ? '2px solid #16a34a' : '2px solid transparent',
@@ -69,11 +83,7 @@ export default function SidebarNav({ projects }: { projects: Project[] }) {
           <p style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-text-secondary)', padding: '0 16px', margin: '0 0 4px' }}>
             Tools
           </p>
-          {[
-            { href: '/dashboard/new',     icon: '＋', label: 'New project' },
-            { href: '/dashboard',         icon: '⊞', label: 'All projects' },
-            { href: '/dashboard/billing', icon: '◈', label: 'Billing' },
-          ].map(item => {
+          {tools.map(item => {
             const active = pathname === item.href
             return (
               <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>

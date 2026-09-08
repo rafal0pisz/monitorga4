@@ -24,7 +24,18 @@ export const LANDING_BASE_STYLES = `
   .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }
   .lp-nav .nav-cta-full { display: inline; }
   .lp-nav .nav-cta-short { display: none; }
+  .lp-nav-cta .demo-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 13px; font-weight: 700; color: #eafffb; text-decoration: none; white-space: nowrap;
+    padding: 8px 14px; border-radius: 7px; border: 1.5px solid #2dd4c4;
+  }
+  .lp-nav-cta .demo-link:hover { background: rgba(45,212,196,0.1); }
+  .lp-nav-cta .demo-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .lp-nav-mobile-cta .demo-link { display: flex; align-items: center; gap: 8px; color: #2dd4c4; font-weight: 700; }
   @media (max-width: 860px) { .lp-nav-links { display: none; } }
+  @media (max-width: 560px) {
+    .lp-nav-cta .demo-link { display: none; }
+  }
   @media (max-width: 480px) {
     .lp-nav-cta .login-link { display: none; }
     .lp-nav .nav-cta-full { display: none; }
