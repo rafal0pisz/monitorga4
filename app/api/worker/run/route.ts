@@ -493,19 +493,35 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
   {
     const w = WEIGHTS.geo_anomaly
     try {
+      // Fetches the full country breakdown (not just the top 5) so "new"
+      // means genuinely absent from the previous period, not merely
+      // outside an arbitrary top-N cutoff — and so a share of total
+      // traffic can actually be computed. Previously any country newly
+      // cracking the top 5 triggered this, even a country contributing a
+      // single session — flagged real newcomers and total non-issues the
+      // same way. Now only counts as an anomaly once it's actually
+      // material: a brand-new country pulling more than 3% of the day's
+      // total sessions.
       const [rC, rP] = await Promise.all([
-        report({ dateRanges: [ranges.current], dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
-        report({ dateRanges: [ranges.prev],    dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 5, orderBys: [{ metric: { metricName: 'sessions' }, desc: true }] }),
+        report({ dateRanges: [ranges.current], dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 250 }),
+        report({ dateRanges: [ranges.prev],    dimensions: [{ name: 'country' }], metrics: [{ name: 'sessions' }], limit: 250 }),
       ])
-      const top5C = new Set<string>((rC.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value))
-      const top5P = new Set<string>((rP.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value))
-      const newCountries = [...top5C].filter(c => !top5P.has(c))
+      const rowsC: { country: string; sessions: number }[] = (rC.rows ?? []).map((r: any) => ({ country: r.dimensionValues?.[0]?.value as string, sessions: parseInt(r.metricValues?.[0]?.value ?? '0') }))
+      const rowsP: { country: string; sessions: number }[] = (rP.rows ?? []).map((r: any) => ({ country: r.dimensionValues?.[0]?.value as string, sessions: parseInt(r.metricValues?.[0]?.value ?? '0') }))
+      const totalC = rowsC.reduce((s, r) => s + r.sessions, 0)
+      const prevCountries = new Set(rowsP.map(r => r.country))
+      const GEO_ANOMALY_MIN_SHARE_PCT = 3
+      const newCountries = rowsC
+        .filter(r => !prevCountries.has(r.country) && totalC > 0 && (r.sessions / totalC) * 100 > GEO_ANOMALY_MIN_SHARE_PCT)
+        .map(r => r.country)
       const status = newCountries.length === 0 ? 'pass' : newCountries.length === 1 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
       results.push({
         check_key: 'geo_anomaly', check_level: 'optional', status, score, weight: w,
-        value: { top5_current: [...top5C], top5_prev: [...top5P], new_countries: newCountries },
-        message: newCountries.length === 0 ? 'Top 5 countries unchanged' : `New countries in Top 5: ${newCountries.join(', ')}`,
+        value: { new_countries: newCountries, total_sessions: totalC },
+        message: newCountries.length === 0
+          ? `No new countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic`
+          : `New countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic: ${newCountries.join(', ')}`,
       })
     } catch (e: any) {
       results.push({ check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })

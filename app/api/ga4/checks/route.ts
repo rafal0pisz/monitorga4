@@ -160,13 +160,13 @@ export async function POST(req: NextRequest) {
       ga4Post(propertyId, token, {
         dateRanges: [current],
         dimensions: [{ name: 'country' }],
-        metrics:    [{ name: 'sessions' }], limit: 100,
+        metrics:    [{ name: 'sessions' }], limit: 250,
       }).then(d => d.rows ?? []),
 
       ga4Post(propertyId, token, {
         dateRanges: [prev],
         dimensions: [{ name: 'country' }],
-        metrics:    [{ name: 'sessions' }], limit: 100,
+        metrics:    [{ name: 'sessions' }], limit: 250,
       }).then(d => d.rows ?? []),
 
       // hostName — the actual domain a hit was collected on. Used to catch
@@ -550,21 +550,25 @@ function pageTitleNullCheck(ptC: any[], ptP: any[], label: string): CheckResult 
 
 // ─── USERS ───────────────────────────────────────────────────────────────────
 
-// Mirrors the worker's stored geo_anomaly check exactly: which countries
-// are new to the Top 5 by sessions, not how much any single country's
-// share shifted (that's geo_spike below — a different, complementary
-// signal, not a duplicate of this one). coC/coP aren't pre-sorted here
-// (unlike the worker's own ordered+limited query), so this sorts and
-// takes the top 5 itself to get the same set.
+// Mirrors the worker's stored geo_anomaly check exactly: a country that
+// had no sessions at all in the previous period, now pulling more than
+// 3% of the current period's total sessions — not merely any country
+// newly cracking an arbitrary top-N cutoff (a single-session newcomer
+// used to trigger this the same as a real traffic shift). geo_spike below
+// is a different, complementary signal (share-shift magnitude for any
+// country, not just new ones), not a duplicate of this one.
+const GEO_ANOMALY_MIN_SHARE_PCT = 3
+
 function geoAnomalyCheck(coC: any[], coP: any[], label: string): CheckResult {
-  const top5 = (rows: any[]) => new Set([...rows].sort((a, b) => m0(b) - m0(a)).slice(0, 5).map(dim))
-  const top5C = top5(coC)
-  const top5P = top5(coP)
-  const newCountries = [...top5C].filter(c => !top5P.has(c))
+  const totalC = coC.reduce((s, r) => s + m0(r), 0)
+  const prevCountries = new Set(coP.map(dim))
+  const newCountries = coC
+    .filter(r => !prevCountries.has(dim(r)) && totalC > 0 && (m0(r) / totalC) * 100 > GEO_ANOMALY_MIN_SHARE_PCT)
+    .map(dim)
   return {
     id: 'geo_anomaly', section: 'users',
     label: 'Geographic anomaly',
-    description: `New countries entering the Top 5 by sessions ${label}.`,
+    description: `New countries pulling more than ${GEO_ANOMALY_MIN_SHARE_PCT}% of total sessions ${label}.`,
     status: newCountries.length === 0 ? 'pass' : newCountries.length === 1 ? 'warn' : 'check',
     valueLabel: newCountries.length === 0 ? 'No change' : `${newCountries.length} new`,
     prevLabel: '',
