@@ -59,10 +59,12 @@ function param(eventName: string, parameterName: string, ga4Dimension: string, c
   }
 }
 
+type DemoRun = { id: string; run_date: string; score_total: number; status: 'completed'; sampled: boolean; sampling_ratio: number | null }
+
 // Generates a plausible score run history: `days` entries, newest first,
 // oscillating around `base` and ending exactly on `latest`.
-function scoreRuns(projectId: string, days: number, base: number, wobble: number, latest: number): { id: string; run_date: string; score_total: number; status: 'completed'; sampled: boolean; sampling_ratio: number | null }[] {
-  const out: { id: string; run_date: string; score_total: number; status: 'completed'; sampled: boolean; sampling_ratio: number | null }[] = []
+function scoreRuns(projectId: string, days: number, base: number, wobble: number, latest: number): DemoRun[] {
+  const out: DemoRun[] = []
   for (let i = 0; i < days; i++) {
     const d = new Date(DEMO_TODAY); d.setUTCDate(d.getUTCDate() - 2 - i)
     // Deterministic pseudo-noise (no Math.random — the page must render
@@ -70,6 +72,30 @@ function scoreRuns(projectId: string, days: number, base: number, wobble: number
     const wave = Math.sin(i * 0.9) * wobble + Math.cos(i * 0.37) * (wobble * 0.4)
     const score = i === 0 ? latest : Math.max(0, Math.min(100, Math.round(base + wave)))
     out.push({ id: `${projectId}-run-${i}`, run_date: isoDate(d), score_total: score, status: 'completed', sampled: false, sampling_ratio: null })
+  }
+  return out
+}
+
+// Same shape as scoreRuns, but models a sudden regression instead of a
+// gentle wobble: a long stable run around `stableBase`, then a hard drop
+// for the most recent `dropDays` entries — a real "everything was fine
+// until a release broke it two days ago" story instead of a slow decline.
+function scoreRunsWithDrop(
+  projectId: string, days: number, dropDays: number,
+  lowBase: number, lowWobble: number, stableBase: number, stableWobble: number, latest: number,
+): DemoRun[] {
+  const out: DemoRun[] = []
+  for (let i = 0; i < days; i++) {
+    const d = new Date(DEMO_TODAY); d.setUTCDate(d.getUTCDate() - 2 - i)
+    let score: number
+    if (i === 0) {
+      score = latest
+    } else if (i < dropDays) {
+      score = Math.round(lowBase + Math.sin(i * 1.3) * lowWobble)
+    } else {
+      score = Math.round(stableBase + Math.sin(i * 0.9) * stableWobble + Math.cos(i * 0.37) * (stableWobble * 0.4))
+    }
+    out.push({ id: `${projectId}-run-${i}`, run_date: isoDate(d), score_total: Math.max(0, Math.min(100, score)), status: 'completed', sampled: false, sampling_ratio: null })
   }
   return out
 }
@@ -250,7 +276,7 @@ export const DEMO_PROJECTS: DemoProjectSummary[] = [
   {
     id: BLOG_ID, name: 'Blog Techniczny (Demo)', ga4_property_id: 'properties/219873305',
     status: 'active', alert_threshold: 70, alert_email: 'demo@example.com', auto_run: true,
-    last_score: 58, prev_week_score: 71,
+    last_score: 58, prev_week_score: 93,
     ecommerce_events_count: 0, custom_events_count: 6, parameter_checks_count: 6,
   },
 ]
@@ -267,7 +293,7 @@ export const DEMO_PROJECT_DETAIL: Record<string, DemoProjectDetail> = {
   },
   [BLOG_ID]: {
     summary: DEMO_PROJECTS[1],
-    runs: scoreRuns(BLOG_ID, 30, 68, 6, 58),
+    runs: scoreRunsWithDrop(BLOG_ID, 30, 4, 58, 2, 92.5, 2.5, 58),
     checks: blogChecks,
     ecommerce: [],
     customEvents: blogCustomEvents,

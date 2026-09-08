@@ -106,7 +106,7 @@ export default async function DemoProjectPage({
         }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: '#0e9488' }} />
           <span style={{ fontSize: 12.5, color: '#0f766e' }}>
-            Fixed example data for this demo — Period and Export still work, but numbers won’t change from a real GA4 query.
+            Example data in this demo dashboard — not all features are available.
           </span>
         </div>
 
