@@ -237,7 +237,7 @@ export default async function HomePage() {
         .lp-faq-item p { color: #5b6570; font-size: 14.5px; line-height: 1.65; margin: 0 0 22px; max-width: 62ch; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} />
 
       {/* Hero */}
       <header className="lp-hero">

@@ -16,13 +16,16 @@ const NAV_LINKS = [
 ]
 
 export default function LandingNav({
-  primaryCta, secondaryCta, user,
+  primaryCta, user,
 }: {
   primaryCta: Cta
-  secondaryCta: Cta | null
   user: boolean
 }) {
   const [open, setOpen] = useState(false)
+  // Demo Dashboard sits with the rest of the nav links (next to Kontakt) as
+  // a plain, unhighlighted link — only shown to visitors who don't already
+  // have the real thing.
+  const navLinks = user ? NAV_LINKS : [...NAV_LINKS, { href: '/demo', label: 'Demo Dashboard' }]
 
   return (
     <nav className="lp-nav" aria-label="Główna">
@@ -31,16 +34,9 @@ export default function LandingNav({
           <BrandWordmark size={19} dark />
         </Link>
         <div className="lp-nav-links">
-          {NAV_LINKS.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
+          {navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
         </div>
         <div className="lp-nav-cta">
-          {!user && (
-            <Link href="/demo" className="demo-link">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-              Demo Dashboard
-            </Link>
-          )}
-          {secondaryCta && <Link href={secondaryCta.href} className="login-link">{secondaryCta.label}</Link>}
           <Link href={primaryCta.href} className="btn btn--primary btn--sm">
             <span className="nav-cta-full">{primaryCta.label}</span>
             <span className="nav-cta-short">{user ? primaryCta.label : 'Zarejestruj się'}</span>
@@ -61,12 +57,10 @@ export default function LandingNav({
 
       {open && (
         <div className="lp-nav-mobile">
-          {NAV_LINKS.map(l => (
+          {navLinks.map(l => (
             <a key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
           ))}
           <div className="lp-nav-mobile-cta">
-            {!user && <Link href="/demo" className="demo-link" onClick={() => setOpen(false)}>Demo Dashboard</Link>}
-            {secondaryCta && <Link href={secondaryCta.href} onClick={() => setOpen(false)}>{secondaryCta.label}</Link>}
             <Link href={primaryCta.href} className="btn btn--primary" onClick={() => setOpen(false)}>{primaryCta.label}</Link>
           </div>
         </div>

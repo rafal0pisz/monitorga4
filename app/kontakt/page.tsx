@@ -16,9 +16,6 @@ export default async function KontaktPage() {
   const primaryCta = user
     ? { href: '/dashboard', label: 'Przejdź do panelu' }
     : { href: '/login', label: 'Zarejestruj się przez Google' }
-  const secondaryCta = user
-    ? null
-    : { href: '/login', label: 'Zaloguj się' }
 
   return (
     <div className="lp">
@@ -56,7 +53,7 @@ export default async function KontaktPage() {
         .contact-sent p { font-size: 13.5px; color: #5b6570; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} />
 
       <main>
         <div className="wrap kontakt-hero">

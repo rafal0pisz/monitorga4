@@ -112,7 +112,7 @@ export default async function CennikPage() {
         .plan-carousel-dot.active { background: #16a34a; width: 18px; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} />
 
       <main>
         <div className="wrap cennik-hero">

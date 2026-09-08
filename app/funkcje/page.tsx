@@ -132,7 +132,7 @@ export default async function FunkcjePage() {
 
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} secondaryCta={secondaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} />
 
       <main>
         <section className="fx-hero">
