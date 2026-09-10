@@ -68,15 +68,16 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 const WEIGHTS: Record<string, number> = {
   expected_events:      15,
   purchase_duplicates:  12,
-  ecommerce_events:     10,
-  self_referral:        10,
+  ecommerce_events:     16,
+  self_referral:         7,
   direct_traffic_spike:  8,
   bounce_rate_anomaly:   8,
   conversion_rate:      10,
   page_title_null:       8,
-  bot_traffic_night:    12,
+  bot_traffic_night:     9,
   geo_anomaly:           7,
-  parameter_checks:      8,
+  parameter_checks:     12,
+  custom_events:        12,
 }
 
 // ============================================================
@@ -560,7 +561,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
         }
       }
       // Per-event results — one card per custom event
-      const wPerEv = +(8 / Math.max(eventNames.length, 1)).toFixed(2)
+      const wPerEv = +(WEIGHTS.custom_events / Math.max(eventNames.length, 1)).toFixed(2)
       for (const ev of eventNames) {
         const currCount = countC[ev] ?? 0
         const prevCount = countP[ev] ?? 0
@@ -577,7 +578,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
         })
       }
     } catch (e: any) {
-      results.push({ check_key: 'custom_events_check', check_level: 'core', status: 'fail', score: 0, weight: 8, value: { error: e.message }, message: `API error: ${e.message}` })
+      results.push({ check_key: 'custom_events_check', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.custom_events, value: { error: e.message }, message: `API error: ${e.message}` })
     }
   }
 
@@ -613,7 +614,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       }
 
       const status = missing.length > 0 ? 'fail' : drops.length > 0 ? 'warn' : 'pass'
-      const w = 10
+      const w = WEIGHTS.ecommerce_events
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
       results.push({
         check_key: 'ecommerce_events', check_level: 'core', status, score, weight: w,
@@ -625,7 +626,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           : `All ${ecomEvents.length} ecommerce events present`,
       })
     } catch (e: any) {
-      results.push({ check_key: 'ecommerce_events', check_level: 'core', status: 'fail', score: 0, weight: 10, value: { error: e.message }, message: `API error: ${e.message}` })
+      results.push({ check_key: 'ecommerce_events', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.ecommerce_events, value: { error: e.message }, message: `API error: ${e.message}` })
     }
   }
 
