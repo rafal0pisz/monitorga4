@@ -3,6 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
+import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 
 // GA4 dimension name for a custom event parameter — shared with the worker
 // (src/lib/ga4/standardParams.ts) so this endpoint can't silently diverge
@@ -168,6 +169,10 @@ export async function GET(request: NextRequest) {
 
   if (!project || project.owner_id !== user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (!(await ownerHasActiveAccess(user.id))) {
+    return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
   }
 
   const propertyId = project.ga4_property_id

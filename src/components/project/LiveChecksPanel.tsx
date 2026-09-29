@@ -34,6 +34,24 @@ function ErrorBlock({ message }: { message: string }) {
   )
 }
 
+// Distinct from ErrorBlock — a lapsed trial/plan (HTTP 402) isn't a GA4
+// connection problem, it's an expected, actionable state with its own CTA.
+function UpgradeBlock({ message }: { message: string }) {
+  return (
+    <div style={{
+      padding: '12px 16px', borderRadius: 10, marginBottom: 24,
+      backgroundColor: '#fffbeb', border: '1px solid #fde68a',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>Trial ended</div>
+        <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>{message}</div>
+      </div>
+      <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>
+    </div>
+  )
+}
+
 interface Props { projectId: string; period: number; anchorOffset?: number; extraChecks?: CheckResult[] }
 
 const LCStyle = () => (
@@ -51,20 +69,24 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
+  const [blocked, setBlocked] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(null)
+    setLoading(true); setError(null); setBlocked(false)
 
     ga4Fetch('/api/ga4/checks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId, period, anchorOffset }),
     })
-      .then(r => r.json())
-      .then(d => {
+      .then(async r => {
+        const d = await r.json()
         if (cancelled) return
-        if (d.error) throw new Error(d.error)
+        if (d.error) {
+          if (r.status === 402) { setBlocked(true); setError(d.error); return }
+          throw new Error(d.error)
+        }
         setChecks(d.checks)
       })
       .catch(e => { if (!cancelled) setError(e.message) })
@@ -82,7 +104,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   return (
     <div>
       {loading && !showSections && <Loading />}
-      {error && <ErrorBlock message={error} />}
+      {error && (blocked ? <UpgradeBlock message={error} /> : <ErrorBlock message={error} />)}
       {showSections && (['traffic', 'engagement', 'users'] as const).map(s => (
         <SectionBlock key={s} id={s} checks={merged.filter(c => c.section === s)} />
       ))}

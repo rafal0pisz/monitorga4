@@ -23,8 +23,13 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   const [data, setData] = useState<Record<string, ParameterData>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [errors, setErrors] = useState<Record<string, { message: string; dimension?: string; hint?: string }>>({})
+  // A lapsed trial applies to the whole project, not one parameter — one
+  // combined banner instead of the same "trial ended" message repeated on
+  // every single parameter card.
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    setBlockedMessage(null)
     for (const pc of parameterChecks) {
       const key = `${pc.event_name}_${pc.parameter_name}`
       setLoading(prev => ({ ...prev, [key]: true }))
@@ -38,8 +43,13 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
       })
 
       ga4Fetch(`/api/ga4/parameters?${params}`)
-        .then(res => res.json())
+        .then(async res => {
+          const json = await res.json()
+          if (res.status === 402 && json.error) { setBlockedMessage(json.error); return }
+          return json
+        })
         .then(json => {
+          if (!json) return
           if (json.error) {
             // Carry the server's own ga4_dimension/hint through instead of
             // re-deriving "is this actually an unregistered custom
@@ -58,6 +68,18 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   }, [projectId, JSON.stringify(parameterChecks), periodDays, anchorOffset])
 
   if (parameterChecks.length === 0) return null
+
+  if (blockedMessage) {
+    return (
+      <div style={{ padding: '12px 16px', borderRadius: 10, backgroundColor: '#fffbeb', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>Trial ended</div>
+          <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>{blockedMessage}</div>
+        </div>
+        <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>
+      </div>
+    )
+  }
 
   return (
     <div>

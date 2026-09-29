@@ -79,3 +79,14 @@ export function effectivePlanId(planId: string | null | undefined, trialEndsAt: 
   if (planId === 'trial' && (!trialEndsAt || new Date(trialEndsAt) < new Date())) return null
   return planId ?? null
 }
+
+// Whether an account can use the product at all right now (as opposed to
+// planLimit, which only says how many NEW projects it may create) — a
+// project limit of 0 never stopped an account from continuing to pull live
+// GA4 data or run daily checks on projects it already had, since none of
+// that ever checked plan/trial status. This is that check, shared by the
+// live GA4 routes and the worker so a lapsed trial actually stops
+// functioning instead of only blocking new project creation.
+export function hasActiveAccess(planId: string | null | undefined, trialEndsAt: string | null | undefined): boolean {
+  return effectivePlanId(planId, trialEndsAt) !== null
+}

@@ -10,6 +10,8 @@ import { renderClientAlertEmail } from '@/lib/email/clientAlert'
 import { renderCriticalAlertEmail } from '@/lib/email/criticalAlert'
 import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import { parseEmailList } from '@/lib/email/shared'
+import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
+import { hasActiveAccess } from '@/lib/billing/plans'
 import type { Project, CheckResult } from '@/types'
 
 // Default serverless timeout is far too short once this loops over dozens
@@ -999,6 +1001,9 @@ export async function POST(request: NextRequest) {
     if (!user || !project || project.owner_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
+    if (!(await ownerHasActiveAccess(user.id))) {
+      return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
+    }
   }
 
   return runWorker(projectId ?? null)
@@ -1017,7 +1022,22 @@ async function runWorker(projectId: string | null) {
   // auto_run; automatyczny (cron) run bierze tylko projekty z auto_run = true.
   let query = supabase.from('projects').select('*').eq('status', 'active')
   query = projectId ? query.eq('id', projectId) : query.eq('auto_run', true)
-  const { data: projects } = await query
+  const { data: projectsRaw } = await query
+
+  // A lapsed trial (or no plan at all) used to only block creating NEW
+  // projects — existing ones kept running daily checks and sending client
+  // alerts forever, for free. Batched (not one query per project) since the
+  // cron pass can cover dozens of projects at once. Projects with no
+  // owner_id (a legacy/system-owned property, see getGa4Token below) aren't
+  // tied to any billed account, so they're exempt rather than blocked.
+  const allProjects = (projectsRaw ?? []) as Project[]
+  const ownerIds = [...new Set(allProjects.map(p => p.owner_id).filter((id): id is string => !!id))]
+  const { data: ownerProfiles } = ownerIds.length
+    ? await supabase.from('profiles').select('id, plan_id, trial_ends_at').in('id', ownerIds)
+    : { data: [] as { id: string; plan_id: string | null; trial_ends_at: string | null }[] }
+  const accessByOwner = new Map((ownerProfiles ?? []).map((p: { id: string; plan_id: string | null; trial_ends_at: string | null }) => [p.id, hasActiveAccess(p.plan_id, p.trial_ends_at)]))
+  const projects = allProjects.filter(p => !p.owner_id || accessByOwner.get(p.owner_id) === true)
+  const skippedNoAccess = allProjects.filter(p => p.owner_id && accessByOwner.get(p.owner_id) !== true)
 
   const processed: string[] = []
   const errors: Record<string, string> = {}
@@ -1029,7 +1049,7 @@ async function runWorker(projectId: string | null) {
 
   const isAutoRunPass = projectId === null
   const outcomes = await runWithConcurrency(
-    (projects ?? []) as Project[],
+    projects,
     WORKER_CONCURRENCY,
     project => processProject(supabase, project, runDate, prevDate, isAutoRunPass, checkedDate)
   )
@@ -1052,5 +1072,5 @@ async function runWorker(projectId: string | null) {
     await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0) })
   }
 
-  return NextResponse.json({ ok: true, processed, errors, run_date: runDate })
+  return NextResponse.json({ ok: true, processed, errors, run_date: runDate, skipped_no_access: skippedNoAccess.map(p => p.id) })
 }

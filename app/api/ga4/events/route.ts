@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -26,6 +27,10 @@ export async function GET(request: NextRequest) {
 
   if (!project || project.owner_id !== user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  if (!(await ownerHasActiveAccess(user.id))) {
+    return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
   }
 
   const propertyId = project.ga4_property_id
