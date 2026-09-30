@@ -9,18 +9,28 @@
 -- parameterCatalog.ts) — but with RLS off, anyone with the project's
 -- anon key could also insert/update/delete rows in them via the API, not
 -- just read them.
+--
+-- Guarded with to_regclass() rather than a bare `alter table` — running
+-- this against a live database turned up that parameter_catalog doesn't
+-- actually exist there (005_sections.sql was evidently never fully
+-- applied), and a bare `alter table` on a missing relation errors out the
+-- whole script, silently rolling back the ecommerce_events_catalog half
+-- too when the SQL editor wraps the run in one transaction.
 
-alter table ecommerce_events_catalog enable row level security;
-alter table parameter_catalog enable row level security;
+do $$
+begin
+  if to_regclass('public.ecommerce_events_catalog') is not null then
+    execute 'alter table ecommerce_events_catalog enable row level security';
+    execute 'drop policy if exists "ecommerce_events_catalog_select" on ecommerce_events_catalog';
+    execute 'create policy "ecommerce_events_catalog_select" on ecommerce_events_catalog for select using (true)';
+  end if;
 
-drop policy if exists "ecommerce_events_catalog_select" on ecommerce_events_catalog;
-create policy "ecommerce_events_catalog_select" on ecommerce_events_catalog
-  for select using (true);
-
-drop policy if exists "parameter_catalog_select" on parameter_catalog;
-create policy "parameter_catalog_select" on parameter_catalog
-  for select using (true);
-
--- No insert/update/delete policy on either — this is static reference
--- data maintained via migrations only, same lockdown pattern as the other
--- tables already fixed in 010_lock_down_remaining_tables.sql.
+  -- No insert/update/delete policy on either — this is static reference
+  -- data maintained via migrations only, same lockdown pattern as the
+  -- other tables already fixed in 010_lock_down_remaining_tables.sql.
+  if to_regclass('public.parameter_catalog') is not null then
+    execute 'alter table parameter_catalog enable row level security';
+    execute 'drop policy if exists "parameter_catalog_select" on parameter_catalog';
+    execute 'create policy "parameter_catalog_select" on parameter_catalog for select using (true)';
+  end if;
+end $$;
