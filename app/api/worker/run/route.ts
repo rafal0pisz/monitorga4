@@ -101,6 +101,18 @@ const WEIGHTS: Record<string, number> = {
 // przez GA4. Domyślne pomijanie wczoraj tutaj jest więc na stałe, nie
 // opcjonalne — codzienny automatyczny run zawsze sprawdza dane sprzed
 // 2 dni, o które GA4 zdążyło się już w pełni "domknąć".
+//
+// `new Date()` tutaj to zawsze UTC (środowisko Vercel), a harmonogram
+// crona w vercel.json też jest zawsze w UTC — niezależnie od tego, co
+// pokazuje zegar w Polsce. Stąd realny wymóg: godzina crona MUSI leżeć
+// wygodnie w środku tej samej doby UTC co polska data kalendarzowa, a nie
+// tuż po polskiej północy. Wcześniejsze "0 23 * * *" (23:00 UTC) odpalało
+// się ok. 00:00–01:00 czasu polskiego (zależnie od DST) — czyli już
+// "następnego dnia" dla obserwatora w Polsce, ale WCIĄŻ poprzedniego dnia
+// UTC, więc -2 dni liczyło się od dnia o jeden za wczesnego i finalnie
+// sprawdzało dane sprzed 3 dni kalendarzowych w Polsce, nie 2. Ustawione
+// teraz na "30 4 * * *" (4:30 UTC = 6:30 czasu letniego / 5:30 czasu
+// zimowego w Polsce) celowo z dużym marginesem od obu północy.
 // ============================================================
 function getDailyRanges() {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
