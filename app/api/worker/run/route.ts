@@ -110,9 +110,10 @@ const WEIGHTS: Record<string, number> = {
 // się ok. 00:00–01:00 czasu polskiego (zależnie od DST) — czyli już
 // "następnego dnia" dla obserwatora w Polsce, ale WCIĄŻ poprzedniego dnia
 // UTC, więc -2 dni liczyło się od dnia o jeden za wczesnego i finalnie
-// sprawdzało dane sprzed 3 dni kalendarzowych w Polsce, nie 2. Ustawione
-// teraz na "30 4 * * *" (4:30 UTC = 6:30 czasu letniego / 5:30 czasu
-// zimowego w Polsce) celowo z dużym marginesem od obu północy.
+// sprawdzało dane sprzed 3 dni kalendarzowych w Polsce, nie 2. Teraz cron
+// (vercel.json) odpala się o 7:30 polskiego czasu — patrz
+// isScheduledWarsawHour() przy handlerze GET niżej po szczegóły, czemu to
+// dwa wpisy w harmonogramie, nie jeden.
 // ============================================================
 function getDailyRanges() {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
@@ -977,11 +978,34 @@ async function processProject(
 // ============================================================
 // ROUTE HANDLERS
 // ============================================================
-// GET — wywoływany przez Vercel Cron (codziennie 23:00 UTC, bez body).
-// Przetwarza tylko projekty z auto_run = true.
+
+// Vercel Cron is UTC-only — no per-job timezone option — so a single
+// fixed UTC schedule drifts an hour against Polish wall-clock time every
+// time DST flips (this is exactly how the previous "23:00 UTC" schedule
+// ended up checking data from the wrong calendar day). Rather than
+// requiring a manual vercel.json edit twice a year, vercel.json registers
+// TWO daily cron firings — one correct for CEST, one for CET — and this
+// gate lets only whichever one actually lands on 7:30 Warsaw time through;
+// the other no-ops for free. Net effect: always 7:30 Polish time, summer
+// and winter, with no seasonal maintenance.
+const SCHEDULED_WARSAW_HOUR = 7
+
+function isScheduledWarsawHour(): boolean {
+  const warsawHour = Number(
+    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date())
+  )
+  return warsawHour === SCHEDULED_WARSAW_HOUR
+}
+
+// GET — wywoływany przez Vercel Cron, dwa razy dziennie (patrz
+// vercel.json + isScheduledWarsawHour powyżej). Przetwarza tylko
+// projekty z auto_run = true.
 export async function GET(request: NextRequest) {
   if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (!isScheduledWarsawHour()) {
+    return NextResponse.json({ ok: true, skipped: 'not the scheduled Warsaw hour for this cron firing' })
   }
   return runWorker(null)
 }
