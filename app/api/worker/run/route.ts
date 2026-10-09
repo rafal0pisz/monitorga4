@@ -111,9 +111,9 @@ const WEIGHTS: Record<string, number> = {
 // "następnego dnia" dla obserwatora w Polsce, ale WCIĄŻ poprzedniego dnia
 // UTC, więc -2 dni liczyło się od dnia o jeden za wczesnego i finalnie
 // sprawdzało dane sprzed 3 dni kalendarzowych w Polsce, nie 2. Teraz cron
-// (vercel.json) odpala się o 7:30 polskiego czasu — patrz
-// isScheduledWarsawHour() przy handlerze GET niżej po szczegóły, czemu to
-// dwa wpisy w harmonogramie, nie jeden.
+// (vercel.json) celuje w 7:30 polskiego czasu — patrz komentarz przy
+// handlerze GET niżej po pełne szczegóły (i czemu to nie jest już prosty
+// gate na dokładną godzinę).
 // ============================================================
 function getDailyRanges() {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
@@ -982,31 +982,77 @@ async function processProject(
 // Vercel Cron is UTC-only — no per-job timezone option — so a single
 // fixed UTC schedule drifts an hour against Polish wall-clock time every
 // time DST flips (this is exactly how the previous "23:00 UTC" schedule
-// ended up checking data from the wrong calendar day). Rather than
-// requiring a manual vercel.json edit twice a year, vercel.json registers
-// TWO daily cron firings — one correct for CEST, one for CET — and this
-// gate lets only whichever one actually lands on 7:30 Warsaw time through;
-// the other no-ops for free. Net effect: always 7:30 Polish time, summer
-// and winter, with no seasonal maintenance.
-const SCHEDULED_WARSAW_HOUR = 7
+// ended up checking data from the wrong calendar day). vercel.json
+// registers TWO daily cron firings (5:30 and 6:30 UTC — correct for CEST
+// and CET respectively) aimed at 7:30 Warsaw time.
+//
+// Originally this gated on an EXACT Warsaw hour match. That assumed Vercel
+// dispatches cron at the scheduled minute — true on Pro, but Hobby plan
+// only guarantees cron fires "within the hour" (±59 min), so a firing
+// could land outside the expected hour entirely and get silently gated
+// out, with NEITHER of the day's two firings ever doing real work — which
+// is exactly the kind of silent, multi-day gap that stops every client's
+// alerts without raising any error anywhere. So this is now two
+// independent, fail-open safety nets instead of one precise gate:
+//   1. A wide tolerance window (not an exact hour) absorbs scheduling
+//      jitter on any plan tier.
+//   2. A once-per-day marker (app_config) stops the two firings (or
+//      retries within the window) from double-running the same day —
+//      but if reading/writing that marker itself fails for any reason,
+//      this fails OPEN (runs anyway) rather than silently skipping, since
+//      a missed day of alerts is a worse failure than an extra run.
+const WARSAW_MORNING_WINDOW = new Set([5, 6, 7, 8, 9, 10, 11])
+const AUTO_RUN_MARKER_KEY = 'worker_last_auto_run_date'
 
-function isScheduledWarsawHour(): boolean {
-  const warsawHour = Number(
+function currentWarsawHour(): number {
+  return Number(
     new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date())
   )
-  return warsawHour === SCHEDULED_WARSAW_HOUR
 }
 
-// GET — wywoływany przez Vercel Cron, dwa razy dziennie (patrz
-// vercel.json + isScheduledWarsawHour powyżej). Przetwarza tylko
-// projekty z auto_run = true.
+function currentWarsawDate(): string {
+  // en-CA gives YYYY-MM-DD directly, matching dqs_runs.run_date's format.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date())
+}
+
+async function alreadyRanAutomaticallyToday(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string): Promise<boolean> {
+  try {
+    const { data, error } = await admin.from('app_config').select('value').eq('key', AUTO_RUN_MARKER_KEY).maybeSingle()
+    if (error) throw error
+    return data?.value === todayWarsaw
+  } catch (e: any) {
+    console.error('[worker] Could not read auto-run marker — failing open (running anyway):', e.message)
+    return false
+  }
+}
+
+async function markRanAutomaticallyToday(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string): Promise<void> {
+  try {
+    const { error } = await admin.from('app_config').upsert({ key: AUTO_RUN_MARKER_KEY, value: todayWarsaw })
+    if (error) throw error
+  } catch (e: any) {
+    // Non-fatal — worst case the next cron firing today re-runs once more,
+    // which is far safer than the alternative of appearing to have run
+    // when it didn't.
+    console.error('[worker] Could not record auto-run marker (non-fatal):', e.message)
+  }
+}
+
+// GET — wywoływany przez Vercel Cron, dwa razy dziennie (patrz vercel.json
+// + komentarz powyżej). Przetwarza tylko projekty z auto_run = true.
 export async function GET(request: NextRequest) {
   if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!isScheduledWarsawHour()) {
-    return NextResponse.json({ ok: true, skipped: 'not the scheduled Warsaw hour for this cron firing' })
+  if (!WARSAW_MORNING_WINDOW.has(currentWarsawHour())) {
+    return NextResponse.json({ ok: true, skipped: 'outside the Warsaw morning window' })
   }
+  const admin = createAdminClient()
+  const todayWarsaw = currentWarsawDate()
+  if (await alreadyRanAutomaticallyToday(admin, todayWarsaw)) {
+    return NextResponse.json({ ok: true, skipped: 'already ran automatically today' })
+  }
+  await markRanAutomaticallyToday(admin, todayWarsaw)
   return runWorker(null)
 }
 
@@ -1068,12 +1114,24 @@ async function runWorker(projectId: string | null) {
   // tied to any billed account, so they're exempt rather than blocked.
   const allProjects = (projectsRaw ?? []) as Project[]
   const ownerIds = [...new Set(allProjects.map(p => p.owner_id).filter((id): id is string => !!id))]
-  const { data: ownerProfiles } = ownerIds.length
+  const { data: ownerProfiles, error: ownerProfilesError } = ownerIds.length
     ? await supabase.from('profiles').select('id, plan_id, trial_ends_at').in('id', ownerIds)
-    : { data: [] as { id: string; plan_id: string | null; trial_ends_at: string | null }[] }
+    : { data: [] as { id: string; plan_id: string | null; trial_ends_at: string | null }[], error: null }
+  if (ownerProfilesError) {
+    // Fail OPEN, not closed: this lookup errorring must never translate
+    // into "treat every project as having no access" — that would silently
+    // stop every client's checks and alerts off the back of an unrelated,
+    // transient query failure, which is a far worse outcome than letting a
+    // lapsed-trial project slip through for one run.
+    console.error('[worker] Owner profile lookup failed — not filtering any project by plan status this run:', ownerProfilesError.message)
+  }
   const accessByOwner = new Map((ownerProfiles ?? []).map((p: { id: string; plan_id: string | null; trial_ends_at: string | null }) => [p.id, hasActiveAccess(p.plan_id, p.trial_ends_at)]))
-  const projects = allProjects.filter(p => !p.owner_id || accessByOwner.get(p.owner_id) === true)
-  const skippedNoAccess = allProjects.filter(p => p.owner_id && accessByOwner.get(p.owner_id) !== true)
+  const projects = ownerProfilesError
+    ? allProjects
+    : allProjects.filter(p => !p.owner_id || accessByOwner.get(p.owner_id) === true)
+  const skippedNoAccess = ownerProfilesError
+    ? []
+    : allProjects.filter(p => p.owner_id && accessByOwner.get(p.owner_id) !== true)
 
   const processed: string[] = []
   const errors: Record<string, string> = {}
