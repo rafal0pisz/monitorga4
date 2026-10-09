@@ -14,7 +14,7 @@ const PUBLIC_PATHS = [
 // carries a session cookie). Same reasoning for /api/stripe/webhook: Stripe
 // never carries a session cookie, it self-authorizes via the
 // stripe-signature header instead.
-const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/stripe/webhook']
+const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/worker/watchdog', '/api/stripe/webhook']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

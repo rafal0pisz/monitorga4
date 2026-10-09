@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { timingSafeEqual } from 'crypto'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
@@ -12,6 +11,8 @@ import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import { parseEmailList } from '@/lib/email/shared'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 import { hasActiveAccess } from '@/lib/billing/plans'
+import { isCronRequest } from '@/lib/worker/cronAuth'
+import { AUTO_RUN_MARKER_KEY, currentWarsawDate } from '@/lib/worker/schedule'
 import type { Project, CheckResult } from '@/types'
 
 // Default serverless timeout is far too short once this loops over dozens
@@ -35,23 +36,8 @@ interface SamplingHit { samplesReadCount: number; samplingSpaceSize: number }
 // codzienny automatyczny run) ORAZ z sesją (klik "Run now" z UI). Middleware
 // przepuszcza ten path bez przekierowania na /login, więc autoryzację
 // sprawdzamy tutaj: albo poprawny sekret crona, albo zalogowany użytkownik.
-function safeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a)
-  const bufB = Buffer.from(b)
-  // timingSafeEqual throws on mismatched lengths rather than returning
-  // false, and the length check itself leaks length — both are fine here
-  // since the secret's length isn't the sensitive part, only its value.
-  if (bufA.length !== bufB.length) return false
-  return timingSafeEqual(bufA, bufB)
-}
-
-function isCronRequest(request: NextRequest): boolean {
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return false
-  const authHeader = request.headers.get('authorization')
-  return !!authHeader && safeCompare(authHeader, `Bearer ${cronSecret}`)
-}
-
+// isCronRequest samo w sobie mieszka teraz w lib/worker/cronAuth.ts —
+// współdzielone z /api/worker/watchdog.
 async function isAuthorized(request: NextRequest): Promise<boolean> {
   if (isCronRequest(request)) return true
 
@@ -1002,17 +988,11 @@ async function processProject(
 //      this fails OPEN (runs anyway) rather than silently skipping, since
 //      a missed day of alerts is a worse failure than an extra run.
 const WARSAW_MORNING_WINDOW = new Set([5, 6, 7, 8, 9, 10, 11])
-const AUTO_RUN_MARKER_KEY = 'worker_last_auto_run_date'
 
 function currentWarsawHour(): number {
   return Number(
     new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date())
   )
-}
-
-function currentWarsawDate(): string {
-  // en-CA gives YYYY-MM-DD directly, matching dqs_runs.run_date's format.
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw' }).format(new Date())
 }
 
 async function alreadyRanAutomaticallyToday(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string): Promise<boolean> {
