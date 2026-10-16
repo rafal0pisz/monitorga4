@@ -565,7 +565,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           : !dominant
           ? 'No country data available'
           : `${dominant.country} + (not set): ${(dominantShare + notSetShare).toFixed(1)}%` + (otherShare > 5
-              ? ` — other countries: ${otherCountries.map(c => `${c.country} ${c.share.toFixed(1)}%`).join(', ')}`
+              ? ` — other countries: ${otherCountries.slice(0, 3).map(c => `${c.country} ${c.share.toFixed(1)}%`).join(', ')}${otherCountries.length > 3 ? ` +${otherCountries.length - 3} more` : ''}`
               : ' — everything else under 5%'),
       })
     } catch (e: any) {

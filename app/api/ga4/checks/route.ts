@@ -676,7 +676,9 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
       status: countryShareStatus,
       valueLabel: `${r1(otherShare)}%`,
       prevLabel: '',
-      deltaLabel: otherShare > 5 ? otherCountries.map(x => `${x.c} ${r1(x.share)}%`).join(', ') : 'All clear',
+      deltaLabel: otherShare > 5
+        ? otherCountries.slice(0, 3).map(x => `${x.c} ${r1(x.share)}%`).join(', ') + (otherCountries.length > 3 ? ` +${otherCountries.length - 3} more` : '')
+        : 'All clear',
       detail: dominantCountry ? `Dominant: ${dominantCountry} (${r1(dominantShare)}%)` : undefined,
     },
   ]
