@@ -599,6 +599,26 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
     .map(c => ({ c, δ: ppΔ(csC(c), csP(c)) }))
     .reduce((m, x) => Math.abs(x.δ) > Math.abs(m.δ) ? x : m, { c: '', δ: 0 })
 
+  // Composition check (current period only, no WoW — matches the worker's
+  // own country_share exactly): dominant country + "(not set)" should
+  // together cover the large majority of traffic; anything beyond that
+  // going "elsewhere" is worth flagging even among countries that were
+  // already present (geo_anomaly above only catches brand-new ones).
+  const countriesC = Object.keys(mapCoC).filter(c => c !== '(not set)')
+  const dominantCountry = countriesC.length
+    ? countriesC.reduce((max, c) => csC(c) > csC(max) ? c : max, countriesC[0])
+    : null
+  const dominantShare = dominantCountry ? csC(dominantCountry) : 0
+  const otherCountries = countriesC
+    .filter(c => c !== dominantCountry)
+    .map(c => ({ c, share: csC(c) }))
+    .filter(x => x.share > 0)
+    .sort((a, b) => b.share - a.share)
+  const otherShare = Math.max(0, 100 - dominantShare - unkC)
+  // totCC === 0 (no sessions at all this period) must not fall through to
+  // "100% is elsewhere" — that's an absence of data, not an anomaly.
+  const countryShareStatus: Status = totCC === 0 ? 'pass' : otherShare > 10 ? 'check' : otherShare > 5 ? 'warn' : 'pass'
+
   // Bot signals — current period
   const newUsersC   = mi(engC, 5)
   const totalUsrsC  = mi(engC, 6)
@@ -648,6 +668,16 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
       prevLabel: '',
       deltaLabel: botScore === 0 ? 'All clear' : triggered[0] ?? '',
       detail: triggered.length ? triggered.join(' · ') : 'No signals triggered',
+    },
+    {
+      id: 'country_share', section: 'users',
+      label: 'Country share',
+      description: 'Share of sessions outside the dominant country and "(not set)" — flags composition drift even among countries that were already present.',
+      status: countryShareStatus,
+      valueLabel: `${r1(otherShare)}%`,
+      prevLabel: '',
+      deltaLabel: otherShare > 5 ? otherCountries.map(x => `${x.c} ${r1(x.share)}%`).join(', ') : 'All clear',
+      detail: dominantCountry ? `Dominant: ${dominantCountry} (${r1(dominantShare)}%)` : undefined,
     },
   ]
 }

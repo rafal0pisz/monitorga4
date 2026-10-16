@@ -161,10 +161,11 @@ const shopChecks: CheckResult[] = [
   { id: 'session_duration', section: 'engagement', label: 'Session duration shift', description: 'Change in average session duration vs prev 7d — drops can indicate bot traffic or UX degradation.', status: 'pass', valueLabel: '142s', prevLabel: '135s', deltaLabel: '+5.2%' },
   { id: 'conversion_rate', section: 'engagement', label: 'Conversion rate', description: 'Change in session conversion rate vs prev 7d.', status: 'warn', valueLabel: '1.80%', prevLabel: '2.60%', deltaLabel: '−30.8%' },
   { id: 'page_title_null', section: 'engagement', label: 'Page title coverage', description: 'Share of sessions with a missing or blank page title.', status: 'pass', valueLabel: '0.30%', prevLabel: '0.50%', deltaLabel: '−40.0%' },
-  // Users (5)
+  // Users (6)
   { id: 'geo_anomaly', section: 'users', label: 'Geographic anomaly', description: 'New countries pulling more than 3% of total sessions vs prev 7d.', status: 'pass', valueLabel: 'No change', prevLabel: '', deltaLabel: 'All clear' },
   { id: 'unknown_country', section: 'users', label: 'Unknown country share', description: 'Sessions without an assigned country — elevated values may indicate VPN traffic or bot activity.', status: 'pass', valueLabel: '0.8%', prevLabel: '1.1%', deltaLabel: '−0.3pp' },
   { id: 'geo_spike', section: 'users', label: 'Geographic spike', description: 'Flags any country whose session share jumped 15+ pp vs the previous period — a strong bot signal.', status: 'pass', valueLabel: '4.1pp max', prevLabel: '', deltaLabel: 'Germany: +4.1pp', detail: 'Largest: Germany' },
+  { id: 'country_share', section: 'users', label: 'Country share', description: 'Share of sessions outside the dominant country and "(not set)" — flags composition drift even among countries that were already present.', status: 'pass', valueLabel: '3.2%', prevLabel: '', deltaLabel: 'All clear', detail: 'Dominant: Poland (94.1%)' },
   { id: 'bot_suspicion', section: 'users', label: 'Bot Suspicion Index', description: 'Combines 4 signals (new-user ratio, engagement rate, session length, direct share) into a risk score.', status: 'pass', valueLabel: '0/4 signals', prevLabel: '', deltaLabel: 'All clear', detail: 'No signals triggered' },
   { id: 'bot_traffic_night', section: 'users', label: 'Night traffic spike', description: 'Change in night-time (0–5h) traffic share vs prev 7d — a common bot signal.', status: 'pass', valueLabel: '2.1%', prevLabel: '2.4%', deltaLabel: '−12.5%' },
 ]
@@ -226,10 +227,11 @@ const blogChecks: CheckResult[] = [
   { id: 'session_duration', section: 'engagement', label: 'Session duration shift', description: 'Change in average session duration vs prev 7d — drops can indicate bot traffic or UX degradation.', status: 'warn', valueLabel: '58s', prevLabel: '95s', deltaLabel: '−38.9%' },
   { id: 'conversion_rate', section: 'engagement', label: 'Conversion rate', description: 'Change in session conversion rate vs prev 7d.', status: 'pass', valueLabel: '3.10%', prevLabel: '2.90%', deltaLabel: '+6.9%' },
   { id: 'page_title_null', section: 'engagement', label: 'Page title coverage', description: 'Share of sessions with a missing or blank page title.', status: 'warn', valueLabel: '6.20%', prevLabel: '1.80%', deltaLabel: '+244.4%' },
-  // Users (5)
+  // Users (6)
   { id: 'geo_anomaly', section: 'users', label: 'Geographic anomaly', description: 'New countries pulling more than 3% of total sessions vs prev 7d.', status: 'warn', valueLabel: '1 new', prevLabel: '', deltaLabel: 'Vietnam', detail: 'New: Vietnam' },
   { id: 'unknown_country', section: 'users', label: 'Unknown country share', description: 'Sessions without an assigned country — elevated values may indicate VPN traffic or bot activity.', status: 'pass', valueLabel: '1.6%', prevLabel: '1.4%', deltaLabel: '+0.2pp' },
   { id: 'geo_spike', section: 'users', label: 'Geographic spike', description: 'Flags any country whose session share jumped 15+ pp vs the previous period — a strong bot signal.', status: 'warn', valueLabel: '9.5pp max', prevLabel: '', deltaLabel: 'Vietnam: +9.5pp', detail: 'Largest: Vietnam' },
+  { id: 'country_share', section: 'users', label: 'Country share', description: 'Share of sessions outside the dominant country and "(not set)" — flags composition drift even among countries that were already present.', status: 'warn', valueLabel: '8.4%', prevLabel: '', deltaLabel: 'Vietnam 5.1%, Germany 2.1%, Ukraine 1.2%', detail: 'Dominant: Poland (88.2%)' },
   { id: 'bot_suspicion', section: 'users', label: 'Bot Suspicion Index', description: 'Combines 4 signals (new-user ratio, engagement rate, session length, direct share) into a risk score.', status: 'warn', valueLabel: '2/4 signals', prevLabel: '', deltaLabel: 'New users > 97%', detail: 'New users > 97% · Direct + (not set) > 78%' },
   { id: 'bot_traffic_night', section: 'users', label: 'Night traffic spike', description: 'Change in night-time (0–5h) traffic share vs prev 7d — a common bot signal.', status: 'pass', valueLabel: '1.5%', prevLabel: '1.6%', deltaLabel: '−6.3%' },
 ]

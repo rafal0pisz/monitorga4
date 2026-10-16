@@ -27,7 +27,7 @@ function categoryFor(checkKey: string): Category {
   if (checkKey.startsWith('param_')) return 'parameters'
   if (checkKey === 'ecommerce_events' || checkKey === 'purchase_duplicates') return 'ecommerce'
   if (checkKey === 'self_referral' || checkKey === 'direct_traffic_spike') return 'traffic'
-  if (checkKey === 'geo_anomaly' || checkKey === 'bot_traffic_night') return 'users'
+  if (checkKey === 'geo_anomaly' || checkKey === 'bot_traffic_night' || checkKey === 'country_share') return 'users'
   return 'engagement' // expected_events, bounce_rate_anomaly, conversion_rate, page_title_null
 }
 

@@ -21,7 +21,7 @@ const ECOM_EVENTS = ECOMMERCE_CATALOG.map(e => e.event_name)
 const CORE_CRITICAL_CHECKS = [
   'expected_events', 'self_referral', 'direct_traffic_spike', 'bounce_rate_anomaly',
   'conversion_rate', 'page_title_null', 'bot_traffic_night', 'purchase_duplicates',
-  'geo_anomaly',
+  'geo_anomaly', 'country_share',
 ]
 
 interface CustomEvent { event_name: string; check_type: string; is_enabled: boolean }

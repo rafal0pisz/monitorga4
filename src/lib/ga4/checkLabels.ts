@@ -11,6 +11,7 @@ const LABELS: Record<string, string> = {
   bot_traffic_night: 'Night traffic spike',
   purchase_duplicates: 'Purchase/session ratio',
   geo_anomaly: 'Geographic anomaly',
+  country_share: 'Country share',
   custom_events_check: 'Custom events',
   ecommerce_events: 'Ecommerce events',
 }

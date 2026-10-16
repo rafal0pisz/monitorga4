@@ -64,6 +64,7 @@ const WEIGHTS: Record<string, number> = {
   page_title_null:       8,
   bot_traffic_night:     9,
   geo_anomaly:           7,
+  country_share:         7,
   parameter_checks:     12,
   custom_events:        12,
 }
@@ -525,8 +526,51 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           ? `No new countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic`
           : `New countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic: ${newCountries.join(', ')}`,
       })
+
+      // Composition check, complementary to geo_anomaly above (which only
+      // catches brand-new countries) — this catches drift even among
+      // countries that were already present, e.g. a slow bot crawl or a
+      // misconfigured redirect sending real share somewhere it shouldn't
+      // be. Derived from the same rowsC/totalC fetched above — no extra
+      // GA4 call needed.
+      const wCountryShare = WEIGHTS.country_share
+      const dominant = rowsC
+        .filter(r => r.country !== '(not set)')
+        .reduce((max, r) => (r.sessions > (max?.sessions ?? -1) ? r : max), null as { country: string; sessions: number } | null)
+      const notSetSessions = rowsC.find(r => r.country === '(not set)')?.sessions ?? 0
+      const dominantShare = totalC > 0 && dominant ? (dominant.sessions / totalC) * 100 : 0
+      const notSetShare = totalC > 0 ? (notSetSessions / totalC) * 100 : 0
+      const otherShare = Math.max(0, 100 - dominantShare - notSetShare)
+      const otherCountries = rowsC
+        .filter(r => r.country !== '(not set)' && (!dominant || r.country !== dominant.country))
+        .map(r => ({ country: r.country, share: totalC > 0 ? (r.sessions / totalC) * 100 : 0 }))
+        .filter(r => r.share > 0)
+        .sort((a, b) => b.share - a.share)
+      // totalC === 0 (no sessions at all this period) must not fall through
+      // to "100% is elsewhere" — that's an absence of data, not a geographic
+      // anomaly; otherShare is meaningless with nothing to divide.
+      const countryShareStatus = totalC === 0 ? 'pass' : otherShare > 10 ? 'fail' : otherShare > 5 ? 'warn' : 'pass'
+      const countryShareScore = countryShareStatus === 'pass' ? wCountryShare : countryShareStatus === 'warn' ? wCountryShare * 0.5 : 0
+      results.push({
+        check_key: 'country_share', check_level: 'optional', status: countryShareStatus, score: countryShareScore, weight: wCountryShare,
+        value: {
+          dominant_country: dominant?.country ?? null,
+          dominant_share: +dominantShare.toFixed(1),
+          not_set_share: +notSetShare.toFixed(1),
+          other_share: +otherShare.toFixed(1),
+          other_countries: otherCountries.map(c => ({ country: c.country, share: +c.share.toFixed(1) })),
+        },
+        message: totalC === 0
+          ? 'No session data available for this period'
+          : !dominant
+          ? 'No country data available'
+          : `${dominant.country} + (not set): ${(dominantShare + notSetShare).toFixed(1)}%` + (otherShare > 5
+              ? ` — other countries: ${otherCountries.map(c => `${c.country} ${c.share.toFixed(1)}%`).join(', ')}`
+              : ' — everything else under 5%'),
+      })
     } catch (e: any) {
       results.push({ check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      results.push({ check_key: 'country_share', check_level: 'optional', status: 'fail', score: 0, weight: WEIGHTS.country_share, value: { error: e.message }, message: `API error: ${e.message}` })
     }
   }
 
