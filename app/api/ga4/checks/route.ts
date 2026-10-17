@@ -616,8 +616,13 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
     .sort((a, b) => b.share - a.share)
   const otherShare = Math.max(0, 100 - dominantShare - unkC)
   // totCC === 0 (no sessions at all this period) must not fall through to
-  // "100% is elsewhere" — that's an absence of data, not an anomaly.
-  const countryShareStatus: Status = totCC === 0 ? 'pass' : otherShare > 10 ? 'check' : otherShare > 5 ? 'warn' : 'pass'
+  // "100% is elsewhere" — that's an absence of data, not an anomaly. Same
+  // for services with naturally global/diversified traffic: without a
+  // single country above DOMINANT_COUNTRY_MIN_SHARE_PCT there's no
+  // baseline to measure drift against, so skip rather than false-alarm.
+  const DOMINANT_COUNTRY_MIN_SHARE_PCT = 60
+  const hasDominantCountry = dominantShare > DOMINANT_COUNTRY_MIN_SHARE_PCT
+  const countryShareStatus: Status = totCC === 0 || !hasDominantCountry ? 'pass' : otherShare > 10 ? 'check' : otherShare > 5 ? 'warn' : 'pass'
 
   // Bot signals — current period
   const newUsersC   = mi(engC, 5)
@@ -676,7 +681,9 @@ function usersChecks(coC: any[], coP: any[], engC: any, engP: any, chC: any[]): 
       status: countryShareStatus,
       valueLabel: `${r1(otherShare)}%`,
       prevLabel: '',
-      deltaLabel: otherShare > 5
+      deltaLabel: !hasDominantCountry
+        ? 'No dominant country — check skipped'
+        : otherShare > 5
         ? otherCountries.slice(0, 3).map(x => `${x.c} ${r1(x.share)}%`).join(', ') + (otherCountries.length > 3 ? ` +${otherCountries.length - 3} more` : '')
         : 'All clear',
       detail: dominantCountry ? `Dominant: ${dominantCountry} (${r1(dominantShare)}%)` : undefined,

@@ -534,6 +534,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       // be. Derived from the same rowsC/totalC fetched above — no extra
       // GA4 call needed.
       const wCountryShare = WEIGHTS.country_share
+      const DOMINANT_COUNTRY_MIN_SHARE_PCT = 60
       const dominant = rowsC
         .filter(r => r.country !== '(not set)')
         .reduce((max, r) => (r.sessions > (max?.sessions ?? -1) ? r : max), null as { country: string; sessions: number } | null)
@@ -548,8 +549,14 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
         .sort((a, b) => b.share - a.share)
       // totalC === 0 (no sessions at all this period) must not fall through
       // to "100% is elsewhere" — that's an absence of data, not a geographic
-      // anomaly; otherShare is meaningless with nothing to divide.
-      const countryShareStatus = totalC === 0 ? 'pass' : otherShare > 10 ? 'fail' : otherShare > 5 ? 'warn' : 'pass'
+      // anomaly; otherShare is meaningless with nothing to divide. Likewise,
+      // services with naturally global/diversified traffic (no single
+      // country above DOMINANT_COUNTRY_MIN_SHARE_PCT) have no "dominant"
+      // baseline to measure drift against — otherShare would always look
+      // large there even though nothing changed, so skip the check rather
+      // than false-alarm every day.
+      const hasDominantCountry = dominantShare > DOMINANT_COUNTRY_MIN_SHARE_PCT
+      const countryShareStatus = totalC === 0 || !hasDominantCountry ? 'pass' : otherShare > 10 ? 'fail' : otherShare > 5 ? 'warn' : 'pass'
       const countryShareScore = countryShareStatus === 'pass' ? wCountryShare : countryShareStatus === 'warn' ? wCountryShare * 0.5 : 0
       results.push({
         check_key: 'country_share', check_level: 'optional', status: countryShareStatus, score: countryShareScore, weight: wCountryShare,
@@ -564,6 +571,8 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           ? 'No session data available for this period'
           : !dominant
           ? 'No country data available'
+          : !hasDominantCountry
+          ? `No single dominant country (largest: ${dominant.country} ${dominantShare.toFixed(1)}%) — check skipped`
           : `${dominant.country} + (not set): ${(dominantShare + notSetShare).toFixed(1)}%` + (otherShare > 5
               ? ` — other countries: ${otherCountries.slice(0, 3).map(c => `${c.country} ${c.share.toFixed(1)}%`).join(', ')}${otherCountries.length > 3 ? ` +${otherCountries.length - 3} more` : ''}`
               : ' — everything else under 5%'),
