@@ -14,7 +14,7 @@ export const BRAND = {
   line: '#edeeef',
 }
 
-export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://alertga4.bettersteps.pl'
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://alertga4.pl'
 
 const SERIF = `"Iowan Old Style", "Palatino Linotype", Palatino, Georgia, ui-serif, serif`
 const SANS = `-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, ui-sans-serif, sans-serif`

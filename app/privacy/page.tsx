@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         <h2 style={h2}>1. Administrator danych</h2>
         <p style={p}>
           Administratorem danych osobowych przetwarzanych w ramach usługi AlertGA4 (dostępnej pod adresem
-          alertga4.bettersteps.pl) jest:
+          alertga4.pl) jest:
         </p>
         <p style={{ ...p, padding: '14px 16px', borderRadius: 8, backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
           <strong>Bettersteps spółka z ograniczoną odpowiedzialnością</strong><br />

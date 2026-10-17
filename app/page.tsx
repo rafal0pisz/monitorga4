@@ -121,7 +121,7 @@ export default async function HomePage() {
     name: 'AlertGA4',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
-    url: 'https://alertga4.bettersteps.pl',
+    url: 'https://alertga4.pl',
     inLanguage: 'pl',
     description: 'AlertGA4 codziennie weryfikuje usługę Google Analytics 4: zdarzenia, parametry, lejek e-commerce i anomalie ruchu, oraz wysyła alert e-mail, zanim popsute dane trafią do raportu.',
     provider: {
@@ -414,7 +414,7 @@ export default async function HomePage() {
               <div className="lp-card">
                 <div className="lp-card-bar">
                   <div className="lp-card-bar-left">
-                    <span className="lp-card-title">alertga4.bettersteps.pl/dashboard</span>
+                    <span className="lp-card-title">alertga4.pl/dashboard</span>
                   </div>
                   <span className="lp-card-tag">+ nowy projekt</span>
                 </div>

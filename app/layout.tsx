@@ -27,7 +27,7 @@ const poppins = Poppins({
   display: 'swap',
 })
 
-const SITE_URL = 'https://alertga4.bettersteps.pl'
+const SITE_URL = 'https://alertga4.pl'
 const TITLE = 'AlertGA4 — monitoring jakości implementacji GA4'
 const DESCRIPTION = 'AlertGA4 codziennie sprawdza implementację Google Analytics 4 pod kątem brakujących eventów, błędów śledzenia i anomalii, i wysyła alert zanim popsute dane trafią do raportów.'
 
