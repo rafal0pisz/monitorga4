@@ -1,8 +1,12 @@
 import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
-import { checkLabel } from '@/lib/ga4/checkLabels'
+import { checkLabel, checkCategory, CATEGORY_LABEL, CATEGORY_ORDER } from '@/lib/ga4/checkLabels'
 
 export interface TrendPoint { runDate: string; score: number }
-export interface CheckIssue { checkKey: string; message: string }
+// streakDays: consecutive days (including today) this check has been
+// warn/fail, capped by the worker's lookback window. Only meaningful for
+// failing/warning issues — defaults to 1 ("new today") when not supplied.
+export interface CheckIssue { checkKey: string; message: string; streakDays?: number }
+export interface CheckStatus { checkKey: string; status: 'pass' | 'warn' | 'fail' }
 
 export interface ClientAlertData {
   projectId: string
@@ -21,6 +25,10 @@ export interface ClientAlertData {
   warning: CheckIssue[]
   passingCount: number
   passingLabels: string[]
+  // Every check this run produced (checkKey + status only) — drives the
+  // "By category" scorecard. Only categories with at least one check
+  // actually run for this project are shown.
+  allChecks: CheckStatus[]
 }
 
 const BAR_HEIGHT = 52
@@ -65,6 +73,13 @@ function trendHtml(trend: TrendPoint[], threshold: number): string {
   </div>`
 }
 
+function streakBadge(streakDays: number): string {
+  const label = streakDays <= 1 ? 'New today' : `${streakDays}${streakDays === 2 ? 'nd' : streakDays === 3 ? 'rd' : 'th'} day in a row`
+  const bg = streakDays <= 1 ? '#eef1f3' : '#f3e8d8'
+  const fg = streakDays <= 1 ? '#5b6267' : '#8a5a1c'
+  return `<span style="font-size:9.5px;font-weight:700;color:${fg};background:${bg};padding:2px 6px;border-radius:10px;white-space:nowrap;">${label}</span>`
+}
+
 function issueRow(issue: CheckIssue, kind: 'fail' | 'warn'): string {
   const bg = kind === 'fail' ? BRAND.alert : '#fbfbf3'
   const tagColor = kind === 'fail' ? BRAND.coralLink : '#8a7c00'
@@ -74,14 +89,70 @@ function issueRow(issue: CheckIssue, kind: 'fail' | 'warn'): string {
       html: `<div style="font-weight:600;color:${BRAND.ink};">${checkLabel(issue.checkKey)}</div><div style="color:#4a5157;margin-top:1px;">${issue.message}</div>`,
       valign: 'top',
     },
+    { html: streakBadge(issue.streakDays ?? 1), width: 92, align: 'right', valign: 'top' },
   ])
   return `<div style="padding:10px 12px;border-radius:8px;background:${bg};margin-bottom:8px;font-size:13px;">${row}</div>`
+}
+
+function categoryDot(status: 'ok' | 'warn' | 'fail'): string {
+  const color = status === 'fail' ? BRAND.coralLink : status === 'warn' ? '#a8831c' : '#2f7a4f'
+  return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-right:6px;"></span>`
+}
+
+function scorecardHtml(allChecks: CheckStatus[]): string {
+  const byCategory = CATEGORY_ORDER.map(cat => allChecks.filter(c => checkCategory(c.checkKey) === cat))
+    .map((checks, i) => ({ cat: CATEGORY_ORDER[i], checks }))
+    .filter(c => c.checks.length > 0)
+  if (byCategory.length === 0) return ''
+
+  const tiles = byCategory.map(({ cat, checks }) => {
+    const failCount = checks.filter(c => c.status === 'fail').length
+    const warnCount = checks.filter(c => c.status === 'warn').length
+    const status: 'ok' | 'warn' | 'fail' = failCount > 0 ? 'fail' : warnCount > 0 ? 'warn' : 'ok'
+    const note = status === 'ok'
+      ? 'All clear'
+      : [failCount > 0 ? `${failCount} failing` : '', warnCount > 0 ? `${warnCount} warning` : ''].filter(Boolean).join(', ')
+    const noteColor = status === 'fail' ? BRAND.coralLink : status === 'warn' ? '#8a7c00' : '#6b7278'
+    return `
+      <td width="${Math.floor(100 / 3)}%" style="padding:4px;">
+        <div style="border:1px solid ${BRAND.line};border-radius:8px;padding:10px 12px;">
+          <div style="font-size:11px;font-weight:700;color:${BRAND.ink};margin-bottom:3px;">${categoryDot(status)}${CATEGORY_LABEL[cat]}</div>
+          <div style="font-size:11px;color:${noteColor};">${note}</div>
+        </div>
+      </td>`
+  })
+
+  const rows: string[] = []
+  for (let i = 0; i < tiles.length; i += 3) rows.push(`<tr>${tiles.slice(i, i + 3).join('')}</tr>`)
+
+  return `
+  <div style="padding:20px 32px 4px;">
+    <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 10px;font-weight:700;">By category</h2>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows.join('')}</table>
+  </div>`
+}
+
+function categoryBlock(label: string, items: { issue: CheckIssue; kind: 'fail' | 'warn' }[]): string {
+  if (!items.length) return ''
+  return `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:11.5px;font-weight:700;color:${BRAND.ink};margin-bottom:6px;">${label}</div>
+      ${items.map(i => issueRow(i.issue, i.kind)).join('')}
+    </div>`
 }
 
 export function renderClientAlertEmail(d: ClientAlertData): { subject: string; html: string } {
   const subject = `GA4 Quality Alert — ${d.projectName}: score ${Math.round(d.scoreTotal)}, below threshold (${d.alertThreshold})`
   const delta = d.prevScore != null ? Math.round(d.scoreTotal - d.prevScore) : null
   const total = d.failing.length + d.warning.length + d.passingCount
+
+  const issuesByCategory = CATEGORY_ORDER.map(cat => ({
+    cat,
+    items: [
+      ...d.failing.filter(i => checkCategory(i.checkKey) === cat).map(issue => ({ issue, kind: 'fail' as const })),
+      ...d.warning.filter(i => checkCategory(i.checkKey) === cat).map(issue => ({ issue, kind: 'warn' as const })),
+    ],
+  })).filter(c => c.items.length > 0)
 
   const scoreHero = hstack([
     { html: `<span class="serif" style="font-size:48px;color:${BRAND.coralText};">${Math.round(d.scoreTotal)}</span>`, width: 90, valign: 'top' },
@@ -102,13 +173,14 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
       ${scoreHero}
     </div>
 
+    ${scorecardHtml(d.allChecks)}
+
     ${trendHtml(d.trend, d.alertThreshold)}
 
     <div style="padding:22px 32px 6px;">
       <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:${BRAND.soft};margin:0 0 4px;font-weight:700;">Checks</h2>
       <p style="font-size:12.5px;color:#6b7278;margin:0 0 12px;"><b style="color:${BRAND.ink};">${d.passingCount} passing</b> · <b style="color:${BRAND.ink};">${d.warning.length} warning</b> · <b style="color:${BRAND.ink};">${d.failing.length} failing</b> (of ${total})</p>
-      ${d.failing.map(i => issueRow(i, 'fail')).join('')}
-      ${d.warning.map(i => issueRow(i, 'warn')).join('')}
+      ${issuesByCategory.map(c => categoryBlock(CATEGORY_LABEL[c.cat], c.items)).join('')}
       ${d.passingCount > 0 ? `
       <div style="font-size:12.5px;color:#6b7278;padding:8px 12px;border-top:1px dashed ${BRAND.line};margin-top:4px;">
         <b style="color:${BRAND.ink};">✓ ${d.passingCount} more check${d.passingCount > 1 ? 's' : ''} passing</b>${d.passingLabels.length ? ` — ${d.passingLabels.map(checkLabel).join(', ')}` : ''}

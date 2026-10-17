@@ -717,6 +717,68 @@ interface ProjectRunOutcome {
   digestEntry: DigestEntry
 }
 
+// How many consecutive days (including today) each currently-failing/warning
+// check has been non-passing, for the "Nth day in a row" badge in the client
+// alert email. Purely cosmetic — on any query error this fails open by
+// returning an empty map, which the caller treats as "new today" for every
+// check rather than blocking the email.
+const STREAK_LOOKBACK_DAYS = 14
+
+async function computeStreakDays(
+  supabase: ReturnType<typeof createAdminClient>,
+  projectId: string,
+  runDate: string,
+  nonPassingKeys: string[]
+): Promise<Map<string, number>> {
+  if (nonPassingKeys.length === 0) return new Map()
+  try {
+    const { data: pastRuns, error: runsError } = await supabase
+      .from('dqs_runs')
+      .select('id, run_date')
+      .eq('project_id', projectId)
+      .eq('status', 'completed')
+      .lt('run_date', runDate)
+      .order('run_date', { ascending: false })
+      .limit(STREAK_LOOKBACK_DAYS)
+    if (runsError) throw runsError
+
+    const pastRunList = (pastRuns ?? []) as { id: string; run_date: string }[]
+    const pastRunIds = pastRunList.map((r: { id: string; run_date: string }) => r.id)
+    const runDateById = new Map(pastRunList.map((r: { id: string; run_date: string }) => [r.id, r.run_date]))
+    const sortedPastDates = [...new Set(pastRunList.map((r: { id: string; run_date: string }) => r.run_date))].sort((a, b) => b.localeCompare(a))
+
+    const { data: pastResultsRaw, error: resultsError } = pastRunIds.length
+      ? await supabase.from('dqs_results').select('run_id, check_key, status').in('run_id', pastRunIds).in('check_key', nonPassingKeys)
+      : { data: [] as { run_id: string; check_key: string; status: string }[], error: null }
+    if (resultsError) throw resultsError
+    const pastResults = (pastResultsRaw ?? []) as { run_id: string; check_key: string; status: string }[]
+
+    const statusByCheck = new Map<string, Map<string, string>>()
+    for (const r of pastResults) {
+      const date = runDateById.get(r.run_id)
+      if (!date) continue
+      if (!statusByCheck.has(r.check_key)) statusByCheck.set(r.check_key, new Map())
+      statusByCheck.get(r.check_key)!.set(date, r.status)
+    }
+
+    const streaks = new Map<string, number>()
+    for (const key of nonPassingKeys) {
+      let streak = 1 // today always counts as day 1
+      const byDate = statusByCheck.get(key)
+      for (const date of sortedPastDates) {
+        const status = byDate?.get(date)
+        if (status === 'fail' || status === 'warn') streak++
+        else break
+      }
+      streaks.set(key, streak)
+    }
+    return streaks
+  } catch (e: any) {
+    console.error('[worker] Streak lookup failed — client alert email will show "New today" for all issues:', e.message)
+    return new Map()
+  }
+}
+
 // One project's full check pipeline — extracted from the worker loop so it
 // can run concurrently across projects instead of every project waiting on
 // the one before it.
@@ -919,9 +981,16 @@ async function processProject(
           .reverse()
           .map((r: { run_date: string; score_total: number }) => ({ runDate: r.run_date, score: r.score_total }))
 
-        const failing = allResults.filter(r => r.status === 'fail').map(r => ({ checkKey: r.check_key, message: r.message }))
-        const warning = allResults.filter(r => r.status === 'warn').map(r => ({ checkKey: r.check_key, message: r.message }))
+        const failingResults = allResults.filter(r => r.status === 'fail')
+        const warningResults = allResults.filter(r => r.status === 'warn')
         const passing = allResults.filter(r => r.status === 'pass')
+
+        const streakByCheck = await computeStreakDays(
+          supabase, project.id, runDate,
+          [...failingResults, ...warningResults].map(r => r.check_key)
+        )
+        const failing = failingResults.map(r => ({ checkKey: r.check_key, message: r.message, streakDays: streakByCheck.get(r.check_key) }))
+        const warning = warningResults.map(r => ({ checkKey: r.check_key, message: r.message, streakDays: streakByCheck.get(r.check_key) }))
 
         await sendEmail({
           to: alertEmails,
@@ -938,6 +1007,7 @@ async function processProject(
             warning,
             passingCount: passing.length,
             passingLabels: passing.slice(0, 10).map(r => r.check_key),
+            allChecks: allResults.map(r => ({ checkKey: r.check_key, status: r.status as 'pass' | 'warn' | 'fail' })),
           }),
         })
       }

@@ -2,34 +2,9 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import AccountMismatch from '@/components/project/AccountMismatch'
-import { checkLabel } from '@/lib/ga4/checkLabels'
+import { checkLabel, checkCategory, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from '@/lib/ga4/checkLabels'
 
 const HISTORY_RUNS = 30
-
-type Category = 'traffic' | 'engagement' | 'users' | 'ecommerce' | 'custom_events' | 'parameters'
-
-const CATEGORY_LABEL: Record<Category, string> = {
-  traffic: 'Traffic',
-  engagement: 'Engagement',
-  users: 'Users',
-  ecommerce: 'Ecommerce',
-  custom_events: 'Custom Events',
-  parameters: 'Parameters',
-}
-
-const CATEGORY_ORDER: Category[] = ['traffic', 'engagement', 'users', 'ecommerce', 'custom_events', 'parameters']
-
-// Mirrors how the app already groups these same check_keys elsewhere
-// (live checks panel sections) — kept local to this page rather than a
-// shared module since nothing else needs it anymore.
-function categoryFor(checkKey: string): Category {
-  if (checkKey.startsWith('custom_event_')) return 'custom_events'
-  if (checkKey.startsWith('param_')) return 'parameters'
-  if (checkKey === 'ecommerce_events' || checkKey === 'purchase_duplicates') return 'ecommerce'
-  if (checkKey === 'self_referral' || checkKey === 'direct_traffic_spike') return 'traffic'
-  if (checkKey === 'geo_anomaly' || checkKey === 'bot_traffic_night' || checkKey === 'country_share') return 'users'
-  return 'engagement' // expected_events, bounce_rate_anomaly, conversion_rate, page_title_null
-}
 
 interface HistoryEntry {
   date: string
@@ -91,7 +66,7 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
       label: checkLabel(row.check_key),
       kind: row.status,
       detail: row.message ?? '',
-      category: categoryFor(row.check_key),
+      category: checkCategory(row.check_key),
     })
   }
 
