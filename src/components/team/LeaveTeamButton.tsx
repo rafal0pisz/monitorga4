@@ -35,7 +35,7 @@ export default function LeaveTeamButton() {
   return (
     <div style={{ marginTop: 10 }}>
       <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
-        You&apos;ll lose access to this team&apos;s projects immediately. You can start your own plan right after.
+        You&apos;ll lose access to this team&apos;s projects immediately. Any projects or plan of your own are unaffected.
       </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button

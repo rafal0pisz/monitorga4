@@ -1,4 +1,5 @@
 import NewProjectForm from '@/components/project/NewProjectForm'
+import NewProjectTargetPicker from '@/components/project/NewProjectTargetPicker'
 import StartTrialButton from '@/components/billing/StartTrialButton'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import { effectivePlanId, planLimit, TRIAL_DAYS } from '@/lib/billing/plans'
@@ -8,51 +9,56 @@ import Link from 'next/link'
 export default async function NewProjectPage() {
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
-  // Gate checked up front, before the wizard renders at all — previously
-  // this only surfaced as a "PLAN_LIMIT_REACHED" error from create_project
-  // at the very last step, after a user had already filled in custom
-  // events/ecommerce/parameters. A brand-new account (plan_id = null,
-  // trial never started) has a project limit of 0, so without this gate
-  // every new signup would hit that dead end on their very first project.
-  let canCreate = true
-  let canStartTrial = false
-  let limit = 0
-  // New projects a team member creates belong to the Agency owner's
-  // account (shared pool, shared limit, visible to the whole team) — never
-  // to the member's own (plan-less) account. See src/lib/team/access.ts.
-  let ownerId: string | null = null
-  // Shown to a member as a heads-up: the daily automated check and the
-  // owner's own view of this project both run on the OWNER's Google
-  // token, never the member's — if only the member has Viewer access to
-  // the property they're connecting here, daily checks fail with a GA4
-  // permission error and the owner can't see it either, until the owner
-  // is separately granted access too (see src/lib/ga4/memberAccess.ts).
-  let ownerEmailForNote: string | null = null
+  // "Own" (your own plan) and "Team" (an Agency account you're a member
+  // of) are two independent places a new project can go — see
+  // src/lib/team/access.ts. Both are checked up front, before the wizard
+  // renders, so a dead-end ("PLAN_LIMIT_REACHED" from create_project at
+  // the very last step) never happens after someone's already filled in
+  // custom events/ecommerce/parameters.
+  let ownCanCreate = false
+  let ownCanStartTrial = false
+  let ownLimit = 0
+  let teamCanCreate = false
+  let teamOwnerId: string | null = null
+  let teamOwnerEmail: string | null = null
 
   if (!bypass) {
     const user = await getAuthUser()
     if (user) {
       const teamContext = await getTeamContext(user.id)
-      ownerId = teamContext.primaryOwnerId
       const admin = createAdminClient()
-      const [{ data: profile }, { count }] = await Promise.all([
-        admin.from('profiles').select('plan_id, trial_ends_at, trial_used_at').eq('id', ownerId).single(),
-        admin.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId),
+
+      const ownQueries = Promise.all([
+        admin.from('profiles').select('plan_id, trial_ends_at, trial_used_at').eq('id', user.id).single(),
+        admin.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
       ])
-      const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-      limit = planLimit(effective)
-      canCreate = (count ?? 0) < limit
-      // Starting a trial is a billing action tied to the account owner's
-      // own profile — a team member never sees this (teamContext.isMember
-      // implies profile here is the OWNER's, whose trial_used_at they
-      // can't act on anyway; canStartTrial stays false for them below).
-      canStartTrial = !teamContext.isMember && !effective && !profile?.trial_used_at
-      if (teamContext.isMember) {
-        const { data: ownerUser } = await admin.auth.admin.getUserById(ownerId)
-        ownerEmailForNote = ownerUser?.user?.email ?? null
+      const teamQueries = teamContext.isMember && teamContext.teamOwnerId
+        ? Promise.all([
+            admin.from('profiles').select('plan_id, trial_ends_at').eq('id', teamContext.teamOwnerId).single(),
+            admin.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', teamContext.teamOwnerId),
+            admin.auth.admin.getUserById(teamContext.teamOwnerId),
+          ])
+        : null
+
+      const [[{ data: ownProfile }, { count: ownCount }], teamResults] = await Promise.all([ownQueries, teamQueries ?? Promise.resolve(null)])
+
+      const ownEffective = effectivePlanId(ownProfile?.plan_id, ownProfile?.trial_ends_at)
+      ownLimit = planLimit(ownEffective)
+      ownCanCreate = ownEffective !== null && (ownCount ?? 0) < ownLimit
+      ownCanStartTrial = ownEffective === null && !ownProfile?.trial_used_at
+
+      if (teamResults) {
+        const [{ data: teamProfile }, { count: teamCount }, { data: ownerUserRes }] = teamResults
+        const teamEffective = effectivePlanId(teamProfile?.plan_id, teamProfile?.trial_ends_at)
+        const teamLimit = planLimit(teamEffective)
+        teamCanCreate = (teamCount ?? 0) < teamLimit
+        teamOwnerId = teamContext.teamOwnerId
+        teamOwnerEmail = ownerUserRes?.user?.email ?? null
       }
     }
   }
+
+  const canCreateAnywhere = ownCanCreate || teamCanCreate
 
   return (
     <div style={{ maxWidth: 560 }}>
@@ -64,29 +70,40 @@ export default async function NewProjectPage() {
       <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>New project</h1>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 28px' }}>Connect a GA4 property to the quality monitor</p>
 
-      {!canCreate ? (
-        canStartTrial ? (
-          <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px' }}>
-            <p style={{ fontSize: 13, color: '#166534', margin: '0 0 10px' }}>
-              You don&apos;t have a paid plan yet, so you can&apos;t create a project. Start your free {TRIAL_DAYS}-day trial on Agency terms (up to 100 GA4 properties) — no card required, one-time only.
-            </p>
-            <StartTrialButton label={`Start ${TRIAL_DAYS}-day free trial`} lang="en" />
-          </div>
-        ) : (
-          <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>You&apos;ve reached your plan&apos;s project limit ({limit}). Upgrade to add more.</p>
-            <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
-          </div>
-        )
-      ) : (
-        <>
-          {ownerEmailForNote && (
+      {canCreateAnywhere ? (
+        ownCanCreate && teamCanCreate && teamOwnerId ? (
+          <NewProjectTargetPicker ownTarget={{ label: 'My account' }} teamTarget={{ ownerId: teamOwnerId, label: teamOwnerEmail ? `${teamOwnerEmail}'s team` : 'Team' }} />
+        ) : teamCanCreate && teamOwnerId ? (
+          <>
             <div style={{ fontSize: 12.5, color: '#92400e', background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-              This project will be added to your team&apos;s account. Daily automated checks run on <b>{ownerEmailForNote}</b>&apos;s Google access — if only your Google account has Viewer access to this GA4 property, make sure {ownerEmailForNote} gets it too, or checks will fail.
+              This project will be added to your team&apos;s account. Daily automated checks run on {teamOwnerEmail ? <b>{teamOwnerEmail}</b> : 'the owner'}&apos;s Google access — if only your Google account has Viewer access to this GA4 property, make sure {teamOwnerEmail ?? 'they'} get{teamOwnerEmail ? 's' : ''} it too, or checks will fail.
             </div>
+            <NewProjectForm ownerId={teamOwnerId} />
+          </>
+        ) : (
+          <NewProjectForm />
+        )
+      ) : ownCanStartTrial ? (
+        <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px' }}>
+          <p style={{ fontSize: 13, color: '#166534', margin: '0 0 10px' }}>
+            You don&apos;t have a paid plan yet, so you can&apos;t create a project{teamOwnerId ? ' of your own' : ''}. Start your free {TRIAL_DAYS}-day trial on Agency terms (up to 100 GA4 properties) — no card required, one-time only.
+          </p>
+          <StartTrialButton label={`Start ${TRIAL_DAYS}-day free trial`} lang="en" />
+          {teamOwnerId && (
+            <p style={{ fontSize: 12, color: '#166534', margin: '10px 0 0' }}>
+              {teamOwnerEmail ?? 'Your team'}&apos;s own plan has also reached its project limit — ask them to upgrade to add more.
+            </p>
           )}
-          <NewProjectForm ownerId={ownerId ?? undefined} />
-        </>
+        </div>
+      ) : (
+        <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>
+            {teamOwnerId
+              ? `Your plan's project limit (${ownLimit}) and ${teamOwnerEmail ?? 'your team'}'s are both reached. Upgrade either to add more.`
+              : `You've reached your plan's project limit (${ownLimit}). Upgrade to add more.`}
+          </p>
+          <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
+        </div>
       )}
     </div>
   )

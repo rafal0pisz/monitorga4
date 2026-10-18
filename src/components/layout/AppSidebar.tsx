@@ -20,9 +20,9 @@ export default async function AppSidebar() {
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
   const supabase = createAdminClient()
-  // Same team-aware access as the dashboard — a member sees the Agency
-  // owner's projects, and plan/limit display resolves to the owner's
-  // profile, not the member's own (plan-less) one. See src/lib/team/access.ts.
+  // "Own" and "Team" are independent contexts (see src/lib/team/access.ts)
+  // — the project list below shows both, but the Plan card always reflects
+  // YOUR OWN profile/limit, never a team you're also on.
   const teamContext = !bypass && user ? await getTeamContext(user.id) : null
 
   let projectsQuery = supabase
@@ -36,7 +36,7 @@ export default async function AppSidebar() {
   const [{ data: projects }, { data: profile, error: profileErr }, memberPropertyIds] = await Promise.all([
     projectsQuery,
     !bypass && user
-      ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', teamContext!.primaryOwnerId).single()
+      ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
       : Promise.resolve({ data: null, error: null }),
     !bypass && user && teamContext?.isMember ? getMemberAccessiblePropertyIds(user.id) : Promise.resolve(null),
   ])
@@ -48,16 +48,22 @@ export default async function AppSidebar() {
     ...p,
     locked: !!memberPropertyIds && p.owner_id !== user?.id && !memberPropertyIds.has(p.ga4_property_id),
   }))
+  const ownProjectCount = sidebarProjects.filter((p: any) => p.owner_id === user?.id).length
 
   let plan: string | null = null
   let limit: number | null = null
   let trialDaysLeft: number | null = null
   if (!bypass && user && !profileErr) {
     const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-    plan = planName(effective) + (teamContext?.isMember ? ' (team)' : '')
-    limit = planLimit(effective)
-    if (effective === 'trial' && profile?.trial_ends_at) {
-      trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
+    // Hide the card entirely rather than show "No plan" — for someone who's
+    // purely a team member and never intended to have their own plan, that
+    // reads as an alarm, not information.
+    if (effective !== null) {
+      plan = planName(effective)
+      limit = planLimit(effective)
+      if (effective === 'trial' && profile?.trial_ends_at) {
+        trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))
+      }
     }
   }
 
@@ -193,7 +199,7 @@ export default async function AppSidebar() {
               <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Plan: {plan}</span>
               {limit != null && (
                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                  {sidebarProjects.length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
+                  {ownProjectCount} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
                 </span>
               )}
             </div>

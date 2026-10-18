@@ -33,11 +33,20 @@ export default async function TeamPage() {
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Share access to your monitored GA4 properties with your team.</p>
       </div>
 
-      {isOwner ? (
-        <TeamOwnerView ownerId={user.id} />
-      ) : teamContext.isMember ? (
-        <MemberView ownerId={teamContext.primaryOwnerId} />
-      ) : (
+      {/* Your own team — independent of any team you're also a member of. */}
+      {isOwner && (
+        <div style={{ marginBottom: teamContext.isMember ? 32 : 0 }}>
+          <TeamOwnerView ownerId={user.id} />
+        </div>
+      )}
+
+      {/* A team you're a member of — independent of whether you also own
+          your own Agency team above. */}
+      {teamContext.isMember && teamContext.teamOwnerId && (
+        <MemberView ownerId={teamContext.teamOwnerId} />
+      )}
+
+      {!isOwner && !teamContext.isMember && (
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
             Team members are available on the Agency plan — invite up to {MAX_TEAM_SEATS - 1} people to share access to your monitored GA4 properties.
@@ -66,11 +75,9 @@ async function MemberView({ ownerId }: { ownerId: string }) {
 
   return (
     <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
+      <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 10px' }}>Team membership</p>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
-        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team — you can see and manage their monitored projects (once they&apos;ve granted your Google account access to each one in GA4). Team membership and billing are managed by the account owner.
-      </p>
-      <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 6px' }}>
-        Want your own plan and projects instead? Leave this team first — you can&apos;t hold your own plan while on someone else&apos;s team.
+        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team — you can see and manage their monitored projects (once they&apos;ve granted your Google account access to each one in GA4), shown separately from any projects of your own on your dashboard.
       </p>
       <LeaveTeamButton />
     </div>

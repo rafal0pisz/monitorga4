@@ -32,27 +32,10 @@ export default async function BillingPage() {
   const user = await getAuthUser()
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
-  // Billing, invoices, company details, and account deletion are the
-  // account OWNER's to manage — a team member never sees or touches any of
-  // it, even read-only, so this stops here rather than reusing the rest of
-  // the page against the owner's data under the member's own session.
-  if (!bypass && user) {
-    const teamContext = await getTeamContext(user.id)
-    if (teamContext.isMember) {
-      return (
-        <div style={{ maxWidth: 620 }}>
-          <div style={{ marginBottom: 28 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Billing</h1>
-          </div>
-          <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
-            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
-              Billing is managed by the team owner. Want your own plan instead? Leave the team from <Link href="/dashboard/team" style={{ color: '#16a34a' }}>Team</Link> first.
-            </p>
-          </div>
-        </div>
-      )
-    }
-  }
+  // Billing is always about YOUR OWN account — being on someone else's
+  // team (see src/lib/team/access.ts) is a separate, independent context
+  // that never hides or redirects this page.
+  const teamContext = !bypass && user ? await getTeamContext(user.id) : null
 
   const supabase = createAdminClient()
   let planId: string | null = null
@@ -69,6 +52,7 @@ export default async function BillingPage() {
   let trialEndsAt: string | null = null
   let trialUsedAt: string | null = null
   let quotaProjects: QuotaProject[] = []
+  let teamOwnerEmail: string | null = null
 
   if (!bypass && user) {
     // Independent queries — same owner, no data dependency — run as one
@@ -115,6 +99,11 @@ export default async function BillingPage() {
       companyPostalCode = company.postalCode
       companyNip = company.nip
     }
+
+    if (teamContext?.isMember && teamContext.teamOwnerId) {
+      const { data: ownerUser } = await supabase.auth.admin.getUserById(teamContext.teamOwnerId)
+      teamOwnerEmail = ownerUser?.user?.email ?? null
+    }
   }
 
   const limit = planLimit(planId)
@@ -129,6 +118,11 @@ export default async function BillingPage() {
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Billing</h1>
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Your plan and billing details</p>
+        {teamOwnerEmail && (
+          <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '6px 0 0' }}>
+            You&apos;re also on <b>{teamOwnerEmail}</b>&apos;s team — that&apos;s separate from your own plan below. See <Link href="/dashboard/team" style={{ color: '#16a34a' }}>Team</Link>.
+          </p>
+        )}
       </div>
 
       {/* Current plan */}
