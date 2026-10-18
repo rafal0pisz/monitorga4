@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
@@ -5,9 +6,32 @@ import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import FeatureSubnav from '@/components/marketing/FeatureSubnav'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
-export const metadata = {
-  title: 'Funkcje',
-  description: 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: monitoring danych głównych, weryfikacja parametrów, zdarzenia niestandardowe i e-commerce, alert mailowy, podsumowanie projektów i kreator konfiguracji.',
+const TITLE = 'Funkcje'
+const DESCRIPTION = 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: monitoring danych głównych, weryfikacja parametrów, zdarzenia niestandardowe i e-commerce, alert mailowy, podsumowanie projektów i kreator konfiguracji.'
+
+// Without these, this page silently inherited the homepage's canonical
+// URL, Open Graph title/description and Twitter card from the root
+// layout (Next.js only overrides the specific metadata fields a page
+// declares) — every secondary page was telling Google its canonical URL
+// was "/", and sharing any of these pages on social media showed the
+// homepage's blurb instead of the page's own.
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: '/funkcje' },
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'AlertGA4',
+    url: 'https://alertga4.pl/funkcje',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
 }
 
 const SUBNAV = [

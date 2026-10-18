@@ -1,12 +1,32 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import ContactForm from '@/components/marketing/ContactForm'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
-export const metadata = {
-  title: 'Kontakt',
-  description: 'Skontaktuj się z zespołem AlertGA4 — wsparcie, testy aplikacji, zgłoszenie błędu lub inne pytanie.',
+const TITLE = 'Kontakt'
+const DESCRIPTION = 'Skontaktuj się z zespołem AlertGA4 — wsparcie, testy aplikacji, zgłoszenie błędu lub inne pytanie.'
+
+// See app/funkcje/page.tsx for why canonical/openGraph/twitter are spelled
+// out explicitly here instead of relying on the root layout's defaults.
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: '/kontakt' },
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'AlertGA4',
+    url: 'https://alertga4.pl/kontakt',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
 }
 
 export default async function KontaktPage() {

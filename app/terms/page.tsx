@@ -1,8 +1,28 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 
-export const metadata = {
-  title: 'Regulamin',
-  description: 'Regulamin serwisu AlertGA4 — definicje, zasady rejestracji, plany i rozliczenia, dostępność usługi, odpowiedzialność, reklamacje.',
+const TITLE = 'Regulamin'
+const DESCRIPTION = 'Regulamin serwisu AlertGA4 — definicje, zasady rejestracji, plany i rozliczenia, dostępność usługi, odpowiedzialność, reklamacje.'
+
+// See app/funkcje/page.tsx for why canonical/openGraph/twitter are spelled
+// out explicitly here instead of relying on the root layout's defaults.
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: '/terms' },
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'AlertGA4',
+    url: 'https://alertga4.pl/terms',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
 }
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }

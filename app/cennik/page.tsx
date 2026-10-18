@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
@@ -9,9 +10,28 @@ import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { PLANS, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
 import Link from 'next/link'
 
-export const metadata = {
-  title: 'Cennik',
-  description: 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 30 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.',
+const TITLE = 'Cennik'
+const DESCRIPTION = 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 30 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.'
+
+// See app/funkcje/page.tsx for why canonical/openGraph/twitter are spelled
+// out explicitly here instead of relying on the root layout's defaults.
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: '/cennik' },
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'AlertGA4',
+    url: 'https://alertga4.pl/cennik',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${TITLE} — AlertGA4`,
+    description: DESCRIPTION,
+  },
 }
 
 export default async function CennikPage() {
