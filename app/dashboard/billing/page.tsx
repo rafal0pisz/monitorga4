@@ -5,6 +5,7 @@ import { getCompanyDetails } from '@/lib/stripe/companyDetails'
 import BillingActions from '@/components/billing/BillingActions'
 import CompanyDetailsForm from '@/components/billing/CompanyDetailsForm'
 import StartTrialButton from '@/components/billing/StartTrialButton'
+import DangerZone from '@/components/billing/DangerZone'
 import Link from 'next/link'
 
 interface InvoiceRow {
@@ -239,6 +240,12 @@ export default async function BillingPage() {
           initialPostalCode={companyPostalCode}
           initialNip={companyNip}
         />
+      </section>
+
+      {/* Your data */}
+      <section style={sectionWrap}>
+        <h2 style={sectionH2}>Your data</h2>
+        <DangerZone />
       </section>
     </div>
   )

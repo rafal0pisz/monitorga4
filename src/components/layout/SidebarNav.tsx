@@ -21,6 +21,7 @@ const DEFAULT_TOOLS: ToolLink[] = [
   { href: '/dashboard/new',     icon: '＋', label: 'New project' },
   { href: '/dashboard',         icon: '⊞', label: 'All projects' },
   { href: '/dashboard/billing', icon: '◈', label: 'Billing' },
+  { href: '/dashboard/help',    icon: '?', label: 'Help' },
 ]
 
 export default function SidebarNav({

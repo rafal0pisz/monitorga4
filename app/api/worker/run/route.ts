@@ -1159,6 +1159,15 @@ export async function GET(request: NextRequest) {
   return runWorker(null)
 }
 
+// A manual "Run now" was previously only guarded client-side (the button
+// disables itself while loading) — nothing stopped multiple browser tabs or
+// a repeated raw POST from re-triggering it. Each run burns ~20 GA4 Data
+// API calls against that property's own shared daily quota, so a spammed
+// button could exhaust a client's GA4 quota and knock out their own
+// automatic daily check too. 60s is generous for legitimate re-runs (e.g.
+// right after fixing a config) while blocking rapid-fire clicking.
+const RUN_NOW_COOLDOWN_MS = 60_000
+
 // POST — wywoływany przyciskiem "Run now" z UI, zawsze z konkretnym project_id.
 // Manualny run działa niezależnie od auto_run (patrz opis w UI: "Disabled —
 // use Run now to check manually").
@@ -1182,13 +1191,27 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const admin = createAdminClient()
-    const { data: project } = await admin.from('projects').select('owner_id').eq('id', projectId).single()
+    const { data: project } = await admin.from('projects').select('owner_id, last_manual_run_at').eq('id', projectId).single()
     if (!user || !project || project.owner_id !== user.id) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
     if (!(await ownerHasActiveAccess(user.id))) {
       return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
     }
+
+    if (project.last_manual_run_at) {
+      const elapsedMs = Date.now() - new Date(project.last_manual_run_at).getTime()
+      if (elapsedMs < RUN_NOW_COOLDOWN_MS) {
+        const waitSeconds = Math.ceil((RUN_NOW_COOLDOWN_MS - elapsedMs) / 1000)
+        return NextResponse.json({ error: `Please wait ${waitSeconds}s before running again`, waitSeconds }, { status: 429 })
+      }
+    }
+    // Recorded before the run itself so two near-simultaneous requests (two
+    // tabs, a double click) both see the updated timestamp rather than
+    // racing through on the old one. Best-effort only — a failure here must
+    // never block the actual run, just like every other gate in this file.
+    const { error: markError } = await admin.from('projects').update({ last_manual_run_at: new Date().toISOString() }).eq('id', projectId)
+    if (markError) console.error('[worker] Could not record last_manual_run_at (non-fatal, cooldown just won\'t apply this time):', markError.message)
   }
 
   return runWorker(projectId ?? null)

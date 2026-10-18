@@ -45,7 +45,7 @@ export default async function DashboardPage() {
   const supabase = createAdminClient()
   let query = supabase.from('dashboard_projects').select('*').order('name')
   if (!bypass && user) query = query.eq('owner_id', user.id)
-  const { data: projects } = await query
+  const { data: projects, error: projectsError } = await query
   const list = (projects ?? []) as DashboardProject[]
   const avgScore = list.length ? Math.round(list.reduce((s, p) => s + (p.last_score ?? 0), 0) / list.length) : null
   const critical = list.filter(p => ['critical','warning'].includes(getScoreGrade(p.last_score))).length
@@ -97,6 +97,16 @@ export default async function DashboardPage() {
           <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 6, padding: '4px 10px', whiteSpace: 'nowrap' }}>Plan: {plan}</span>
         )}
       </div>
+      {projectsError ? (
+        <div style={{ background: '#fef2f2', border: '0.5px solid #fecaca', borderRadius: 12, padding: '20px 24px' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#dc2626', margin: '0 0 4px' }}>Couldn&apos;t load your projects</p>
+          <p style={{ fontSize: 12.5, color: '#991b1b', margin: 0 }}>
+            Something went wrong loading your data just now — this is a loading error, not an empty account, and your projects are not affected. Please refresh the page; if this keeps happening, contact{' '}
+            <a href="mailto:kontakt@bettersteps.pl" style={{ color: '#991b1b', textDecoration: 'underline' }}>kontakt@bettersteps.pl</a>.
+          </p>
+        </div>
+      ) : (
+      <>
       {showOnboarding && <OnboardingChecklist steps={onboardingSteps} />}
       {list.length > 0 && (
         <div className="dashboard-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(128px, 1fr))', gap: 12, marginBottom: atLimit ? 12 : 28 }}>
@@ -173,6 +183,8 @@ export default async function DashboardPage() {
             )
           })}
         </div>
+      )}
+      </>
       )}
     </div>
   )

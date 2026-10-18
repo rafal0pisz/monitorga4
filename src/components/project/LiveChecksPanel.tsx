@@ -52,6 +52,28 @@ function UpgradeBlock({ message }: { message: string }) {
   )
 }
 
+// Distinct from ErrorBlock — an expired/revoked Google token (HTTP 401) has
+// one specific fix (sign in with Google again), so it gets its own CTA
+// instead of a dead-end red error message. The backend already emails the
+// owner about this (see renderReconnectNoticeEmail in the worker), but
+// someone looking at the project page right now shouldn't have to guess
+// what to do about it.
+function ReconnectBlock({ message }: { message: string }) {
+  return (
+    <div style={{
+      padding: '12px 16px', borderRadius: 10, marginBottom: 24,
+      backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a' }}>Google connection lost</div>
+        <div style={{ fontSize: 11, color: '#1e3a8a', marginTop: 2 }}>{message}</div>
+      </div>
+      <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>
+    </div>
+  )
+}
+
 interface Props { projectId: string; period: number; anchorOffset?: number; extraChecks?: CheckResult[] }
 
 const LCStyle = () => (
@@ -70,10 +92,11 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [needsReconnect, setNeedsReconnect] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(null); setBlocked(false)
+    setLoading(true); setError(null); setBlocked(false); setNeedsReconnect(false)
 
     ga4Fetch('/api/ga4/checks', {
       method: 'POST',
@@ -85,6 +108,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
         if (cancelled) return
         if (d.error) {
           if (r.status === 402) { setBlocked(true); setError(d.error); return }
+          if (r.status === 401 && /sign in with Google/i.test(d.error)) { setNeedsReconnect(true); setError(d.error); return }
           throw new Error(d.error)
         }
         setChecks(d.checks)
@@ -104,7 +128,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   return (
     <div>
       {loading && !showSections && <Loading />}
-      {error && (blocked ? <UpgradeBlock message={error} /> : <ErrorBlock message={error} />)}
+      {error && (blocked ? <UpgradeBlock message={error} /> : needsReconnect ? <ReconnectBlock message={error} /> : <ErrorBlock message={error} />)}
       {showSections && (['traffic', 'engagement', 'users'] as const).map(s => (
         <SectionBlock key={s} id={s} checks={merged.filter(c => c.section === s)} />
       ))}
