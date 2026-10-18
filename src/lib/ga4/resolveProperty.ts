@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
-// ownerId is only set on the projectId path — it's who the caller should
-// fetch a GA4 token for (see src/lib/ga4/token.ts), since a team member
-// viewing an existing project has no GA4 access of their own and relies on
-// the project owner's. Absent on the propertyId path (new-project wizard),
-// where the current user's own token is correct.
-type Resolved = { propertyId: string; ownerId?: string } | { error: NextResponse }
+type Resolved = { propertyId: string } | { error: NextResponse }
 
 // A couple of GA4 endpoints are called both for an existing, owned project
 // (settings page, "suggest events") AND before any project exists yet (the
@@ -47,7 +43,16 @@ export async function resolvePropertyId(searchParams: URLSearchParams): Promise<
     if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
       return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) }
     }
-    return { propertyId: project.ga4_property_id, ownerId: project.owner_id }
+
+    // Team membership alone only grants AlertGA4-side visibility — this
+    // endpoint pulls real GA4 data (event volumes, registered dimensions),
+    // so a non-owner viewer needs Google's own, separately granted access
+    // to this specific property, not just a shared AlertGA4 project.
+    if (project.owner_id !== user.id && !(await memberHasAccessToProperty(user.id, project.ga4_property_id))) {
+      return { error: NextResponse.json({ error: NO_GA4_ACCESS_MESSAGE }, { status: 403 }) }
+    }
+
+    return { propertyId: project.ga4_property_id }
   }
 
   if (rawPropertyId) {

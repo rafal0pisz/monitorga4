@@ -11,10 +11,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const resolved = await resolvePropertyId(searchParams)
   if ('error' in resolved) return resolved.error
-  const { propertyId, ownerId } = resolved
+  const { propertyId } = resolved
   const periodDays = parseInt(searchParams.get('periodDays') ?? '30')
 
-  const token = await getGa4Token(ownerId)
+  const token = await getGa4Token()
   if (!token)
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
 

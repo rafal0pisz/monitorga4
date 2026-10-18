@@ -9,6 +9,7 @@ interface Project {
   name: string
   last_score: number | null
   status: string
+  locked?: boolean
 }
 
 function scoreDotColor(score: number | null): string {
@@ -52,16 +53,18 @@ export default function SidebarNav({
                     borderLeft: active ? '2px solid #16a34a' : '2px solid transparent',
                     background: active ? 'var(--color-background-primary)' : 'transparent',
                   }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: scoreDotColor(p.last_score) }} />
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, background: p.locked ? 'var(--color-text-tertiary)' : scoreDotColor(p.last_score) }} />
                     <span style={{
                       fontSize: 13,
-                      color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                      color: p.locked ? 'var(--color-text-tertiary)' : active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
                       fontWeight: active ? 500 : 400,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
                     }}>
                       {p.name}
                     </span>
-                    {p.last_score !== null && (
+                    {p.locked ? (
+                      <span style={{ fontSize: 11, marginLeft: 'auto', flexShrink: 0 }}>🔒</span>
+                    ) : p.last_score !== null && (
                       <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 'auto', flexShrink: 0, color: scoreDotColor(p.last_score) }}>
                         {Math.round(p.last_score)}
                       </span>

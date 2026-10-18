@@ -1,32 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
-
-async function fetchGA4Accounts(token: string) {
-  const res = await fetch('https://analyticsadmin.googleapis.com/v1beta/accounts', {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  if (!res.ok) {
-    // Google's actual error body (e.g. "Admin API has not been used in
-    // project ... before or it is disabled") is the only way to tell a
-    // disabled-API/permission problem apart from a token issue — losing it
-    // and just throwing the status code makes this undiagnosable from the
-    // client.
-    const body = await res.text().catch(() => '')
-    throw new Error(`Accounts API ${res.status}: ${body.slice(0, 500)}`)
-  }
-  const data = await res.json()
-  return data.accounts ?? []
-}
-
-async function fetchGA4Properties(token: string, accountName: string) {
-  const res = await fetch(
-    `https://analyticsadmin.googleapis.com/v1beta/properties?filter=ancestor:${accountName}&pageSize=100`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.properties ?? []
-}
+import { fetchGA4Accounts, fetchGA4Properties } from '@/lib/ga4/listProperties'
 
 export async function GET(request: NextRequest) {
   const token = await getGa4Token()

@@ -9,9 +9,9 @@ import { resolvePropertyId } from '@/lib/ga4/resolveProperty'
 export async function GET(request: NextRequest) {
   const resolved = await resolvePropertyId(request.nextUrl.searchParams)
   if ('error' in resolved) return resolved.error
-  const { propertyId, ownerId } = resolved
+  const { propertyId } = resolved
 
-  const token = await getGa4Token(ownerId)
+  const token = await getGa4Token()
   if (!token) {
     return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
   }

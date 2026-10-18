@@ -5,6 +5,7 @@ import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 import { getTeamContext } from '@/lib/team/access'
+import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 
 const MOBILE_TOPBAR_HEIGHT = 52
 // Notched/Dynamic-Island phones need extra clearance above the topbar's own
@@ -26,18 +27,27 @@ export default async function AppSidebar() {
 
   let projectsQuery = supabase
     .from('dashboard_projects')
-    .select('id, name, last_score, status')
+    .select('id, name, last_score, status, owner_id, ga4_property_id')
     .order('name')
   if (!bypass && user) projectsQuery = projectsQuery.in('owner_id', teamContext!.accessibleOwnerIds)
 
   // Independent queries — same owner_id, no data dependency between them —
   // so they run as one round trip instead of two sequential ones.
-  const [{ data: projects }, { data: profile, error: profileErr }] = await Promise.all([
+  const [{ data: projects }, { data: profile, error: profileErr }, memberPropertyIds] = await Promise.all([
     projectsQuery,
     !bypass && user
       ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', teamContext!.primaryOwnerId).single()
       : Promise.resolve({ data: null, error: null }),
+    !bypass && user && teamContext?.isMember ? getMemberAccessiblePropertyIds(user.id) : Promise.resolve(null),
   ])
+
+  // Same rule as the dashboard — team membership alone doesn't unlock a
+  // project's actual data, only Google's own, separately granted access
+  // does. See src/lib/ga4/memberAccess.ts.
+  const sidebarProjects = (projects ?? []).map((p: any) => ({
+    ...p,
+    locked: !!memberPropertyIds && p.owner_id !== user?.id && !memberPropertyIds.has(p.ga4_property_id),
+  }))
 
   let plan: string | null = null
   let limit: number | null = null
@@ -183,7 +193,7 @@ export default async function AppSidebar() {
               <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--color-text-primary)' }}>Plan: {plan}</span>
               {limit != null && (
                 <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                  {(projects ?? []).length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
+                  {sidebarProjects.length} / {limit < Number.MAX_SAFE_INTEGER ? limit : '∞'}
                 </span>
               )}
             </div>
@@ -197,7 +207,7 @@ export default async function AppSidebar() {
 
         {/* Nav */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          <SidebarNav projects={(projects ?? []) as any} />
+          <SidebarNav projects={sidebarProjects} />
         </div>
 
         {/* Footer */}

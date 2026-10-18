@@ -54,16 +54,10 @@ function UpgradeBlock({ message }: { message: string }) {
 
 // Distinct from ErrorBlock — an expired/revoked Google token (HTTP 401) has
 // one specific fix (sign in with Google again), so it gets its own CTA
-// instead of a dead-end red error message. The backend already emails the
-// owner about this (see renderReconnectNoticeEmail in the worker), but
-// someone looking at the project page right now shouldn't have to guess
-// what to do about it.
+// instead of a dead-end red error message. Every live GA4 fetch always
+// uses the CURRENT viewer's own token (see app/api/ga4/checks/route.ts) —
+// a team member reconnects their own account here, same as the owner.
 function ReconnectBlock({ message }: { message: string }) {
-  // A team member viewing a shared project can't fix the OWNER's Google
-  // connection by reconnecting their own — the backend says so explicitly
-  // (see app/api/ga4/checks/route.ts) when that's the case, so the CTA is
-  // only shown when reconnecting is actually something the viewer can do.
-  const viewerCanFix = !/ask the project owner/i.test(message)
   return (
     <div style={{
       padding: '12px 16px', borderRadius: 10, marginBottom: 24,
@@ -74,7 +68,24 @@ function ReconnectBlock({ message }: { message: string }) {
         <div style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a' }}>Google connection lost</div>
         <div style={{ fontSize: 11, color: '#1e3a8a', marginTop: 2 }}>{message}</div>
       </div>
-      {viewerCanFix && <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>}
+      <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>
+    </div>
+  )
+}
+
+// Distinct from ReconnectBlock — this isn't a broken/missing connection,
+// it's a team member whose Google account has never been granted access to
+// this specific GA4 property (see src/lib/ga4/memberAccess.ts). No sign-in
+// CTA here — the fix is on the project owner's side, in GA4 itself, not in
+// AlertGA4.
+function NoAccessBlock({ message }: { message: string }) {
+  return (
+    <div style={{
+      padding: '12px 16px', borderRadius: 10, marginBottom: 24,
+      backgroundColor: '#f9fafb', border: '1px solid #e5e7eb',
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>🔒 No Google Analytics access yet</div>
+      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3 }}>{message}</div>
     </div>
   )
 }
@@ -98,10 +109,11 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   const [error,   setError]   = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false)
   const [needsReconnect, setNeedsReconnect] = useState(false)
+  const [noAccess, setNoAccess] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(null); setBlocked(false); setNeedsReconnect(false)
+    setLoading(true); setError(null); setBlocked(false); setNeedsReconnect(false); setNoAccess(false)
 
     ga4Fetch('/api/ga4/checks', {
       method: 'POST',
@@ -113,7 +125,8 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
         if (cancelled) return
         if (d.error) {
           if (r.status === 402) { setBlocked(true); setError(d.error); return }
-          if (r.status === 401 && /sign in with Google/i.test(d.error)) { setNeedsReconnect(true); setError(d.error); return }
+          if (r.status === 401) { setNeedsReconnect(true); setError(d.error); return }
+          if (r.status === 403) { setNoAccess(true); setError(d.error); return }
           throw new Error(d.error)
         }
         setChecks(d.checks)
@@ -133,7 +146,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   return (
     <div>
       {loading && !showSections && <Loading />}
-      {error && (blocked ? <UpgradeBlock message={error} /> : needsReconnect ? <ReconnectBlock message={error} /> : <ErrorBlock message={error} />)}
+      {error && (blocked ? <UpgradeBlock message={error} /> : needsReconnect ? <ReconnectBlock message={error} /> : noAccess ? <NoAccessBlock message={error} /> : <ErrorBlock message={error} />)}
       {showSections && (['traffic', 'engagement', 'users'] as const).map(s => (
         <SectionBlock key={s} id={s} checks={merged.filter(c => c.section === s)} />
       ))}

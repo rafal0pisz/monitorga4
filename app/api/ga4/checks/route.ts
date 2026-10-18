@@ -4,6 +4,7 @@ import { ga4Report as ga4Post } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
 export const runtime = 'nodejs'
 
@@ -103,21 +104,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
   }
 
-  const propertyId = project.ga4_property_id
-  // The PROJECT OWNER's GA4 token, not the viewing user's — a team member
-  // has no GA4 access of their own and was never expected to; the account
-  // that actually has Viewer access to this property is the project's
-  // owner (see src/lib/ga4/token.ts resolution order).
-  const token = await getGa4Token(project.owner_id)
-  if (!token) {
-    // A team member can't fix the OWNER's Google connection by reconnecting
-    // their own — the message (and any "Reconnect" CTA reading it, see
-    // LiveChecksPanel) needs to say whose account actually needs it.
-    const message = project.owner_id === user.id
-      ? 'No GA4 token — please sign in with Google'
-      : "No GA4 token — ask the project owner to sign in with Google again"
-    return NextResponse.json({ error: message }, { status: 401 })
+  // Team membership alone only grants AlertGA4-side visibility — actually
+  // reading this project's GA4 data requires the viewer's OWN Google
+  // account to have been separately granted Viewer access on the property
+  // itself (the owner always has this inherently, it's their property).
+  if (project.owner_id !== user.id && !(await memberHasAccessToProperty(user.id, project.ga4_property_id))) {
+    return NextResponse.json({ error: NO_GA4_ACCESS_MESSAGE }, { status: 403 })
   }
+
+  const propertyId = project.ga4_property_id
+  const token = await getGa4Token()
+  if (!token) return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
 
   const { current, prev, label } = buildRanges(period, anchorOffset)
 

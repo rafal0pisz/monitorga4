@@ -12,6 +12,7 @@ import { parseEmailList } from '@/lib/email/shared'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 import { hasActiveAccess } from '@/lib/billing/plans'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 import { isCronRequest } from '@/lib/worker/cronAuth'
 import { AUTO_RUN_MARKER_KEY, currentWarsawDate } from '@/lib/worker/schedule'
 import type { Project, CheckResult } from '@/types'
@@ -1203,7 +1204,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const admin = createAdminClient()
-    const { data: project } = await admin.from('projects').select('owner_id, last_manual_run_at').eq('id', projectId).single()
+    const { data: project } = await admin.from('projects').select('owner_id, ga4_property_id, last_manual_run_at').eq('id', projectId).single()
     if (!user || !project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
@@ -1213,6 +1214,12 @@ export async function POST(request: NextRequest) {
     // the Agency account they belong to is fully active.
     if (!(await ownerHasActiveAccess(project.owner_id))) {
       return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
+    }
+    // Team membership alone doesn't mean Google granted this person access
+    // to the property itself — don't let a member burn this project's GA4
+    // API quota for data they wouldn't be allowed to read back anyway.
+    if (project.owner_id !== user.id && !(await memberHasAccessToProperty(user.id, project.ga4_property_id))) {
+      return NextResponse.json({ error: NO_GA4_ACCESS_MESSAGE }, { status: 403 })
     }
 
     if (project.last_manual_run_at) {
