@@ -22,16 +22,35 @@ export default function AcceptInviteClient({ token, invitedEmail, ownerEmail, al
     supabase.auth.getUser().then(({ data }) => setSessionEmail(data.user?.email ?? null))
   }, [])
 
-  async function handleSignIn() {
+  // forceChooser asks Google to show its account picker instead of silently
+  // reusing whichever Google account is already active in this browser —
+  // used for "switch account" below, where that's exactly the point, but
+  // also for the very first sign-in: without it, someone who already has a
+  // Google session in this browser (e.g. their own main account, different
+  // from the invited address) gets signed into AlertGA4 as the WRONG
+  // account with no indication anything went sideways, until the mismatch
+  // check further down catches it.
+  async function startOAuth(forceChooser: boolean) {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         scopes: 'https://www.googleapis.com/auth/analytics.readonly',
-        queryParams: { access_type: 'offline', prompt: 'consent' },
+        queryParams: { access_type: 'offline', prompt: forceChooser ? 'select_account consent' : 'consent' },
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(`/invite/${token}`)}`,
       },
     })
+  }
+
+  // Previously a plain link to the bare /login page, which had no memory
+  // of the invite at all — after switching accounts there, Google's own
+  // OAuth redirect always landed on /dashboard, silently dropping the
+  // person out of the accept flow (they'd have to re-find this link and
+  // start over, usually looking like "accepting doesn't work").
+  async function handleSwitchAccount() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    await startOAuth(true)
   }
 
   async function handleAccept() {
@@ -73,7 +92,7 @@ export default function AcceptInviteClient({ token, invitedEmail, ownerEmail, al
 
       {sessionEmail === undefined ? null : sessionEmail === null ? (
         <button
-          type="button" onClick={handleSignIn}
+          type="button" onClick={() => startOAuth(true)}
           style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, border: 'none', fontSize: 13, cursor: 'pointer' }}
         >
           Sign in with Google to accept
@@ -81,9 +100,14 @@ export default function AcceptInviteClient({ token, invitedEmail, ownerEmail, al
       ) : sessionEmail.toLowerCase() !== invitedEmail.toLowerCase() ? (
         <div>
           <p style={{ fontSize: 12.5, color: '#dc2626', marginBottom: 10 }}>
-            You&apos;re signed in as <b>{sessionEmail}</b>, but this invite was sent to <b>{invitedEmail}</b>. Sign out and sign in with that account to accept it.
+            You&apos;re signed in as <b>{sessionEmail}</b>, but this invite was sent to <b>{invitedEmail}</b>. Switch to that account to accept it.
           </p>
-          <a href="/login" style={{ fontSize: 13, color: '#16a34a', fontWeight: 500 }}>Switch account →</a>
+          <button
+            type="button" onClick={handleSwitchAccount}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 13, color: '#16a34a', fontWeight: 500, cursor: 'pointer' }}
+          >
+            Switch account →
+          </button>
         </div>
       ) : (
         <button

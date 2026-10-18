@@ -1,11 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 
-export default function LoginPage() {
+// Only a same-origin relative path is ever honored — see the identical
+// check in app/auth/callback/route.ts. "next" rides through as a plain
+// query param (middleware's own redirect here, a failed OAuth round trip
+// retried from this page, the invite page's "switch account" action), so
+// treating it as a trusted redirect target without this check would be an
+// open redirect.
+function safeNextPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
+function LoginForm() {
   const [loading, setLoading] = useState(false)
+  const next = safeNextPath(useSearchParams().get('next'))
 
   async function handleGoogleLogin() {
     setLoading(true)
@@ -18,7 +31,7 @@ export default function LoginPage() {
           access_type: 'offline',
           prompt: 'consent',
         },
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`,
       },
     })
   }
@@ -103,5 +116,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }

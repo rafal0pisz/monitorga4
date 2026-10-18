@@ -53,7 +53,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    // Preserved so /login's own Google button can send the OAuth redirect
+    // back here afterward instead of always landing on /dashboard — see
+    // app/login/page.tsx and app/auth/callback/route.ts.
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('next', path)
+    return NextResponse.redirect(loginUrl)
   }
 
   if (user && path === '/login') {

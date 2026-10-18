@@ -4,9 +4,20 @@ import { NextRequest, NextResponse } from 'next/server'
 // Only a same-origin relative path is ever honored — "next" rides through
 // the OAuth round trip as a plain query param, so treating it as a trusted
 // redirect target without this check would be an open redirect.
-function safeNextPath(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
+function safeNextPath(raw: string | null): string | null {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return null
   return raw
+}
+
+// Appended to a /login redirect so a retry from there (bare "Kontynuuj
+// przez Google" button) still ends up back at the original destination —
+// previously an error here (or simply no code, e.g. the user cancelled
+// Google's consent screen) sent them to a plain /login with no memory of
+// where they'd been heading, which is exactly what made the invite-accept
+// flow silently dead-end on any hiccup: one failed round trip and the
+// person was back on /dashboard with no idea they still had to accept.
+function loginRedirect(origin: string, error: string, next: string | null): string {
+  return `${origin}/login?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ''}`
 }
 
 export async function GET(request: NextRequest) {
@@ -16,7 +27,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     console.error('[auth/callback] Missing code param')
-    return NextResponse.redirect(`${origin}/login?error=missing_code`)
+    return NextResponse.redirect(loginRedirect(origin, 'missing_code', next))
   }
 
   const supabase = await createClient()
@@ -24,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   if (error || !data.session) {
     console.error('[auth/callback] Session exchange failed:', error?.message)
-    return NextResponse.redirect(`${origin}/login?error=session_failed`)
+    return NextResponse.redirect(loginRedirect(origin, 'session_failed', next))
   }
 
   const { session } = data
@@ -74,5 +85,5 @@ export async function GET(request: NextRequest) {
       providerRefreshToken ? '(with refresh_token)' : '(no refresh_token — re-login with prompt=consent needed)')
   }
 
-  return NextResponse.redirect(`${origin}${next}`)
+  return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
 }
