@@ -43,9 +43,11 @@ export default async function AppSidebar() {
 
   // Same rule as the dashboard — team membership alone doesn't unlock a
   // project's actual data, only Google's own, separately granted access
-  // does. See src/lib/ga4/memberAccess.ts.
+  // does. See src/lib/ga4/memberAccess.ts. isOwn drives the "Your
+  // projects" / "Team" split in SidebarNav.
   const sidebarProjects = (projects ?? []).map((p: any) => ({
     ...p,
+    isOwn: p.owner_id === user?.id,
     locked: !!memberPropertyIds && p.owner_id !== user?.id && !memberPropertyIds.has(p.ga4_property_id),
   }))
   const ownProjectCount = sidebarProjects.filter((p: any) => p.owner_id === user?.id).length
