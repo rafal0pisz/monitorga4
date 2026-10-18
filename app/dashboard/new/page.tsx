@@ -21,6 +21,13 @@ export default async function NewProjectPage() {
   // account (shared pool, shared limit, visible to the whole team) — never
   // to the member's own (plan-less) account. See src/lib/team/access.ts.
   let ownerId: string | null = null
+  // Shown to a member as a heads-up: the daily automated check and the
+  // owner's own view of this project both run on the OWNER's Google
+  // token, never the member's — if only the member has Viewer access to
+  // the property they're connecting here, daily checks fail with a GA4
+  // permission error and the owner can't see it either, until the owner
+  // is separately granted access too (see src/lib/ga4/memberAccess.ts).
+  let ownerEmailForNote: string | null = null
 
   if (!bypass) {
     const user = await getAuthUser()
@@ -40,6 +47,10 @@ export default async function NewProjectPage() {
       // implies profile here is the OWNER's, whose trial_used_at they
       // can't act on anyway; canStartTrial stays false for them below).
       canStartTrial = !teamContext.isMember && !effective && !profile?.trial_used_at
+      if (teamContext.isMember) {
+        const { data: ownerUser } = await admin.auth.admin.getUserById(ownerId)
+        ownerEmailForNote = ownerUser?.user?.email ?? null
+      }
     }
   }
 
@@ -68,7 +79,14 @@ export default async function NewProjectPage() {
           </div>
         )
       ) : (
-        <NewProjectForm ownerId={ownerId ?? undefined} />
+        <>
+          {ownerEmailForNote && (
+            <div style={{ fontSize: 12.5, color: '#92400e', background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+              This project will be added to your team&apos;s account. Daily automated checks run on <b>{ownerEmailForNote}</b>&apos;s Google access — if only your Google account has Viewer access to this GA4 property, make sure {ownerEmailForNote} gets it too, or checks will fail.
+            </div>
+          )}
+          <NewProjectForm ownerId={ownerId ?? undefined} />
+        </>
       )}
     </div>
   )
