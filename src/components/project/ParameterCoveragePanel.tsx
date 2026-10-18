@@ -27,6 +27,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   // combined banner instead of the same "trial ended" message repeated on
   // every single parameter card.
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
+  const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
 
   useEffect(() => {
     setBlockedMessage(null)
@@ -45,7 +46,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
       ga4Fetch(`/api/ga4/parameters?${params}`)
         .then(async res => {
           const json = await res.json()
-          if (res.status === 402 && json.error) { setBlockedMessage(json.error); return }
+          if (res.status === 402 && json.error) { setBlockedMessage(json.error); setBlockedScope(json.scope === 'member' ? 'member' : 'owner'); return }
           return json
         })
         .then(json => {
@@ -73,10 +74,12 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
     return (
       <div style={{ padding: '12px 16px', borderRadius: 10, backgroundColor: '#fffbeb', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>Trial ended</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>{blockedScope === 'member' ? "Owner's plan has ended" : 'Trial ended'}</div>
           <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>{blockedMessage}</div>
         </div>
-        <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>
+        {blockedScope === 'member'
+          ? <a href="/dashboard/team" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Go to Team →</a>
+          : <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>}
       </div>
     )
   }

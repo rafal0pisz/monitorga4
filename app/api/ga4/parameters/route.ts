@@ -3,7 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
-import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
+import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!(await ownerHasActiveAccess(project.owner_id))) {
-    return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
+    return NextResponse.json(trialExpiredPayload(user.id, project.owner_id), { status: 402 })
   }
 
   if (project.owner_id !== user.id && !(await memberHasAccessToProperty(user.id, project.ga4_property_id))) {

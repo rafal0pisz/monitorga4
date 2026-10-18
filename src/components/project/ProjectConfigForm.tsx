@@ -357,9 +357,22 @@ export default function ProjectConfigForm({ project }: Props) {
   async function handleDelete() {
     if (deleteConfirmText.trim().toLowerCase() !== 'delete') return
     setDeleting(true)
-    const { error } = await supabase.from('projects').delete().eq('id', project.id)
-    if (error) { setError(error.message); setDeleting(false); return }
-    router.push('/dashboard')
+    try {
+      // Routed through the server, not a direct browser delete, so anyone
+      // else on the team with access to this project gets notified by
+      // email instead of just finding it gone next time they look.
+      const res = await fetch('/api/project/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: project.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error ?? 'Could not delete the project — please try again.')
+      router.push('/dashboard')
+    } catch (e: any) {
+      setError(e.message)
+      setDeleting(false)
+    }
   }
 
   // ─── STYLES ──────────────────────────────────────────────────────────────

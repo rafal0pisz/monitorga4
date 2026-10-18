@@ -36,7 +36,10 @@ function ErrorBlock({ message }: { message: string }) {
 
 // Distinct from ErrorBlock — a lapsed trial/plan (HTTP 402) isn't a GA4
 // connection problem, it's an expected, actionable state with its own CTA.
-function UpgradeBlock({ message }: { message: string }) {
+// scope 'member' means it's the project OWNER's plan that lapsed, not the
+// viewer's own — they can't fix it via /cennik, so the CTA points at the
+// Team page instead (see src/lib/billing/access.ts: trialExpiredPayload).
+function UpgradeBlock({ message, scope }: { message: string; scope: 'owner' | 'member' }) {
   return (
     <div style={{
       padding: '12px 16px', borderRadius: 10, marginBottom: 24,
@@ -44,10 +47,12 @@ function UpgradeBlock({ message }: { message: string }) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
     }}>
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>Trial ended</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#92400e' }}>{scope === 'member' ? "Owner's plan has ended" : 'Trial ended'}</div>
         <div style={{ fontSize: 11, color: '#92400e', marginTop: 2 }}>{message}</div>
       </div>
-      <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>
+      {scope === 'member'
+        ? <a href="/dashboard/team" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Go to Team →</a>
+        : <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>}
     </div>
   )
 }
@@ -108,6 +113,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false)
+  const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [noAccess, setNoAccess] = useState(false)
 
@@ -124,7 +130,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
         const d = await r.json()
         if (cancelled) return
         if (d.error) {
-          if (r.status === 402) { setBlocked(true); setError(d.error); return }
+          if (r.status === 402) { setBlocked(true); setBlockedScope(d.scope === 'member' ? 'member' : 'owner'); setError(d.error); return }
           if (r.status === 401) { setNeedsReconnect(true); setError(d.error); return }
           if (r.status === 403) { setNoAccess(true); setError(d.error); return }
           throw new Error(d.error)
@@ -146,7 +152,7 @@ export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, e
   return (
     <div>
       {loading && !showSections && <Loading />}
-      {error && (blocked ? <UpgradeBlock message={error} /> : needsReconnect ? <ReconnectBlock message={error} /> : noAccess ? <NoAccessBlock message={error} /> : <ErrorBlock message={error} />)}
+      {error && (blocked ? <UpgradeBlock message={error} scope={blockedScope} /> : needsReconnect ? <ReconnectBlock message={error} /> : noAccess ? <NoAccessBlock message={error} /> : <ErrorBlock message={error} />)}
       {showSections && (['traffic', 'engagement', 'users'] as const).map(s => (
         <SectionBlock key={s} id={s} checks={merged.filter(c => c.section === s)} />
       ))}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report as ga4Post } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
+import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!(await ownerHasActiveAccess(project.owner_id))) {
-    return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
+    return NextResponse.json(trialExpiredPayload(user.id, project.owner_id), { status: 402 })
   }
 
   // Team membership alone only grants AlertGA4-side visibility — actually
