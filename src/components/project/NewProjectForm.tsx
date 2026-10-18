@@ -702,9 +702,6 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
           <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
             A daily report email is sent every day by default — you can switch it to only send on Warn/Fail later, in project Settings.
           </p>
-          <Field label="Score threshold" hint="Reference line on the trend chart and in the daily email — doesn't affect whether the email is sent">
-            <input type="number" min="0" max="100" value={form.alert_threshold} onChange={e => set('alert_threshold', e.target.value)} style={{ ...inp, width: 100 }} />
-          </Field>
           <Field label="Alert email(s)">
             {alertEmails.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
