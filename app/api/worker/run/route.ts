@@ -11,6 +11,7 @@ import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import { parseEmailList } from '@/lib/email/shared'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 import { hasActiveAccess } from '@/lib/billing/plans'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { isCronRequest } from '@/lib/worker/cronAuth'
 import { AUTO_RUN_MARKER_KEY, currentWarsawDate } from '@/lib/worker/schedule'
 import type { Project, CheckResult } from '@/types'
@@ -1192,10 +1193,14 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     const admin = createAdminClient()
     const { data: project } = await admin.from('projects').select('owner_id, last_manual_run_at').eq('id', projectId).single()
-    if (!user || !project || project.owner_id !== user.id) {
+    if (!user || !project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
-    if (!(await ownerHasActiveAccess(user.id))) {
+    // The PROJECT'S owner's plan/trial gates this, not the clicking user's
+    // own — a team member has no plan of their own at all, so checking
+    // user.id here would reject every manual run from a member even while
+    // the Agency account they belong to is fully active.
+    if (!(await ownerHasActiveAccess(project.owner_id))) {
       return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
     }
 

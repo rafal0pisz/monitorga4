@@ -3,6 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report as ga4Post } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 
 export const runtime = 'nodejs'
 
@@ -94,17 +95,29 @@ export async function POST(req: NextRequest) {
 
   // 404, not 403 — don't confirm to the caller that a project id they
   // don't own exists at all.
-  if (!project || project.owner_id !== user.id) {
+  if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  if (!(await ownerHasActiveAccess(user.id))) {
+  if (!(await ownerHasActiveAccess(project.owner_id))) {
     return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
   }
 
   const propertyId = project.ga4_property_id
-  const token = await getGa4Token()
-  if (!token) return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
+  // The PROJECT OWNER's GA4 token, not the viewing user's — a team member
+  // has no GA4 access of their own and was never expected to; the account
+  // that actually has Viewer access to this property is the project's
+  // owner (see src/lib/ga4/token.ts resolution order).
+  const token = await getGa4Token(project.owner_id)
+  if (!token) {
+    // A team member can't fix the OWNER's Google connection by reconnecting
+    // their own — the message (and any "Reconnect" CTA reading it, see
+    // LiveChecksPanel) needs to say whose account actually needs it.
+    const message = project.owner_id === user.id
+      ? 'No GA4 token — please sign in with Google'
+      : "No GA4 token — ask the project owner to sign in with Google again"
+    return NextResponse.json({ error: message }, { status: 401 })
+  }
 
   const { current, prev, label } = buildRanges(period, anchorOffset)
 

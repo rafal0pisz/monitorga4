@@ -1,9 +1,18 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Only a same-origin relative path is ever honored — "next" rides through
+// the OAuth round trip as a plain query param, so treating it as a trusted
+// redirect target without this check would be an open redirect.
+function safeNextPath(raw: string | null): string {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/dashboard'
+  return raw
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const next = safeNextPath(searchParams.get('next'))
 
   if (!code) {
     console.error('[auth/callback] Missing code param')
@@ -63,5 +72,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/dashboard`)
+  return NextResponse.redirect(`${origin}${next}`)
 }

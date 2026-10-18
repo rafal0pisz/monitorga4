@@ -95,7 +95,7 @@ function EventTag({ isStandard }: { isStandard: boolean }) {
   )
 }
 
-export default function NewProjectForm() {
+export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -342,7 +342,7 @@ export default function NewProjectForm() {
       // the UI — see plan_project_limit()/create_project() in
       // supabase/migrations/011_billing.sql.
       const { data: projectRow, error: projErr } = await supabase.rpc('create_project', {
-        p_owner_id: user.id,
+        p_owner_id: ownerId ?? user.id,
         p_name: propertyName,
         p_ga4_property_id: `properties/${effectivePropertyId}`,
         p_own_domain: form.own_domain || null,

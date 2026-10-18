@@ -4,6 +4,7 @@ import MobileTopBar from './MobileTopBar'
 import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
+import { getTeamContext } from '@/lib/team/access'
 
 const MOBILE_TOPBAR_HEIGHT = 52
 // Notched/Dynamic-Island phones need extra clearance above the topbar's own
@@ -18,18 +19,23 @@ export default async function AppSidebar() {
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
   const supabase = createAdminClient()
+  // Same team-aware access as the dashboard — a member sees the Agency
+  // owner's projects, and plan/limit display resolves to the owner's
+  // profile, not the member's own (plan-less) one. See src/lib/team/access.ts.
+  const teamContext = !bypass && user ? await getTeamContext(user.id) : null
+
   let projectsQuery = supabase
     .from('dashboard_projects')
     .select('id, name, last_score, status')
     .order('name')
-  if (!bypass && user) projectsQuery = projectsQuery.eq('owner_id', user.id)
+  if (!bypass && user) projectsQuery = projectsQuery.in('owner_id', teamContext!.accessibleOwnerIds)
 
   // Independent queries — same owner_id, no data dependency between them —
   // so they run as one round trip instead of two sequential ones.
   const [{ data: projects }, { data: profile, error: profileErr }] = await Promise.all([
     projectsQuery,
     !bypass && user
-      ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
+      ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', teamContext!.primaryOwnerId).single()
       : Promise.resolve({ data: null, error: null }),
   ])
 
@@ -38,7 +44,7 @@ export default async function AppSidebar() {
   let trialDaysLeft: number | null = null
   if (!bypass && user && !profileErr) {
     const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-    plan = planName(effective)
+    plan = planName(effective) + (teamContext?.isMember ? ' (team)' : '')
     limit = planLimit(effective)
     if (effective === 'trial' && profile?.trial_ends_at) {
       trialDaysLeft = Math.max(0, Math.ceil((new Date(profile.trial_ends_at).getTime() - Date.now()) / 86400000))

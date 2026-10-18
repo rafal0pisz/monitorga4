@@ -3,6 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -25,18 +26,22 @@ export async function GET(request: NextRequest) {
     .eq('id', projectId)
     .single()
 
-  if (!project || project.owner_id !== user.id) {
+  if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  if (!(await ownerHasActiveAccess(user.id))) {
+  if (!(await ownerHasActiveAccess(project.owner_id))) {
     return NextResponse.json({ error: TRIAL_EXPIRED_MESSAGE }, { status: 402 })
   }
 
   const propertyId = project.ga4_property_id
-  const token = await getGa4Token()
-  if (!token)
-    return NextResponse.json({ error: 'No GA4 token — please sign in with Google' }, { status: 401 })
+  const token = await getGa4Token(project.owner_id)
+  if (!token) {
+    const message = project.owner_id === user.id
+      ? 'No GA4 token — please sign in with Google'
+      : 'No GA4 token — ask the project owner to sign in with Google again'
+    return NextResponse.json({ error: message }, { status: 401 })
+  }
 
   const today = new Date()
   const fmt = (d: Date) => d.toISOString().split('T')[0]

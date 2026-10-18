@@ -59,6 +59,11 @@ function UpgradeBlock({ message }: { message: string }) {
 // someone looking at the project page right now shouldn't have to guess
 // what to do about it.
 function ReconnectBlock({ message }: { message: string }) {
+  // A team member viewing a shared project can't fix the OWNER's Google
+  // connection by reconnecting their own — the backend says so explicitly
+  // (see app/api/ga4/checks/route.ts) when that's the case, so the CTA is
+  // only shown when reconnecting is actually something the viewer can do.
+  const viewerCanFix = !/ask the project owner/i.test(message)
   return (
     <div style={{
       padding: '12px 16px', borderRadius: 10, marginBottom: 24,
@@ -69,7 +74,7 @@ function ReconnectBlock({ message }: { message: string }) {
         <div style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a' }}>Google connection lost</div>
         <div style={{ fontSize: 11, color: '#1e3a8a', marginTop: 2 }}>{message}</div>
       </div>
-      <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>
+      {viewerCanFix && <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>}
     </div>
   )
 }

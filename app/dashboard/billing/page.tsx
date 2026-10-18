@@ -6,6 +6,7 @@ import BillingActions from '@/components/billing/BillingActions'
 import CompanyDetailsForm from '@/components/billing/CompanyDetailsForm'
 import StartTrialButton from '@/components/billing/StartTrialButton'
 import DangerZone from '@/components/billing/DangerZone'
+import { getTeamContext } from '@/lib/team/access'
 import Link from 'next/link'
 
 interface InvoiceRow {
@@ -30,6 +31,28 @@ const sectionWrap: React.CSSProperties = { marginTop: 40 }
 export default async function BillingPage() {
   const user = await getAuthUser()
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
+
+  // Billing, invoices, company details, and account deletion are the
+  // account OWNER's to manage — a team member never sees or touches any of
+  // it, even read-only, so this stops here rather than reusing the rest of
+  // the page against the owner's data under the member's own session.
+  if (!bypass && user) {
+    const teamContext = await getTeamContext(user.id)
+    if (teamContext.isMember) {
+      return (
+        <div style={{ maxWidth: 620 }}>
+          <div style={{ marginBottom: 28 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Billing</h1>
+          </div>
+          <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
+              Billing is managed by the team owner — see <Link href="/dashboard/team" style={{ color: '#16a34a' }}>Team</Link> for details.
+            </p>
+          </div>
+        </div>
+      )
+    }
+  }
 
   const supabase = createAdminClient()
   let planId: string | null = null

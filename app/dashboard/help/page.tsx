@@ -63,6 +63,13 @@ export default function HelpPage() {
         </p>
       </div>
 
+      <h2 style={h2}>Team</h2>
+      <div style={card}>
+        <p style={a}>
+          Agency plan accounts can invite team members from <a href="/dashboard/team" style={{ color: '#16a34a' }}>Team</a> — an invited member sees and can manage the same projects as the account owner, without needing their own Google Viewer access to GA4. Billing, invoices, and account deletion stay with the owner only.
+        </p>
+      </div>
+
       <h2 style={h2}>Your data</h2>
       <div style={card}>
         <p style={a}>

@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 
-type Resolved = { propertyId: string } | { error: NextResponse }
+// ownerId is only set on the projectId path — it's who the caller should
+// fetch a GA4 token for (see src/lib/ga4/token.ts), since a team member
+// viewing an existing project has no GA4 access of their own and relies on
+// the project owner's. Absent on the propertyId path (new-project wizard),
+// where the current user's own token is correct.
+type Resolved = { propertyId: string; ownerId?: string } | { error: NextResponse }
 
 // A couple of GA4 endpoints are called both for an existing, owned project
 // (settings page, "suggest events") AND before any project exists yet (the
@@ -38,10 +44,10 @@ export async function resolvePropertyId(searchParams: URLSearchParams): Promise<
 
     // 404, not 403 — don't confirm to the caller that a project id they
     // don't own exists at all.
-    if (!project || project.owner_id !== user.id) {
+    if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
       return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) }
     }
-    return { propertyId: project.ga4_property_id }
+    return { propertyId: project.ga4_property_id, ownerId: project.owner_id }
   }
 
   if (rawPropertyId) {

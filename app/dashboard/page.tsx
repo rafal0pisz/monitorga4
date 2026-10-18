@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
+import { getTeamContext } from '@/lib/team/access'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import Link from 'next/link'
 
@@ -43,8 +44,11 @@ export default async function DashboardPage() {
   const bypass = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true'
 
   const supabase = createAdminClient()
+  // A team member sees every project under the Agency owner's account too,
+  // not just ones they personally own — see src/lib/team/access.ts.
+  const teamContext = !bypass && user ? await getTeamContext(user.id) : null
   let query = supabase.from('dashboard_projects').select('*').order('name')
-  if (!bypass && user) query = query.eq('owner_id', user.id)
+  if (!bypass && user) query = query.in('owner_id', teamContext!.accessibleOwnerIds)
   const { data: projects, error: projectsError } = await query
   const list = (projects ?? []) as DashboardProject[]
   const avgScore = list.length ? Math.round(list.reduce((s, p) => s + (p.last_score ?? 0), 0) / list.length) : null
@@ -56,16 +60,22 @@ export default async function DashboardPage() {
   let limit: number | null = null
   let plan: string | null = null
   let onboardingDismissed = false
+  // Plan/limit/onboarding state is always the ACCOUNT's (primaryOwnerId) —
+  // for a pure team member that's the Agency owner's own profile, never
+  // the member's own (plan-less) one, since billing and limits are the
+  // owner's, not theirs. isMember also gates the "at limit" banner below:
+  // a member can't act on an upgrade CTA anyway.
+  const isMember = !!teamContext?.isMember
   if (!bypass && user) {
-    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', user.id).single()
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', teamContext!.primaryOwnerId).single()
     if (!profileErr) {
       const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
       limit = planLimit(effective)
       plan = planName(effective)
-      onboardingDismissed = !!profile?.onboarding_dismissed_at
+      onboardingDismissed = isMember ? true : !!profile?.onboarding_dismissed_at
     }
   }
-  const atLimit = limit != null && list.length >= limit
+  const atLimit = !isMember && limit != null && list.length >= limit
 
   const hasFirstRun = list.some(p => p.last_score != null)
   const onboardingSteps = [
@@ -94,7 +104,7 @@ export default async function DashboardPage() {
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>{list.length} monitored GA4 properties</p>
         </div>
         {plan && (
-          <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 6, padding: '4px 10px', whiteSpace: 'nowrap' }}>Plan: {plan}</span>
+          <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 6, padding: '4px 10px', whiteSpace: 'nowrap' }}>Plan: {plan}{isMember ? ' (team)' : ''}</span>
         )}
       </div>
       {projectsError ? (

@@ -2,6 +2,7 @@ import NewProjectForm from '@/components/project/NewProjectForm'
 import StartTrialButton from '@/components/billing/StartTrialButton'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import { effectivePlanId, planLimit, TRIAL_DAYS } from '@/lib/billing/plans'
+import { getTeamContext } from '@/lib/team/access'
 import Link from 'next/link'
 
 export default async function NewProjectPage() {
@@ -16,19 +17,29 @@ export default async function NewProjectPage() {
   let canCreate = true
   let canStartTrial = false
   let limit = 0
+  // New projects a team member creates belong to the Agency owner's
+  // account (shared pool, shared limit, visible to the whole team) — never
+  // to the member's own (plan-less) account. See src/lib/team/access.ts.
+  let ownerId: string | null = null
 
   if (!bypass) {
     const user = await getAuthUser()
     if (user) {
+      const teamContext = await getTeamContext(user.id)
+      ownerId = teamContext.primaryOwnerId
       const admin = createAdminClient()
       const [{ data: profile }, { count }] = await Promise.all([
-        admin.from('profiles').select('plan_id, trial_ends_at, trial_used_at').eq('id', user.id).single(),
-        admin.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+        admin.from('profiles').select('plan_id, trial_ends_at, trial_used_at').eq('id', ownerId).single(),
+        admin.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', ownerId),
       ])
       const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
       limit = planLimit(effective)
       canCreate = (count ?? 0) < limit
-      canStartTrial = !effective && !profile?.trial_used_at
+      // Starting a trial is a billing action tied to the account owner's
+      // own profile — a team member never sees this (teamContext.isMember
+      // implies profile here is the OWNER's, whose trial_used_at they
+      // can't act on anyway; canStartTrial stays false for them below).
+      canStartTrial = !teamContext.isMember && !effective && !profile?.trial_used_at
     }
   }
 
@@ -57,7 +68,7 @@ export default async function NewProjectPage() {
           </div>
         )
       ) : (
-        <NewProjectForm />
+        <NewProjectForm ownerId={ownerId ?? undefined} />
       )}
     </div>
   )

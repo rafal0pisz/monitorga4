@@ -10,6 +10,7 @@ import Link from 'next/link'
 import PDFExportButton from '@/components/project/PDFExportButton'
 import ScoreTrendChart from '@/components/project/ScoreTrendChart'
 import AccountMismatch from '@/components/project/AccountMismatch'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { scoreColor } from '@/types'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
@@ -101,7 +102,7 @@ export default async function ProjectPage({
 
   const { data: project } = await admin.from('projects').select('*').eq('id', id).single()
   if (!project) return notFound()
-  if (!bypass && project.owner_id !== authData!.user!.id) return <AccountMismatch />
+  if (!bypass && !(await getAccessibleOwnerIds(authData!.user!.id)).includes(project.owner_id)) return <AccountMismatch />
 
   const { data: runsRaw } = await admin
     .from('dqs_runs').select('id, run_date, score_total, status, sampled, sampling_ratio')

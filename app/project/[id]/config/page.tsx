@@ -4,6 +4,7 @@ import type { Project, ChecksCatalog, ChecksConfig, CustomEventCheck, EcommerceC
 import Link from 'next/link'
 import ProjectConfigForm from '@/components/project/ProjectConfigForm'
 import AccountMismatch from '@/components/project/AccountMismatch'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -20,7 +21,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
   // up this whole Promise.all instead of showing a friendly message.
   const { data: project } = await supabase.from('projects').select('*').eq('id', id).single()
   if (!project) notFound()
-  if (!bypass && project.owner_id !== authData!.user!.id) return <AccountMismatch />
+  if (!bypass && !(await getAccessibleOwnerIds(authData!.user!.id)).includes(project.owner_id)) return <AccountMismatch />
 
   const [
     { data: catalog },
