@@ -47,6 +47,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Your plan includes up to ${MAX_TEAM_SEATS} seats (including you). Remove someone first to invite a new person.` }, { status: 409 })
   }
 
+  // Catch the dead-end invite before it's ever sent — accept-time already
+  // refuses this (app/api/team/accept), but without this check the owner
+  // would only find out after the invitee clicks the link and hits a wall.
+  // profiles.email is synced on every login (app/auth/callback) and
+  // backfilled for existing accounts by migration 027.
+  const { data: existingProfile, error: existingProfileErr } = await admin.from('profiles')
+    .select('plan_id, trial_ends_at').ilike('email', email).maybeSingle()
+  if (existingProfileErr) {
+    return NextResponse.json({ error: 'Could not check that email — please try again.' }, { status: 500 })
+  }
+  if (existingProfile && effectivePlanId(existingProfile.plan_id, existingProfile.trial_ends_at) !== null) {
+    return NextResponse.json({
+      error: 'This email already has its own AlertGA4 account with an active plan — it can\'t also join your team. They would need to accept from a different Google account.',
+    }, { status: 409 })
+  }
+
   const { data: invite, error: insertErr } = await admin.from('team_members')
     .insert({ owner_id: user.id, email })
     .select('invite_token').single()

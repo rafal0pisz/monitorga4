@@ -32,44 +32,46 @@ export async function GET(request: NextRequest) {
   const providerRefreshToken = session.provider_refresh_token // refresh token (long-lived)
   const userId               = session.user.id
 
-  // Save tokens to profiles table so the worker can refresh GA4 access
-  // without requiring an active user session.
+  // Always keep profiles.email in sync on every login — used by the team
+  // invite flow (app/api/team/invite) to warn up front when the invited
+  // email already has its own AlertGA4 account, instead of only finding
+  // out when that person tries to accept. Previously this whole upsert
+  // (and so the email sync) only ran when Google returned a provider
+  // token, which meant an existing user's email was never backfilled here
+  // at all if GA4 tokens were saved by some other path.
+  const admin = createAdminClient()
+  const basePayload: Record<string, string | null> = {
+    id: userId,
+    org_id: '00000000-0000-0000-0000-000000000001',
+    full_name: session.user.user_metadata?.full_name ?? null,
+    email: session.user.email ?? null,
+  }
+
   if (providerToken || providerRefreshToken) {
-    const admin = createAdminClient()
-
-    const updatePayload: Record<string, string | null> = {
-      ga4_access_token: providerToken ?? null,
-      ga4_token_expiry: providerToken
-        ? new Date(Date.now() + 3500 * 1000).toISOString() // ~58 min
-        : null,
-    }
-
+    // Save tokens to profiles table so the worker can refresh GA4 access
+    // without requiring an active user session.
+    basePayload.ga4_access_token = providerToken ?? null
+    basePayload.ga4_token_expiry = providerToken
+      ? new Date(Date.now() + 3500 * 1000).toISOString() // ~58 min
+      : null
     // Only overwrite refresh_token when Google issues a new one
     // (Google only sends it on first consent or when prompt=consent is used)
     if (providerRefreshToken) {
-      updatePayload.ga4_refresh_token = providerRefreshToken
+      basePayload.ga4_refresh_token = providerRefreshToken
     }
+  }
 
-    const { error: upsertError } = await admin
-      .from('profiles')
-      .upsert(
-        {
-          id: userId,
-          org_id: '00000000-0000-0000-0000-000000000001',
-          full_name: session.user.user_metadata?.full_name ?? null,
-          ...updatePayload,
-        },
-        { onConflict: 'id' }
-      )
+  const { error: upsertError } = await admin
+    .from('profiles')
+    .upsert(basePayload, { onConflict: 'id' })
 
-    if (upsertError) {
-      console.error('[auth/callback] Failed to save GA4 tokens:', upsertError.message)
-      // Non-fatal — user is logged in, but worker may not have tokens.
-      // Will surface as "no GA4 token" in reports.
-    } else {
-      console.log('[auth/callback] GA4 tokens saved for user', userId,
-        providerRefreshToken ? '(with refresh_token)' : '(no refresh_token — re-login with prompt=consent needed)')
-    }
+  if (upsertError) {
+    console.error('[auth/callback] Failed to upsert profile:', upsertError.message)
+    // Non-fatal — user is logged in, but worker may not have tokens.
+    // Will surface as "no GA4 token" in reports.
+  } else if (providerToken || providerRefreshToken) {
+    console.log('[auth/callback] GA4 tokens saved for user', userId,
+      providerRefreshToken ? '(with refresh_token)' : '(no refresh_token — re-login with prompt=consent needed)')
   }
 
   return NextResponse.redirect(`${origin}${next}`)
