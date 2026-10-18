@@ -72,7 +72,7 @@ const INCIDENTS = [
   {
     tag: 'brakujący event',
     title: 'Cichy spadek zdarzeń',
-    desc: <>Redesign jednej podstrony usuwa tag menedżera zdarzeń. <code className="mono-inline">add_to_cart</code> znika z 30% katalogu, a lejek wciąż „działa", tylko gorzej.</>,
+    desc: 'Zmiana w kodzie strony usuwa częściowo zdarzenia. Lejek wciąż działa, ale danych jest mniej. Alert informuje i wyłapuje różnice w konwersji i liczbie zdarzeń.',
   },
   {
     tag: 'ruch botów',
