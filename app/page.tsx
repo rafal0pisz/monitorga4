@@ -72,7 +72,7 @@ const INCIDENTS = [
   {
     tag: 'brakujący event',
     title: 'Cichy spadek zdarzeń',
-    desc: 'Zmiana w kodzie strony usuwa częściowo zdarzenia. Lejek wciąż działa, ale danych jest mniej. Alert informuje i wyłapuje różnice w konwersji i liczbie zdarzeń.',
+    desc: 'Zmiany na stronie mogą spowodować częściowe braki w niektórych zdarzeniach. Aplikacja weryfikuje i wyłapuje poszczególne zdarzenia i różnice w konwersjach.',
   },
   {
     tag: 'ruch botów',
@@ -90,7 +90,7 @@ const DASHBOARD_ROWS = [
 
 const AUDIENCE = [
   { t: 'Właściciele usług GA4', d: 'Samodzielnie zarządzasz swoją usługą GA4 i chcesz wiedzieć od razu, gdy coś przestanie działać, zamiast czekać do końca miesiąca na spadek w raporcie.' },
-  { t: 'Agencje marketingowe', d: 'Jeden widok z wynikiem jakości dla wszystkich usług GA4 klientów, zamiast ręcznego przeglądania każdej z osobna raz na kwartał.' },
+  { t: 'Agencje marketingowe', d: 'Podsumowanie wszystkich usług w jednym mailu oraz możliwość dedykowanych podsumowań do swoich klientów per każda usługa.' },
   { t: 'Freelancerzy', d: 'Obsługujesz kilku klientów naraz i nie masz czasu ręcznie sprawdzać każdej usługi GA4. AlertGA4 robi to za Ciebie każdego dnia.' },
 ]
 
