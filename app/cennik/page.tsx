@@ -59,8 +59,42 @@ export default async function CennikPage() {
     ? null
     : { href: '/login', label: 'Zaloguj się' }
 
+  // Only the homepage had structured data (SoftwareApplication) — nothing
+  // here described the actual plans/prices, so Google had no basis for a
+  // price rich result on this page. `offers` is built straight from
+  // PLANS (src/lib/billing/plans.ts) so it can never drift from what's
+  // actually charged.
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'AlertGA4',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: 'https://alertga4.pl/cennik',
+    inLanguage: 'pl',
+    description: DESCRIPTION,
+    provider: {
+      '@type': 'Organization',
+      name: 'Bettersteps Sp. z o.o.',
+      url: 'https://www.bettersteps.pl',
+      email: 'kontakt@bettersteps.pl',
+    },
+    offers: PLANS.map(p => ({
+      '@type': 'Offer',
+      name: p.name,
+      price: p.priceMonthlyPLN,
+      priceCurrency: 'PLN',
+      url: 'https://alertga4.pl/cennik',
+      category: 'subscription',
+    })),
+  }
+
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <style>{`
         ${LANDING_BASE_STYLES}
 
