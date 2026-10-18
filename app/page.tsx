@@ -318,7 +318,7 @@ export default async function HomePage() {
           <div className="wrap">
             <div className="section-head">
               <h2>Co sprawdzamy każdego dnia</h2>
-              <p>Cztery kategorie, kilkanaście sprawdzeń, każde z realnym podglądem tego, co faktycznie mierzy.</p>
+              <p>Weryfikujemy każdego dnia wszystkie najważniejsze dane w Google Analytics 4, podzielone na cztery kategorie.</p>
             </div>
             <div className="lp-feature-grid">
               <div className="lp-feature-cell">
