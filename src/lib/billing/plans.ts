@@ -28,7 +28,7 @@ export const PLANS: Plan[] = [
   {
     id: 'pro',
     name: 'Pro',
-    projectLimit: 10,
+    projectLimit: 30,
     priceMonthlyPLN: 139,
     priceYearlyPLN: 1390,
     stripePriceId: {

@@ -11,7 +11,7 @@ import Link from 'next/link'
 
 export const metadata = {
   title: 'Cennik',
-  description: 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 10 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.',
+  description: 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 30 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.',
 }
 
 export default async function CennikPage() {

@@ -11,7 +11,7 @@ export interface Row {
 // każdym planie — realne różnice między pakietami to limit oraz poziom
 // wsparcia. Konsultacja z analitykiem to nowy wyróżnik najwyższego planu.
 export const ROWS: Row[] = [
-  { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 10', agency: 'do 100' },
+  { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 30', agency: 'do 100' },
   { label: 'Codzienny automatyczny monitoring', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Zdarzenia niestandardowe, parametry i e-commerce (na usługę)', individual: 'do 5', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Alerty e-mail przy wykrytych błędach', individual: '✓', pro: '✓', agency: '✓' },
