@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
+import { effectivePlanId } from '@/lib/billing/plans'
 
 export async function POST(request: NextRequest) {
   const user = await getAuthUser()
@@ -32,6 +33,22 @@ export async function POST(request: NextRequest) {
   if (ownErr) return NextResponse.json({ error: 'Could not check your existing memberships — please try again.' }, { status: 500 })
   if (ownMembership && ownMembership.owner_id !== invite.owner_id) {
     return NextResponse.json({ error: "You're already part of another team — leave it first before accepting a new invite." }, { status: 409 })
+  }
+
+  // Someone who already has their own active plan (and so their own
+  // projects/billing) can't also become a pure team member — accepting
+  // used to silently reassign them to the owner's account for billing/new-
+  // project purposes (getTeamContext's primaryOwnerId), locking them out
+  // of their own account's "Manage billing" button and routing new
+  // projects they create to the wrong account. Refuse instead of letting
+  // that happen quietly.
+  const { data: ownProfile, error: ownProfileErr } = await admin.from('profiles')
+    .select('plan_id, trial_ends_at').eq('id', user.id).maybeSingle()
+  if (ownProfileErr) return NextResponse.json({ error: 'Could not check your account — please try again.' }, { status: 500 })
+  if (effectivePlanId(ownProfile?.plan_id, ownProfile?.trial_ends_at) !== null) {
+    return NextResponse.json({
+      error: 'This Google account already has its own AlertGA4 plan. Accept this invite from a different Google account, or contact kontakt@bettersteps.pl.',
+    }, { status: 409 })
   }
 
   const { error: updateErr } = await admin.from('team_members')

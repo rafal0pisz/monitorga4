@@ -960,9 +960,22 @@ async function processProject(
 
     // Per-project client alert — separate from the owner digest, only to
     // the address configured on this specific project, only about this
-    // one project's data.
+    // one project's data. Sent every day by default, regardless of score —
+    // gating it on alert_threshold used to silently drop the one piece of
+    // information that mattered most (that something was actually broken)
+    // whenever the score stayed just above the line. alert_threshold is
+    // kept on the project purely for display/stats (see the trend chart's
+    // reference line and the email's own stat below) — it no longer
+    // decides whether this email goes out at all. A project can opt into
+    // the old "only when something's wrong" behavior via
+    // alert_only_on_issues (migration 026), now based on an actual
+    // warn/fail in this run's checks rather than a score cutoff.
     const alertEmails = parseEmailList(project.alert_email)
-    if (scoreTotal < project.alert_threshold && alertEmails.length > 0) {
+    const failingResults = allResults.filter(r => r.status === 'fail')
+    const warningResults = allResults.filter(r => r.status === 'warn')
+    const hasIssues = failingResults.length > 0 || warningResults.length > 0
+    const shouldSendAlert = alertEmails.length > 0 && (!project.alert_only_on_issues || hasIssues)
+    if (shouldSendAlert) {
       const { data: lastAlert } = await supabase.from('alert_log')
         .select('sent_at').eq('project_id', project.id)
         .order('sent_at', { ascending: false }).limit(1).single()
@@ -982,8 +995,6 @@ async function processProject(
           .reverse()
           .map((r: { run_date: string; score_total: number }) => ({ runDate: r.run_date, score: r.score_total }))
 
-        const failingResults = allResults.filter(r => r.status === 'fail')
-        const warningResults = allResults.filter(r => r.status === 'warn')
         const passing = allResults.filter(r => r.status === 'pass')
 
         const streakByCheck = await computeStreakDays(

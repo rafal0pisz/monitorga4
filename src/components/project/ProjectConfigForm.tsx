@@ -36,6 +36,7 @@ interface Props {
     own_domain?: string | null
     expected_events?: string[] | null
     alert_threshold?: number | null
+    alert_only_on_issues?: boolean | null
     alert_email?: string | null
     critical_alert_email?: string | null
     critical_alert_checks?: string[] | null
@@ -60,6 +61,7 @@ export default function ProjectConfigForm({ project }: Props) {
   const [ownDomain,   setOwnDomain]   = useState(project.own_domain ?? '')
   const [alertEmails, setAlertEmails] = useState<string[]>(() => parseEmailList(project.alert_email))
   const [alertThresh, setAlertThresh] = useState(String(project.alert_threshold ?? 70))
+  const [alertOnlyOnIssues, setAlertOnlyOnIssues] = useState(project.alert_only_on_issues ?? false)
   const [criticalAlertEmails, setCriticalAlertEmails] = useState<string[]>(() => parseEmailList(project.critical_alert_email))
   const [criticalChecks, setCriticalChecks] = useState<Set<string>>(() => new Set(project.critical_alert_checks ?? []))
   const [status,      setStatus]      = useState(project.status ?? 'active')
@@ -312,6 +314,7 @@ export default function ProjectConfigForm({ project }: Props) {
         own_domain: ownDomain.trim() || null,
         alert_email: alertEmails.length > 0 ? alertEmails.join(', ') : null,
         alert_threshold: Number(alertThresh) || 70,
+        alert_only_on_issues: alertOnlyOnIssues,
         critical_alert_email: criticalAlertEmails.length > 0 ? criticalAlertEmails.join(', ') : null,
         critical_alert_checks: prunedCriticalChecks,
         status,
@@ -681,37 +684,51 @@ export default function ProjectConfigForm({ project }: Props) {
 
       {/* ── ALERTS ────────────────────────────────────────────────────────── */}
       <div style={card}>
-        <SectionHeader id="alerts" title="Email Alerts" subtitle="Get notified when the score drops below threshold" />
+        <SectionHeader id="alerts" title="Email Alerts" subtitle="A daily report is sent every day by default" />
         {openSection === 'alerts' && (
-          <div style={{ padding: 18, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div>
-              <label style={lbl}>Alert email(s)</label>
-              {alertEmails.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
-                  {alertEmails.map((e, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e}</span>
-                      <button onClick={() => setAlertEmails(prev => prev.filter((_, j) => j !== i))}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
-                    </div>
-                  ))}
+          <div style={{ padding: 18 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+              <div>
+                <label style={lbl}>Alert email(s)</label>
+                {alertEmails.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                    {alertEmails.map((e, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, border: '0.5px solid var(--color-border-tertiary)', backgroundColor: 'var(--color-background-secondary)' }}>
+                        <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{e}</span>
+                        <button onClick={() => setAlertEmails(prev => prev.filter((_, j) => j !== i))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input value={newAlertEmail} onChange={e => { setNewAlertEmail(e.target.value); setAlertEmailError(null) }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlertEmail() } }}
+                    placeholder="you@company.com" type="email" style={{ ...inp, flex: 1 }} />
+                  <button onClick={addAlertEmail}
+                    style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
+                    Add
+                  </button>
                 </div>
-              )}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input value={newAlertEmail} onChange={e => { setNewAlertEmail(e.target.value); setAlertEmailError(null) }}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAlertEmail() } }}
-                  placeholder="you@company.com" type="email" style={{ ...inp, flex: 1 }} />
-                <button onClick={addAlertEmail}
-                  style={{ padding: '8px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', backgroundColor: 'var(--color-background-secondary)', color: 'var(--color-text-primary)', border: '0.5px solid var(--color-border-secondary)', flexShrink: 0 }}>
-                  Add
-                </button>
+                {alertEmailError && <p style={{ fontSize: 11, color: '#dc2626', margin: '4px 0 0' }}>{alertEmailError}</p>}
               </div>
-              {alertEmailError && <p style={{ fontSize: 11, color: '#dc2626', margin: '4px 0 0' }}>{alertEmailError}</p>}
+              <div>
+                <label style={lbl}>Score threshold (reference only)</label>
+                <input value={alertThresh} onChange={e => setAlertThresh(e.target.value)} type="number" min="0" max="100" style={inp} />
+                <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '4px 0 0' }}>
+                  Shown on the trend chart and in the daily email as a reference line — it no longer decides whether the email is sent.
+                </p>
+              </div>
             </div>
-            <div>
-              <label style={lbl}>Alert threshold (score)</label>
-              <input value={alertThresh} onChange={e => setAlertThresh(e.target.value)} type="number" min="0" max="100" style={inp} />
-            </div>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={alertOnlyOnIssues} onChange={e => setAlertOnlyOnIssues(e.target.checked)} style={{ marginTop: 2 }} />
+              <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>
+                Only send the daily email when a check shows Warn or Fail
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                  Off by default — a report goes out every day regardless of status, so a real problem can never be missed.
+                </span>
+              </span>
+            </label>
           </div>
         )}
       </div>

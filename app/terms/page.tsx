@@ -49,7 +49,7 @@ export default function TermsPage() {
             <ol type="a" style={{ ...ol, marginTop: 6 }}>
               <li style={li}>uruchamia automatyczne (codzienne) oraz ręczne sprawdzenia konfiguracji i danych raportowych Projektu;</li>
               <li style={li}>wylicza na ich podstawie wynik jakości implementacji oraz trend w czasie;</li>
-              <li style={li}>wysyła powiadomienia e-mail, gdy wynik spadnie poniżej progu skonfigurowanego przez Użytkownika, oraz zbiorcze podsumowanie.</li>
+              <li style={li}>wysyła codzienne podsumowanie e-mail z wynikiem i wykrytymi problemami; Użytkownik może w ustawieniach Projektu ograniczyć wysyłkę wyłącznie do dni, w których sprawdzenie wykryło ostrzeżenie lub błąd.</li>
             </ol>
           </li>
           <li style={li}>AlertGA4 nigdy nie modyfikuje, nie usuwa i nie eksportuje surowych danych zdarzeń z usługi GA4 Użytkownika poza zagregowanymi metrykami wyliczanymi na potrzeby własnych sprawdzeń. Dostęp Operatora do usługi GA4 Użytkownika jest wyłącznie do odczytu.</li>

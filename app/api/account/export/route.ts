@@ -19,7 +19,7 @@ export async function GET() {
       .select('plan_id, trial_ends_at, subscription_status, billing_cycle, current_period_end, onboarding_dismissed_at')
       .eq('id', user.id).single(),
     admin.from('projects')
-      .select('id, name, ga4_property_id, own_domain, expected_events, alert_threshold, alert_email, critical_alert_email, critical_alert_checks, status, auto_run, sections, created_at')
+      .select('id, name, ga4_property_id, own_domain, expected_events, alert_threshold, alert_only_on_issues, alert_email, critical_alert_email, critical_alert_checks, status, auto_run, sections, created_at')
       .eq('owner_id', user.id).order('created_at'),
   ])
 

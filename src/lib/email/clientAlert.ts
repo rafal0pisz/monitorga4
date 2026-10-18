@@ -142,7 +142,12 @@ function categoryBlock(label: string, items: { issue: CheckIssue; kind: 'fail' |
 }
 
 export function renderClientAlertEmail(d: ClientAlertData): { subject: string; html: string } {
-  const subject = `GA4 Quality Alert — ${d.projectName}: score ${Math.round(d.scoreTotal)}, below threshold (${d.alertThreshold})`
+  // Sent every day by default now, not just when the score drops below
+  // d.alertThreshold (that's kept only as a displayed stat below) — so the
+  // subject/hero badge reflect whether THIS run actually found anything,
+  // not a score cutoff that often had nothing to do with it.
+  const hasIssues = d.failing.length > 0 || d.warning.length > 0
+  const subject = `GA4 Daily Report — ${d.projectName}: score ${Math.round(d.scoreTotal)}${hasIssues ? ', issues found' : ', all clear'}`
   const delta = d.prevScore != null ? Math.round(d.scoreTotal - d.prevScore) : null
   const total = d.failing.length + d.warning.length + d.passingCount
 
@@ -155,11 +160,11 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
   })).filter(c => c.items.length > 0)
 
   const scoreHero = hstack([
-    { html: `<span class="serif" style="font-size:48px;color:${BRAND.coralText};">${Math.round(d.scoreTotal)}</span>`, width: 90, valign: 'top' },
+    { html: `<span class="serif" style="font-size:48px;color:${hasIssues ? BRAND.coralText : BRAND.ink};">${Math.round(d.scoreTotal)}</span>`, width: 90, valign: 'top' },
     {
       html: `
-        <div><span style="font-size:10.5px;font-weight:700;color:${BRAND.ink};background:${BRAND.alert};padding:1px 6px;border-radius:4px;">Below threshold</span></div>
-        <div style="font-size:12.5px;color:#6b7278;margin-top:6px;">${delta != null ? `<b style="color:${BRAND.ink};">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}</b> vs. yesterday · ` : ''}your alert threshold is <b style="color:${BRAND.ink};">${d.alertThreshold}</b></div>`,
+        <div><span style="font-size:10.5px;font-weight:700;color:${BRAND.ink};background:${hasIssues ? BRAND.alert : '#e3f3e9'};padding:1px 6px;border-radius:4px;">${hasIssues ? 'Needs attention' : 'All clear'}</span></div>
+        <div style="font-size:12.5px;color:#6b7278;margin-top:6px;">${delta != null ? `<b style="color:${BRAND.ink};">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)}</b> vs. yesterday · ` : ''}configured alert threshold: <b style="color:${BRAND.ink};">${d.alertThreshold}</b></div>`,
       valign: 'top',
     },
   ])

@@ -38,7 +38,8 @@ export interface Project {
   ga4_credentials: string | null
   own_domain: string | null
   expected_events: string[]
-  alert_threshold: number
+  alert_threshold: number // display/stats only — see alert_only_on_issues for what actually gates the daily client alert
+  alert_only_on_issues?: boolean | null // when true, the daily alert only sends if this run had a warn/fail; default (false) sends every day
   alert_email: string | null // comma-separated list — see parseEmailList()
   critical_alert_email?: string | null // comma-separated list — see parseEmailList()
   critical_alert_checks?: string[] | null // check_keys that trigger the critical alert on warn/fail
