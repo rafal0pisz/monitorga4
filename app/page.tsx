@@ -342,7 +342,7 @@ export default async function HomePage() {
               <div className="lp-feature-cell">
                 <div>
                   <h3>Ruch i anomalie</h3>
-                  <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy, wykryte tego samego dnia.</p>
+                  <p className="desc">Self-referral, skoki ruchu direct i podejrzana aktywność botów w nocy lub wzrost/spadek z nietypowego kraju.</p>
                 </div>
                 <div className="lp-feature-visual mini-spark">
                   {[8, 11, 7, 9, 6, 10, 44, 38, 9, 7, 12, 8].map((h, i) => (
