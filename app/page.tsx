@@ -171,9 +171,14 @@ export default async function HomePage() {
         .lp-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
         @media (max-width: 980px) { .lp-steps { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 560px) { .lp-steps { grid-template-columns: 1fr; } }
-        .lp-step-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; color: #fff; background: #232b31; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .lp-step-num { font-family: var(--font-mono), monospace; font-weight: 600; font-size: 13px; color: #fff; background: #232b31; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; flex-shrink: 0; }
         .lp-step h3 { font-size: 15.5px; margin-bottom: 8px; }
         .lp-step p { font-size: 13.5px; color: #5b6570; line-height: 1.6; }
+        @media (max-width: 560px) {
+          .lp-step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+          .lp-step-num { margin-bottom: 0; }
+          .lp-step h3 { margin-bottom: 0; }
+        }
 
         .lp-log { display: flex; flex-direction: column; border-top: 1px solid #e2e6e8; }
         .lp-log-row { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid #e2e6e8; }
@@ -291,8 +296,10 @@ export default async function HomePage() {
             <div className="lp-steps">
               {STEPS.map((s, i) => (
                 <div className="lp-step" key={s.t}>
-                  <div className="lp-step-num">{i + 1}</div>
-                  <h3>{s.t}</h3>
+                  <div className="lp-step-head">
+                    <div className="lp-step-num">{i + 1}</div>
+                    <h3>{s.t}</h3>
+                  </div>
                   <p>{s.d}</p>
                 </div>
               ))}
