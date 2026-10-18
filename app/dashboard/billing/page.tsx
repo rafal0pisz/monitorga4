@@ -46,7 +46,7 @@ export default async function BillingPage() {
           </div>
           <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
             <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
-              Billing is managed by the team owner — see <Link href="/dashboard/team" style={{ color: '#16a34a' }}>Team</Link> for details.
+              Billing is managed by the team owner. Want your own plan instead? Leave the team from <Link href="/dashboard/team" style={{ color: '#16a34a' }}>Team</Link> first.
             </p>
           </div>
         </div>
