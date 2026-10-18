@@ -26,6 +26,7 @@ export default function LandingFooter() {
           <h3>Prawne</h3>
           <Link href="/privacy">Polityka prywatności</Link>
           <Link href="/terms">Regulamin</Link>
+          <a href="#" className="csconsentlink">Ustawienia ciasteczek</a>
         </div>
         <div className="lp-footer-col">
           <h3>Kontakt</h3>
