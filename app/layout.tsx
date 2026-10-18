@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Sans, IBM_Plex_Mono, Poppins } from 'next/font/google'
+import GoogleTagManager from '@/components/analytics/GoogleTagManager'
 import './globals.css'
 
 const plexSans = IBM_Plex_Sans({
@@ -86,6 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pl" className={`${plexSans.variable} ${plexMono.variable} ${poppins.variable}`}>
       <body style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)', fontFamily: 'var(--font-sans), -apple-system, sans-serif' }}>
+        <GoogleTagManager />
         {children}
       </body>
     </html>
