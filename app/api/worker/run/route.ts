@@ -1113,21 +1113,29 @@ async function processProject(
 // Vercel Cron is UTC-only — no per-job timezone option — so a single
 // fixed UTC schedule drifts an hour against Polish wall-clock time every
 // time DST flips (this is exactly how the previous "23:00 UTC" schedule
-// ended up checking data from the wrong calendar day). vercel.json fires
-// this route every 10 minutes across a UTC band (04:00-07:50) wide enough
-// to cover 06:30-08:30 Warsaw time in both CET and CEST — most firings
-// land outside the real local window and no-op immediately below.
+// ended up checking data from the wrong calendar day). A single repeating
+// expression like "*/10 4-7 * * *" would resolve that AND give a rolling
+// cadence in one shot, but the Vercel plan this runs on cannot deploy any
+// cron expression that fires more than once a day — it fails at deploy
+// time, which is exactly what silently broke every deploy from this
+// feature's first version until this fix. vercel.json instead registers
+// EIGHT separate cron entries for this path, each its own once-a-day
+// expression at a different nominal UTC time (04:00 through 07:30, 30
+// minutes apart) — individually compliant with the once-daily limit,
+// collectively covering 06:30-08:30 Warsaw time in both CET and CEST with
+// margin. Scheduling precision on this plan is only "within the hour"
+// anyway, so firings land fuzzily, not on the dot — most no-op immediately
+// below as outside the real local window, which is fine.
 //
 // ROLLING WINDOW, not a single shot: instead of one firing racing every
-// project against a single 300s maxDuration (the exact risk flagged when
-// this was reviewed for ~1000 users — a timeout mid-batch used to leave
-// the rest of that day's projects with zero checks and zero alerts, no
-// retry), each firing inside the window takes up to WORKER_BATCH_SIZE
-// projects off whatever's still pending for today and returns. The next
-// firing ~10 minutes later picks up wherever the last one left off — see
-// fetchPendingAutoRunProjectIds, which treats "has a dqs_runs row for
-// today" as the per-project resume marker (the existing onConflict
-// upsert already makes this idempotent).
+// project against maxDuration (the exact risk flagged when this was
+// reviewed for ~1000 users — a timeout mid-batch used to leave the rest of
+// that day's projects with zero checks and zero alerts, no retry), each
+// firing inside the window takes up to WORKER_BATCH_SIZE projects off
+// whatever's still pending for today and returns. A later firing picks up
+// wherever the last one left off — see fetchPendingAutoRunProjectIds,
+// which treats "has a dqs_runs row for today" as the per-project resume
+// marker (the existing onConflict upsert already makes this idempotent).
 //
 // Two independent, fail-open safety nets carry over unchanged from before:
 //   1. A tolerance window (checked by minute, not an exact firing time)
