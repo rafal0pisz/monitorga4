@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
   // indexable public page (sitemap.ts already lists it) — not a hard
   // block since nothing disallowed it either, just an inconsistency with
   // the "marketing/legal pages are public" intent these rules state.
-  const PUBLIC_PATHS = ['/', '/privacy', '/terms', '/funkcje', '/cennik', '/kontakt']
+  const PUBLIC_PATHS = ['/', '/privacy', '/terms', '/funkcje', '/cennik', '/kontakt', '/blog']
 
   return {
     rules: [

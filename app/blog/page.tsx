@@ -11,15 +11,28 @@ import { getAllPostsForIndex } from '@/lib/blog/posts'
 const TITLE = 'Blog'
 const DESCRIPTION = 'Artykuły o jakości danych w GA4: audyty, typowe błędy pomiarowe i jak je wykrywać, zanim trafią do raportu.'
 
-// Soft-launched: live at /blog for anyone with the direct link, but not
-// linked from the main nav (LandingNav's own NAV_LINKS) and not indexed
-// yet — flip `index: true` here (and add it to app/robots.ts's
-// PUBLIC_PATHS / app/sitemap.ts) once there's enough content to announce.
+// Soft-launched: indexable (robots below) and in the sitemap, so Google can
+// crawl and rank it, but still NOT linked from the main nav (LandingNav's
+// own NAV_LINKS) or the footer — reachable by direct link or search, not
+// by browsing the site. Add it to NAV_LINKS once ready to announce it.
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
   alternates: { canonical: '/blog' },
+  openGraph: {
+    type: 'website',
+    locale: 'pl_PL',
+    siteName: 'AlertGA4',
+    url: 'https://alertga4.pl/blog',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 }
 
 export default async function BlogIndexPage() {
@@ -34,9 +47,30 @@ export default async function BlogIndexPage() {
     : { href: '/login', label: 'Zaloguj się' }
 
   const posts = getAllPostsForIndex()
+  const publishedPosts = posts.filter(p => p.status === 'published')
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    name: 'Blog AlertGA4',
+    description: DESCRIPTION,
+    url: 'https://alertga4.pl/blog',
+    inLanguage: 'pl',
+    publisher: { '@type': 'Organization', name: 'Bettersteps Sp. z o.o.', url: 'https://www.bettersteps.pl' },
+    blogPost: publishedPosts.map(p => ({
+      '@type': 'BlogPosting',
+      headline: p.title,
+      url: `https://alertga4.pl/blog/${p.slug}`,
+      datePublished: p.publishedAt,
+    })),
+  }
 
   return (
     <div className="lp">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <style>{`
         ${LANDING_BASE_STYLES}
 

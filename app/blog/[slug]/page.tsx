@@ -10,8 +10,8 @@ import { getPostBySlug } from '@/lib/blog/posts'
 
 interface Props { params: Promise<{ slug: string }> }
 
-// Soft-launched, same as /blog itself: reachable by direct link, not
-// indexed yet. Flip `index: true` once this post is ready to announce.
+// Soft-launched, same as /blog itself: indexable and in the sitemap so
+// Google can rank it, but not yet linked from the nav — see /blog's page.tsx.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = getPostBySlug(slug)
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: post.title,
     description: post.excerpt,
-    robots: { index: false, follow: false },
+    robots: { index: true, follow: true },
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
       type: 'article',

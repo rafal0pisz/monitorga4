@@ -32,6 +32,7 @@ The Agency plan also supports team members with shared access to the account's m
 - [Homepage](https://alertga4.pl/): product overview, how it works, who it's for.
 - [Features](https://alertga4.pl/funkcje): what AlertGA4 checks every day.
 - [Pricing](https://alertga4.pl/cennik): plans and prices.
+- [Blog](https://alertga4.pl/blog): articles on GA4 data quality — audits, common measurement errors, and how to catch them.
 - [Contact](https://alertga4.pl/kontakt): contact form.
 - [Privacy Policy](https://alertga4.pl/privacy): what data is collected and how it's used.
 - [Terms of Service](https://alertga4.pl/terms): terms governing use of the service.
