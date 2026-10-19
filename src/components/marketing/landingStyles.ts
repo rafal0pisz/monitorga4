@@ -118,31 +118,16 @@ export const LANDING_BASE_STYLES = `
   .lp-footer-bottom a { text-decoration: none; color: inherit; }
   .lp-footer-bottom a:hover { color: #fff; }
 
-  /* Standalone promo banner — visually bolder than .trial-banner-guest
-     (same message, meant to read as a graphic/ad block rather than an
-     inline note): dark card, a big "14" as the focal visual element,
-     yellow CTA matching .lp-cta-band's button treatment. */
-  .lp .trial-promo-banner {
-    background: #232b31; border-radius: 18px; padding: 36px 40px;
-    display: flex; align-items: center; gap: 32px; overflow: hidden; position: relative;
+  /* Standalone promo banner for blog articles — a plain typographic
+     statement (no card, no background), set off by thin rules above and
+     below, rather than a boxed ad block. Same offer as .trial-banner-guest. */
+  .lp .trial-promo-banner { padding: 8px 0; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
+  .trial-promo-banner h3 {
+    font-size: clamp(22px, 3vw, 28px); line-height: 1.3; margin: 18px 0 10px;
+    color: #232b31; letter-spacing: -0.01em;
   }
-  .trial-promo-number {
-    font-family: var(--font-mono), monospace; font-size: 64px; font-weight: 700; line-height: 1;
-    color: #fffd73; flex-shrink: 0; position: relative;
-  }
-  .trial-promo-number span { display: block; font-size: 13px; font-weight: 600; color: rgba(255,253,115,0.75); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .trial-promo-body { position: relative; flex: 1; min-width: 0; }
-  .trial-promo-tag {
-    display: inline-block; font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600;
-    letter-spacing: 0.06em; text-transform: uppercase; color: #fffd73; background: rgba(255,253,115,0.12);
-    border: 1px solid rgba(255,253,115,0.3); border-radius: 999px; padding: 3px 11px; margin-bottom: 10px;
-  }
-  .trial-promo-body h3 { color: #fff; font-size: clamp(19px, 2.4vw, 24px); margin-bottom: 8px; }
-  .trial-promo-body p { color: #fff; font-size: 14px; line-height: 1.55; margin-bottom: 20px; max-width: 48ch; }
-  .trial-promo-banner .btn--primary { background: #fffd73; color: #3a3800; }
-  .trial-promo-banner .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.45); }
-  @media (max-width: 640px) {
-    .lp .trial-promo-banner { flex-direction: column; text-align: center; padding: 32px 24px; gap: 16px; }
-    .trial-promo-body p { max-width: none; }
-  }
+  .trial-promo-banner h3 em { font-style: normal; color: #16a34a; border-bottom: 3px solid #bbf7d0; }
+  .trial-promo-banner p { font-size: 14px; color: #5b6570; margin: 0 0 18px; }
+  .trial-promo-link { font-weight: 600; color: #232b31; text-decoration: none; border-bottom: 2px solid #232b31; padding-bottom: 2px; }
+  .trial-promo-link:hover { color: #16a34a; border-color: #16a34a; }
 `
