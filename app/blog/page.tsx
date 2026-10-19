@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
-import TrialPromoBanner from '@/components/marketing/TrialPromoBanner'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { getAllPostsForIndex } from '@/lib/blog/posts'
 
@@ -102,11 +101,6 @@ export default async function BlogIndexPage() {
         </section>
 
         <div className="wrap blog-body">
-          {!user && (
-            <div style={{ marginBottom: 40 }}>
-              <TrialPromoBanner />
-            </div>
-          )}
           <div className="blog-grid">
             {posts.map(post => (
               <div key={post.slug} className={`blog-card${post.status === 'coming-soon' ? ' is-soon' : ''}`}>
