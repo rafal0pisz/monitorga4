@@ -7,7 +7,7 @@ import FeatureSubnav from '@/components/marketing/FeatureSubnav'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const TITLE = 'Funkcje'
-const DESCRIPTION = 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: monitoring danych głównych, weryfikacja parametrów, zdarzenia niestandardowe i e-commerce, alert mailowy, podsumowanie projektów i kreator konfiguracji.'
+const DESCRIPTION = 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: weryfikacja ruchu, parametrów, zdarzeń niestandardowych i e-commerce, alert mailowy, podsumowanie projektów, współpraca zespołowa i kreator konfiguracji.'
 
 // Without these, this page silently inherited the homepage's canonical
 // URL, Open Graph title/description and Twitter card from the root
@@ -35,12 +35,13 @@ export const metadata: Metadata = {
 }
 
 const SUBNAV = [
-  { href: '#monitoring-danych', label: 'Monitoring danych głównych' },
+  { href: '#monitoring-danych', label: 'Weryfikacja ruchu w GA4' },
   { href: '#parametry', label: 'Weryfikacja parametrów' },
   { href: '#zdarzenia-niestandardowe', label: 'Zdarzenia niestandardowe' },
   { href: '#ecommerce', label: 'Zdarzenia e-commerce' },
   { href: '#alert-mailowy', label: 'Alert mailowy' },
   { href: '#podsumowanie', label: 'Podsumowanie projektów' },
+  { href: '#zespol', label: 'Współpraca zespołowa' },
   { href: '#kreator', label: 'Kreator konfiguracji' },
 ]
 
@@ -154,6 +155,16 @@ export default async function FunkcjePage() {
         .wiz-tag { font-size: 9.5px; padding: 1px 6px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-weight: 500; }
         .wiz-vol { margin-left: auto; font-family: var(--font-mono), monospace; font-size: 11px; color: #8b939a; }
 
+        .team-card { background: #fff; border: 1px solid #e2e6e8; border-radius: 14px; padding: 10px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 20px 40px -22px rgba(35,43,49,0.2); }
+        .team-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 10px; }
+        .team-row + .team-row { margin-top: 2px; }
+        .team-member { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .team-avatar { width: 30px; height: 30px; border-radius: 50%; background: #f3f6f7; border: 1px solid #e2e6e8; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 700; color: #232b31; flex-shrink: 0; }
+        .team-name { font-size: 12.5px; font-weight: 600; color: #232b31; }
+        .team-role { font-size: 11px; color: #8b939a; margin-top: 1px; }
+        .team-badge { font-size: 10.5px; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 3px 9px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+        .team-badge.pending { color: #9a3412; background: #fff7ed; border-color: #fdba74; }
+
       `}</style>
 
       <LandingNav primaryCta={primaryCta} user={!!user} />
@@ -178,13 +189,13 @@ export default async function FunkcjePage() {
             <div className="fx-feature-grid">
               <div className="fx-feature-text">
                 <div className="fx-feature-num">01</div>
-                <h2>Monitoring danych głównych</h2>
+                <h2>Weryfikacja ruchu w GA4</h2>
                 <p>Codziennie porównujemy ruch, zaangażowanie i konwersje tydzień do tygodnia, żeby złapać anomalię, zanim zauważysz ją w miesięcznym raporcie.</p>
                 <ul className="fx-feature-list">
                   <li>Self-referral i skoki ruchu direct po migracji domeny</li>
                   <li>Anomalie współczynnika odrzuceń i konwersji WoW</li>
                   <li>Podejrzana aktywność botów w środku nocy</li>
-                  <li>Nowe kraje w top 5 źródeł ruchu</li>
+                  <li>Nietypowy wzrost lub spadek ruchu z danego kraju</li>
                 </ul>
               </div>
               <div className="fx-feature-visual">
@@ -297,9 +308,10 @@ export default async function FunkcjePage() {
               <div className="fx-feature-text">
                 <div className="fx-feature-num">05</div>
                 <h2>Alert mailowy</h2>
-                <p>Gdy wynik jakości spada poniżej ustalonego progu, dostajesz e-mail z konkretną diagnozą, nie tylko liczbą. Bez logowania się codziennie, żeby to sprawdzić.</p>
+                <p>Codziennie dostajesz e-mail z wynikiem i konkretną diagnozą, nie tylko liczbą — niezależnie od tego, czy tego dnia coś faktycznie nie zagrało. Wolisz ciszej? Włącz opcję, żeby alert przychodził tylko, gdy wykryjemy realny problem.</p>
                 <ul className="fx-feature-list">
                   <li>Alert per projekt, na adres, który sam skonfigurujesz</li>
+                  <li>Opcjonalnie: tylko gdy pojawi się ostrzeżenie lub błąd, nie każdego dnia</li>
                   <li>Zbiorcze podsumowanie wszystkich projektów dla właściciela konta</li>
                   <li>Osobne powiadomienie, gdy wygaśnie połączenie z Google</li>
                 </ul>
@@ -356,11 +368,54 @@ export default async function FunkcjePage() {
           </div>
         </section>
 
-        <section className="fx-feature" id="kreator" style={{ borderBottom: 'none' }}>
+        <section className="fx-feature" id="zespol">
           <div className="wrap">
             <div className="fx-feature-grid">
               <div className="fx-feature-text">
                 <div className="fx-feature-num">07</div>
+                <h2>Współpraca zespołowa (Agency)</h2>
+                <p>Zaproś zespół do wspólnej pracy nad kontem — bez współdzielenia haseł i bez zakładania osobnych kont Google na każdą osobę.</p>
+                <ul className="fx-feature-list">
+                  <li>Do 5 osób w zespole na planie Agency</li>
+                  <li>Zaproszenie mailem, akceptacja własnym logowaniem Google</li>
+                  <li>Dane GA4 widoczne dopiero po realnym, zweryfikowanym dostępie do usługi w Google — samo zaproszenie w AlertGA4 to nie wszystko</li>
+                  <li>Własne projekty i członkostwo w cudzym zespole działają niezależnie od siebie</li>
+                </ul>
+              </div>
+              <div className="fx-feature-visual">
+                <div className="team-card">
+                  <div className="team-row">
+                    <div className="team-member">
+                      <span className="team-avatar">RP</span>
+                      <div><div className="team-name">rafal@agencja.pl</div><div className="team-role">Właściciel konta</div></div>
+                    </div>
+                    <span className="team-badge">Plan: Agency</span>
+                  </div>
+                  <div className="team-row">
+                    <div className="team-member">
+                      <span className="team-avatar">AK</span>
+                      <div><div className="team-name">anna@agencja.pl</div><div className="team-role">Członek zespołu</div></div>
+                    </div>
+                    <span className="team-badge">Dostęp: 4 / 5 usług</span>
+                  </div>
+                  <div className="team-row">
+                    <div className="team-member">
+                      <span className="team-avatar">MW</span>
+                      <div><div className="team-name">marek@agencja.pl</div><div className="team-role">Zaproszony</div></div>
+                    </div>
+                    <span className="team-badge pending">Oczekuje na akceptację</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="fx-feature" id="kreator" style={{ borderBottom: 'none' }}>
+          <div className="wrap">
+            <div className="fx-feature-grid flip">
+              <div className="fx-feature-text">
+                <div className="fx-feature-num">08</div>
                 <h2>Kreator konfiguracji z podpowiedziami z GA4</h2>
                 <p>Zamiast ślepego wpisywania nazw zdarzeń, kreator czyta realne dane z podłączonej usługi GA4 i podpowiada, co warto monitorować, wraz z wolumenem.</p>
                 <ul className="fx-feature-list">
