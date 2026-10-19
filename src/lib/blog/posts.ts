@@ -265,7 +265,6 @@ const NOT_SET_BODY_HTML = `
   <h2>Gdzie najczęściej widać „(not set)”</h2>
 
   <ul>
-    <li><b>Źródło/medium.</b> Ważne rozróżnienie: ruch bez parametrów kampanii i bez referrera nie trafia do „(not set)”, tylko do kanału Direct, czyli „(direct)/(none)” — to inna, prawidłowa wartość. „(not set)” w źródle/medium pojawia się wtedy, gdy GA4 w ogóle nie miał dla danego zdarzenia żadnych danych sesji do odczytania, np. przy zerwanej ciągłości sesji albo zdarzeniu wysłanym poza normalnym przepływem strony.</li>
     <li><b>Strona docelowa (landing page).</b> Zdarza się przy nietypowych przekierowaniach albo gdy parametr strony nie zdążył się załadować przed wysłaniem zdarzenia.</li>
     <li><b>Kraj i miasto.</b> GA4 nie zawsze jest w stanie zgeolokalizować adres IP, zwłaszcza przy ruchu z sieci VPN, firmowych serwerów proxy czy części ruchu botowego.</li>
     <li><b>Nazwa produktu, kategoria produktu, inne wymiary e-commerce.</b> Pojawia się, gdy parametr produktu (item_name, item_category) nie został wysłany razem ze zdarzeniem, mimo że samo zdarzenie e-commerce dotarło.</li>
