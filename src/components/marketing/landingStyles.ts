@@ -126,10 +126,6 @@ export const LANDING_BASE_STYLES = `
     background: #232b31; border-radius: 18px; padding: 36px 40px;
     display: flex; align-items: center; gap: 32px; overflow: hidden; position: relative;
   }
-  .lp .trial-promo-banner::after {
-    content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px;
-    border-radius: 50%; background: radial-gradient(circle, rgba(255,253,115,0.18), transparent 70%);
-  }
   .trial-promo-number {
     font-family: var(--font-mono), monospace; font-size: 64px; font-weight: 700; line-height: 1;
     color: #fffd73; flex-shrink: 0; position: relative;
@@ -142,7 +138,7 @@ export const LANDING_BASE_STYLES = `
     border: 1px solid rgba(255,253,115,0.3); border-radius: 999px; padding: 3px 11px; margin-bottom: 10px;
   }
   .trial-promo-body h3 { color: #fff; font-size: clamp(19px, 2.4vw, 24px); margin-bottom: 8px; }
-  .trial-promo-body p { color: rgba(255,255,255,0.65); font-size: 14px; line-height: 1.55; margin-bottom: 20px; max-width: 48ch; }
+  .trial-promo-body p { color: #fff; font-size: 14px; line-height: 1.55; margin-bottom: 20px; max-width: 48ch; }
   .trial-promo-banner .btn--primary { background: #fffd73; color: #3a3800; }
   .trial-promo-banner .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.45); }
   @media (max-width: 640px) {
