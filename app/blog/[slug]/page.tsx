@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
+import TrialPromoBanner from '@/components/marketing/TrialPromoBanner'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { getPostBySlug } from '@/lib/blog/posts'
 
@@ -99,6 +100,22 @@ export default async function BlogPostPage({ params }: Props) {
         .blog-table th, .blog-table td { padding: 10px 14px; border: 1px solid #e2e6e8; text-align: left; vertical-align: top; }
         .blog-table th { background: #f3f6f7; font-weight: 600; }
 
+        .blog-faq { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 24px; }
+        .blog-faq-item { background: #fff; border: 1px solid #e2e6e8; border-radius: 12px; padding: 0; overflow: hidden; }
+        .blog-faq-item summary {
+          list-style: none; cursor: pointer; padding: 16px 44px 16px 18px; position: relative;
+          font-size: 14.5px; font-weight: 600; color: #232b31; line-height: 1.5;
+        }
+        .blog-faq-item summary::-webkit-details-marker { display: none; }
+        .blog-faq-item summary::after {
+          content: '+'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+          font-size: 20px; font-weight: 400; color: #8b939a; transition: transform 0.15s;
+        }
+        .blog-faq-item[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+        .blog-faq-item[open] summary { border-bottom: 1px solid #e2e6e8; }
+        .blog-faq-answer { padding: 14px 18px 18px; }
+        .blog-faq-answer p { margin: 0; font-size: 14px; }
+
         .blog-back { font-size: 13px; color: #5b6570; text-decoration: none; }
         .blog-back:hover { color: #232b31; }
       `}</style>
@@ -115,6 +132,12 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         <article className="wrap blog-post-body" dangerouslySetInnerHTML={{ __html: post.bodyHtml ?? '' }} />
+
+        {!user && (
+          <div className="wrap blog-post-body" style={{ paddingTop: 0 }}>
+            <TrialPromoBanner />
+          </div>
+        )}
 
         <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
       </main>

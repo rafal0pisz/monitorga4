@@ -117,4 +117,36 @@ export const LANDING_BASE_STYLES = `
   .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
   .lp-footer-bottom a { text-decoration: none; color: inherit; }
   .lp-footer-bottom a:hover { color: #fff; }
+
+  /* Standalone promo banner — visually bolder than .trial-banner-guest
+     (same message, meant to read as a graphic/ad block rather than an
+     inline note): dark card, a big "14" as the focal visual element,
+     yellow CTA matching .lp-cta-band's button treatment. */
+  .lp .trial-promo-banner {
+    background: #232b31; border-radius: 18px; padding: 36px 40px;
+    display: flex; align-items: center; gap: 32px; overflow: hidden; position: relative;
+  }
+  .lp .trial-promo-banner::after {
+    content: ''; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(255,253,115,0.18), transparent 70%);
+  }
+  .trial-promo-number {
+    font-family: var(--font-mono), monospace; font-size: 64px; font-weight: 700; line-height: 1;
+    color: #fffd73; flex-shrink: 0; position: relative;
+  }
+  .trial-promo-number span { display: block; font-size: 13px; font-weight: 600; color: rgba(255,253,115,0.75); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .trial-promo-body { position: relative; flex: 1; min-width: 0; }
+  .trial-promo-tag {
+    display: inline-block; font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; color: #fffd73; background: rgba(255,253,115,0.12);
+    border: 1px solid rgba(255,253,115,0.3); border-radius: 999px; padding: 3px 11px; margin-bottom: 10px;
+  }
+  .trial-promo-body h3 { color: #fff; font-size: clamp(19px, 2.4vw, 24px); margin-bottom: 8px; }
+  .trial-promo-body p { color: rgba(255,255,255,0.65); font-size: 14px; line-height: 1.55; margin-bottom: 20px; max-width: 48ch; }
+  .trial-promo-banner .btn--primary { background: #fffd73; color: #3a3800; }
+  .trial-promo-banner .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.45); }
+  @media (max-width: 640px) {
+    .lp .trial-promo-banner { flex-direction: column; text-align: center; padding: 32px 24px; gap: 16px; }
+    .trial-promo-body p { max-width: none; }
+  }
 `

@@ -137,23 +137,32 @@ const ALERTS_BODY_HTML = `
 
   <h2>Najczęściej zadawane pytania</h2>
 
-  <p><b>Czy AlertGA4 zastępuje Insights w GA4?</b><br/>
-  Nie, i nie taki jest cel. Insights w GA4 to ogólny mechanizm wykrywania anomalii statystycznych, dostępny za darmo w samym GA4. AlertGA4 dokłada warstwę gotowych, konkretnych checków pod znane problemy pomiarowe, których Insights nie obejmuje, oraz codzienną, pewną wysyłkę mailową z diagnozą.</p>
-
-  <p><b>Czy warto korzystać z obu naraz?</b><br/>
-  Tak. Insights w GA4 wciąż ma sens jako ogólny, darmowy mechanizm wykrywania nietypowych zmian w dowolnej metryce, którą sam zdefiniujesz. AlertGA4 pilnuje w tle konkretnych, znanych źródeł błędów pomiarowych, które łatwo przeoczyć, patrząc tylko na ogólne metryki.</p>
-
-  <p><b>Czy trzeba znać się na statystyce, żeby skonfigurować alerty w GA4?</b><br/>
-  Przy Custom Insights w GA4 tak, trzeba samodzielnie dobrać metrykę, próg i częstotliwość. W AlertGA4 checki są już zdefiniowane, a kreator konfiguracji podpowiada na podstawie realnych danych z Twojej usługi, co warto dodatkowo monitorować.</p>
-
-  <p><b>Ile czasu zajmuje wdrożenie AlertGA4?</b><br/>
-  Podłączenie jednej usługi GA4 i przejście przez kreator konfiguracji zajmuje zwykle kilkanaście minut. Codzienne sprawdzanie i wysyłka alertów działają od razu po zapisaniu konfiguracji, bez dalszej pracy z Twojej strony.</p>
-
-  <p><b>Co jeśli obsługuję kilkanaście usług GA4 dla różnych klientów?</b><br/>
-  Plan Agency pozwala monitorować do stu usług GA4 z jednego konta, z jednym dashboardem pokazującym wszystkie projekty naraz, oraz z możliwością zaproszenia zespołu do wspólnej pracy bez współdzielenia haseł.</p>
-
-  <p><b>Czy AlertGA4 wymaga zmian w kodzie strony albo w konfiguracji GA4?</b><br/>
-  Nie. Podłączenie usługi odbywa się przez standardowe logowanie Google i nadanie dostępu do odczytu danych GA4. AlertGA4 tylko czyta dane, które GA4 już zbiera, i nic nie zmienia w samej konfiguracji usługi ani w kodzie śledzącym na stronie.</p>
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy AlertGA4 zastępuje Insights w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie, i nie taki jest cel. Insights w GA4 to ogólny mechanizm wykrywania anomalii statystycznych, dostępny za darmo w samym GA4. AlertGA4 dokłada warstwę gotowych, konkretnych checków pod znane problemy pomiarowe, których Insights nie obejmuje, oraz codzienną, pewną wysyłkę mailową z diagnozą.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy warto korzystać z obu naraz?</summary>
+      <div class="blog-faq-answer"><p>Tak. Insights w GA4 wciąż ma sens jako ogólny, darmowy mechanizm wykrywania nietypowych zmian w dowolnej metryce, którą sam zdefiniujesz. AlertGA4 pilnuje w tle konkretnych, znanych źródeł błędów pomiarowych, które łatwo przeoczyć, patrząc tylko na ogólne metryki.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy trzeba znać się na statystyce, żeby skonfigurować alerty w GA4?</summary>
+      <div class="blog-faq-answer"><p>Przy Custom Insights w GA4 tak, trzeba samodzielnie dobrać metrykę, próg i częstotliwość. W AlertGA4 checki są już zdefiniowane, a kreator konfiguracji podpowiada na podstawie realnych danych z Twojej usługi, co warto dodatkowo monitorować.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Ile czasu zajmuje wdrożenie AlertGA4?</summary>
+      <div class="blog-faq-answer"><p>Podłączenie jednej usługi GA4 i przejście przez kreator konfiguracji zajmuje zwykle kilkanaście minut. Codzienne sprawdzanie i wysyłka alertów działają od razu po zapisaniu konfiguracji, bez dalszej pracy z Twojej strony.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Co jeśli obsługuję kilkanaście usług GA4 dla różnych klientów?</summary>
+      <div class="blog-faq-answer"><p>Plan Agency pozwala monitorować do stu usług GA4 z jednego konta, z jednym dashboardem pokazującym wszystkie projekty naraz, oraz z możliwością zaproszenia zespołu do wspólnej pracy bez współdzielenia haseł.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy AlertGA4 wymaga zmian w kodzie strony albo w konfiguracji GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie. Podłączenie usługi odbywa się przez standardowe logowanie Google i nadanie dostępu do odczytu danych GA4. AlertGA4 tylko czyta dane, które GA4 już zbiera, i nic nie zmienia w samej konfiguracji usługi ani w kodzie śledzącym na stronie.</p></div>
+    </details>
+  </div>
 `
 
 export const BLOG_POSTS: BlogPost[] = [
