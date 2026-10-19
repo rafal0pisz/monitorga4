@@ -699,6 +699,15 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
 // at once instead, pulling the next one as soon as a slot frees up.
 const WORKER_CONCURRENCY = 8
 
+// How many projects ONE cron firing takes off the pending list — see the
+// rolling-window design below (ROLL_WINDOW_START_MIN etc). At concurrency 8,
+// a heavy project (many custom parameters — now unlimited on every plan,
+// each costing its own sequential GA4 call in checkParameters) can take
+// 20-30s; 50 projects / 8 concurrency * ~30s ≈ 190s, comfortably inside the
+// 300s maxDuration even in the worst case. Safe to raise once real
+// per-project timing from production logs says there's headroom.
+const WORKER_BATCH_SIZE = 50
+
 async function runWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length)
   let next = 0
@@ -1104,72 +1113,274 @@ async function processProject(
 // Vercel Cron is UTC-only — no per-job timezone option — so a single
 // fixed UTC schedule drifts an hour against Polish wall-clock time every
 // time DST flips (this is exactly how the previous "23:00 UTC" schedule
-// ended up checking data from the wrong calendar day). vercel.json
-// registers TWO daily cron firings (5:30 and 6:30 UTC — correct for CEST
-// and CET respectively) aimed at 7:30 Warsaw time.
+// ended up checking data from the wrong calendar day). vercel.json fires
+// this route every 10 minutes across a UTC band (04:00-07:50) wide enough
+// to cover 06:30-08:30 Warsaw time in both CET and CEST — most firings
+// land outside the real local window and no-op immediately below.
 //
-// Originally this gated on an EXACT Warsaw hour match. That assumed Vercel
-// dispatches cron at the scheduled minute — true on Pro, but Hobby plan
-// only guarantees cron fires "within the hour" (±59 min), so a firing
-// could land outside the expected hour entirely and get silently gated
-// out, with NEITHER of the day's two firings ever doing real work — which
-// is exactly the kind of silent, multi-day gap that stops every client's
-// alerts without raising any error anywhere. So this is now two
-// independent, fail-open safety nets instead of one precise gate:
-//   1. A wide tolerance window (not an exact hour) absorbs scheduling
-//      jitter on any plan tier.
-//   2. A once-per-day marker (app_config) stops the two firings (or
-//      retries within the window) from double-running the same day —
-//      but if reading/writing that marker itself fails for any reason,
-//      this fails OPEN (runs anyway) rather than silently skipping, since
-//      a missed day of alerts is a worse failure than an extra run.
-const WARSAW_MORNING_WINDOW = new Set([5, 6, 7, 8, 9, 10, 11])
+// ROLLING WINDOW, not a single shot: instead of one firing racing every
+// project against a single 300s maxDuration (the exact risk flagged when
+// this was reviewed for ~1000 users — a timeout mid-batch used to leave
+// the rest of that day's projects with zero checks and zero alerts, no
+// retry), each firing inside the window takes up to WORKER_BATCH_SIZE
+// projects off whatever's still pending for today and returns. The next
+// firing ~10 minutes later picks up wherever the last one left off — see
+// fetchPendingAutoRunProjectIds, which treats "has a dqs_runs row for
+// today" as the per-project resume marker (the existing onConflict
+// upsert already makes this idempotent).
+//
+// Two independent, fail-open safety nets carry over unchanged from before:
+//   1. A tolerance window (checked by minute, not an exact firing time)
+//      absorbs scheduling jitter on any plan tier.
+//   2. AUTO_RUN_MARKER_KEY (app_config) — now written only once ALL
+//      pending projects for today have a run, not before the batch even
+//      starts — stops further firings from re-querying once the day is
+//      done, and is what /api/worker/watchdog checks. If reading/writing
+//      it fails for any reason, this fails OPEN (keeps checking pending
+//      work) rather than silently stopping, since a missed day of alerts
+//      is worse than an extra query.
+// A SEPARATE marker (DIGEST_SENT_MARKER_KEY) gates the owner digest email,
+// deliberately not reused from AUTO_RUN_MARKER_KEY — see sendDailyDigestIfDue
+// for why coupling them is exactly what silently swallowed the digest before.
+const ROLL_WINDOW_START_MIN = 6 * 60 + 30 // 06:30 Warsaw
+const ROLL_WINDOW_END_MIN   = 8 * 60 + 30 // 08:30 Warsaw
+const DIGEST_SENT_MARKER_KEY = 'worker_last_digest_sent_date'
 
-function currentWarsawHour(): number {
-  return Number(
-    new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date())
-  )
+function currentWarsawMinuteOfDay(): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw', hour: 'numeric', minute: 'numeric', hour12: false,
+  }).formatToParts(new Date())
+  const hour = Number(parts.find(p => p.type === 'hour')?.value ?? '0') % 24
+  const minute = Number(parts.find(p => p.type === 'minute')?.value ?? '0')
+  return hour * 60 + minute
+}
+
+async function readMarker(admin: ReturnType<typeof createAdminClient>, key: string): Promise<string | null> {
+  try {
+    const { data, error } = await admin.from('app_config').select('value').eq('key', key).maybeSingle()
+    if (error) throw error
+    return data?.value ?? null
+  } catch (e: any) {
+    console.error(`[worker] Could not read marker "${key}" — failing open:`, e.message)
+    return null
+  }
+}
+
+async function writeMarker(admin: ReturnType<typeof createAdminClient>, key: string, value: string): Promise<void> {
+  try {
+    const { error } = await admin.from('app_config').upsert({ key, value })
+    if (error) throw error
+  } catch (e: any) {
+    // Non-fatal — worst case this gets re-attempted on the next firing,
+    // which is far safer than the alternative of appearing done when not.
+    console.error(`[worker] Could not write marker "${key}" (non-fatal):`, e.message)
+  }
 }
 
 async function alreadyRanAutomaticallyToday(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string): Promise<boolean> {
-  try {
-    const { data, error } = await admin.from('app_config').select('value').eq('key', AUTO_RUN_MARKER_KEY).maybeSingle()
-    if (error) throw error
-    return data?.value === todayWarsaw
-  } catch (e: any) {
-    console.error('[worker] Could not read auto-run marker — failing open (running anyway):', e.message)
-    return false
-  }
+  return (await readMarker(admin, AUTO_RUN_MARKER_KEY)) === todayWarsaw
 }
 
 async function markRanAutomaticallyToday(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string): Promise<void> {
-  try {
-    const { error } = await admin.from('app_config').upsert({ key: AUTO_RUN_MARKER_KEY, value: todayWarsaw })
-    if (error) throw error
-  } catch (e: any) {
-    // Non-fatal — worst case the next cron firing today re-runs once more,
-    // which is far safer than the alternative of appearing to have run
-    // when it didn't.
-    console.error('[worker] Could not record auto-run marker (non-fatal):', e.message)
-  }
+  await writeMarker(admin, AUTO_RUN_MARKER_KEY, todayWarsaw)
 }
 
-// GET — wywoływany przez Vercel Cron, dwa razy dziennie (patrz vercel.json
-// + komentarz powyżej). Przetwarza tylko projekty z auto_run = true.
+// Which auto_run projects still need a run today. Mirrors runWorker's own
+// owner-access filter below (duplicated rather than shared — this runs
+// across many firings over two hours and must independently fail open,
+// without depending on in-memory state from any other invocation) — without
+// it, a lapsed-trial project would never get a dqs_runs row and would look
+// "pending" forever, which would stop the window from ever reporting "done"
+// and sending the digest.
+// Returns null (not []) when the candidate list itself couldn't be read —
+// an empty array here means "genuinely nothing pending", which the caller
+// uses to mark the whole day complete and send the digest. Collapsing a
+// DB error into [] would make a transient outage look exactly like a
+// finished day: the marker gets written, the (empty) digest fires, and the
+// rest of today's real work never runs — the same class of silent miss
+// this rolling-window change exists to prevent. null tells the caller
+// "unknown, try again next firing" instead.
+async function fetchPendingAutoRunProjectIds(admin: ReturnType<typeof createAdminClient>, runDate: string): Promise<string[] | null> {
+  const { data: candidatesRaw, error } = await admin.from('projects').select('id, owner_id').eq('status', 'active').eq('auto_run', true)
+  if (error) {
+    console.error('[worker] Could not list auto_run projects — will retry on the next firing:', error.message)
+    return null
+  }
+  const candidates = (candidatesRaw ?? []) as { id: string; owner_id: string | null }[]
+  if (candidates.length === 0) return []
+
+  const ownerIds = [...new Set(candidates.map(p => p.owner_id).filter((id): id is string => !!id))]
+  const { data: ownerProfiles, error: profilesError } = ownerIds.length
+    ? await admin.from('profiles').select('id, plan_id, trial_ends_at').in('id', ownerIds)
+    : { data: [] as { id: string; plan_id: string | null; trial_ends_at: string | null }[], error: null }
+  if (profilesError) {
+    console.error('[worker] Owner profile lookup failed while checking pending work — not filtering by plan status:', profilesError.message)
+  }
+  const accessByOwner = new Map((ownerProfiles ?? []).map((p: { id: string; plan_id: string | null; trial_ends_at: string | null }) => [p.id, hasActiveAccess(p.plan_id, p.trial_ends_at)]))
+  const eligible = profilesError ? candidates : candidates.filter(p => !p.owner_id || accessByOwner.get(p.owner_id) === true)
+  if (eligible.length === 0) return []
+
+  const ids = eligible.map(p => p.id)
+  const { data: doneRuns, error: doneErr } = await admin.from('dqs_runs').select('project_id').eq('run_date', runDate).in('project_id', ids)
+  if (doneErr) {
+    console.error('[worker] Could not check today\'s completed runs — treating all eligible projects as pending (safe: the dqs_runs upsert is idempotent):', doneErr.message)
+    return ids
+  }
+  const doneSet = new Set((doneRuns ?? []).map((r: { project_id: string }) => r.project_id))
+  return ids.filter(id => !doneSet.has(id))
+}
+
+// Rebuilds today's full digest from dqs_runs/dqs_results rather than
+// carrying in-memory state across firings (impossible anyway — each cron
+// firing is a fresh serverless invocation) — this is also what makes the
+// digest correct regardless of how many batches it took to get through
+// today's projects. Mirrors processProject's own digestEntry construction
+// exactly (topSignal = worst core fail/warn message, checkErrors = results
+// whose value carries an error) so a multi-batch day produces the same
+// digest a single-batch day always did.
+async function buildDigestEntriesForDate(admin: ReturnType<typeof createAdminClient>, runDate: string): Promise<DigestEntry[]> {
+  const { data: runsRaw, error: runsError } = await admin
+    .from('dqs_runs').select('id, project_id, status, score_total, error_message').eq('run_date', runDate)
+  if (runsError) {
+    console.error('[worker] Could not load today\'s runs for the digest:', runsError.message)
+    return []
+  }
+  const runs = (runsRaw ?? []) as { id: string; project_id: string; status: string; score_total: number | null; error_message: string | null }[]
+  if (runs.length === 0) return []
+
+  const projectIds = [...new Set(runs.map(r => r.project_id))]
+  const { data: projectsRaw } = await admin.from('projects').select('id, name, alert_threshold').in('id', projectIds)
+  const projectById = new Map(((projectsRaw ?? []) as { id: string; name: string; alert_threshold: number }[]).map(p => [p.id, p]))
+
+  const completedRunIds = runs.filter(r => r.status === 'completed').map(r => r.id)
+  const { data: resultsRaw } = completedRunIds.length
+    ? await admin.from('dqs_results').select('run_id, check_key, check_level, status, message, value').in('run_id', completedRunIds)
+    : { data: [] as { run_id: string; check_key: string; check_level: string; status: string; message: string; value: unknown }[] }
+  const resultsByRun = new Map<string, { check_key: string; check_level: string; status: string; message: string; value: unknown }[]>()
+  for (const r of (resultsRaw ?? []) as { run_id: string; check_key: string; check_level: string; status: string; message: string; value: unknown }[]) {
+    if (!resultsByRun.has(r.run_id)) resultsByRun.set(r.run_id, [])
+    resultsByRun.get(r.run_id)!.push(r)
+  }
+
+  const prevDateObj = new Date(runDate)
+  prevDateObj.setDate(prevDateObj.getDate() - 1)
+  const prevDate = prevDateObj.toISOString().split('T')[0]
+  const { data: prevRunsRaw } = await admin.from('dqs_runs').select('project_id, score_total').eq('run_date', prevDate).eq('status', 'completed').in('project_id', projectIds)
+  const prevScoreByProject = new Map(((prevRunsRaw ?? []) as { project_id: string; score_total: number | null }[]).map(r => [r.project_id, r.score_total]))
+
+  const entries: DigestEntry[] = []
+  for (const run of runs) {
+    const project = projectById.get(run.project_id)
+    if (!project) continue // deleted since this morning's run — nothing to show
+
+    if (run.status !== 'completed') {
+      entries.push({
+        projectId: run.project_id, name: project.name, runStatus: 'failed',
+        errorMessage: run.error_message, checkErrors: [], scoreTotal: null, prevScore: null,
+        topSignal: '', belowThreshold: true, alertThreshold: project.alert_threshold,
+      })
+      continue
+    }
+
+    const results = resultsByRun.get(run.id) ?? []
+    const coreResults = results.filter(r => r.check_level === 'core')
+    const checkErrors = results
+      .filter(r => r.value && typeof r.value === 'object' && 'error' in (r.value as Record<string, unknown>))
+      .map(r => ({ checkKey: r.check_key, message: String((r.value as Record<string, unknown>).error) }))
+    const worstFail = coreResults.find(r => r.status === 'fail')
+    const worstWarn = coreResults.find(r => r.status === 'warn')
+    const topSignal = worstFail?.message ?? worstWarn?.message ?? 'All core checks passing'
+
+    entries.push({
+      projectId: run.project_id, name: project.name, runStatus: 'completed',
+      checkErrors, scoreTotal: run.score_total, prevScore: prevScoreByProject.get(run.project_id) ?? null,
+      topSignal, belowThreshold: (run.score_total ?? 0) < project.alert_threshold, alertThreshold: project.alert_threshold,
+    })
+  }
+  return entries
+}
+
+// Sends the owner digest exactly once per day, independently of
+// AUTO_RUN_MARKER_KEY — the two used to be the same gate, and that's
+// precisely how the digest silently stopped going out once the automatic
+// run was split across multiple firings: the marker got written by
+// whichever firing finished the batch, every firing after it saw "already
+// ran" and skipped straight past the email too. Keeping a SEPARATE
+// DIGEST_SENT_MARKER_KEY means a firing that sees "work is done but no
+// digest sent yet" (including one that only reaches this via the
+// already-ran fast path in GET, below) always gets to try again.
+async function sendDailyDigestIfDue(admin: ReturnType<typeof createAdminClient>, todayWarsaw: string, runDate: string): Promise<void> {
+  if (!process.env.DIGEST_EMAIL) return
+  if ((await readMarker(admin, DIGEST_SENT_MARKER_KEY)) === todayWarsaw) return
+
+  const digestEntries = await buildDigestEntriesForDate(admin, runDate)
+  if (digestEntries.length === 0) return
+
+  const checkedDate = getDailyRanges().current.startDate
+  const { count: totalActiveProjects } = await admin.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active')
+  const sent = await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0) })
+  if (sent) await writeMarker(admin, DIGEST_SENT_MARKER_KEY, todayWarsaw)
+  // sendEmail failing is logged there already and left non-fatal here too —
+  // the marker is deliberately NOT written on failure, so the next firing
+  // within the window (or the next time anything calls this) retries it.
+}
+
+// GET — wywoływany przez Vercel Cron co 10 minut (patrz vercel.json +
+// komentarz powyżej o rolling window). Za każdym razem bierze tylko kawałek
+// (WORKER_BATCH_SIZE) projektów z auto_run = true, które jeszcze nie miały
+// dzisiaj runu — reszta poczeka na kolejne odpalenie w oknie 6:30-8:30.
 export async function GET(request: NextRequest) {
   if (!(await isAuthorized(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  if (!WARSAW_MORNING_WINDOW.has(currentWarsawHour())) {
-    return NextResponse.json({ ok: true, skipped: 'outside the Warsaw morning window' })
+  const minuteOfDay = currentWarsawMinuteOfDay()
+  if (minuteOfDay < ROLL_WINDOW_START_MIN || minuteOfDay > ROLL_WINDOW_END_MIN) {
+    return NextResponse.json({ ok: true, skipped: 'outside the Warsaw rolling window (06:30-08:30)' })
   }
+
   const admin = createAdminClient()
   const todayWarsaw = currentWarsawDate()
+  const runDate = new Date().toISOString().split('T')[0]
+
   if (await alreadyRanAutomaticallyToday(admin, todayWarsaw)) {
-    return NextResponse.json({ ok: true, skipped: 'already ran automatically today' })
+    // Work is done for today — but make sure the digest actually went out.
+    // Deliberately checked on every firing that lands here, not just the
+    // one that finished the batch: if that firing crashed or timed out
+    // between marking "ran" and sending the digest, this is what lets a
+    // later firing within the window pick it back up instead of the
+    // digest silently never going out.
+    await sendDailyDigestIfDue(admin, todayWarsaw, runDate)
+    return NextResponse.json({ ok: true, skipped: 'already completed today' })
   }
-  await markRanAutomaticallyToday(admin, todayWarsaw)
-  return runWorker(null)
+
+  const pendingIds = await fetchPendingAutoRunProjectIds(admin, runDate)
+  if (pendingIds === null) {
+    // Couldn't tell what's pending this firing (DB hiccup, already logged).
+    // Do NOT mark the day done or touch the digest — just wait for the next
+    // firing (10 minutes later, within the same window) to retry, with the
+    // watchdog as the backstop if the problem outlasts the whole window.
+    return NextResponse.json({ ok: true, skipped: 'could not determine pending work this firing — will retry' })
+  }
+  if (pendingIds.length === 0) {
+    // Nothing left (or nothing to do at all) — today's batch is complete.
+    await markRanAutomaticallyToday(admin, todayWarsaw)
+    await sendDailyDigestIfDue(admin, todayWarsaw, runDate)
+    return NextResponse.json({ ok: true, skipped: 'nothing pending for today' })
+  }
+
+  const batchIds = pendingIds.slice(0, WORKER_BATCH_SIZE)
+  const result = await runWorker(batchIds, true)
+
+  const stillPending = await fetchPendingAutoRunProjectIds(admin, runDate)
+  if (stillPending !== null && stillPending.length === 0) {
+    // This firing's batch happened to be the last one needed today.
+    await markRanAutomaticallyToday(admin, todayWarsaw)
+    await sendDailyDigestIfDue(admin, todayWarsaw, runDate)
+  }
+  // stillPending === null (couldn't re-check) just means we don't know yet
+  // whether today is done — same reasoning as the pre-batch check above;
+  // the next firing re-derives this from scratch, nothing to lose here.
+  return result
 }
 
 // A manual "Run now" was previously only guarded client-side (the button
@@ -1235,30 +1446,55 @@ export async function POST(request: NextRequest) {
     // never block the actual run, just like every other gate in this file.
     const { error: markError } = await admin.from('projects').update({ last_manual_run_at: new Date().toISOString() }).eq('id', projectId)
     if (markError) console.error('[worker] Could not record last_manual_run_at (non-fatal, cooldown just won\'t apply this time):', markError.message)
+
+    return runWorker([projectId], false)
   }
 
-  return runWorker(projectId ?? null)
+  // Cron-authenticated POST with no project_id — the emergency "run
+  // everything right now" path the watchdog's own alert email tells the
+  // account owner to use when the rolling window missed the day entirely.
+  // Unlike the GET rolling batches, this always takes every auto_run
+  // project in one go (ignoring today's pending/done split, since the
+  // point is a full manual catch-up), then feeds the same digest
+  // machinery as the automatic path so a manually-recovered day still
+  // gets exactly one summary email.
+  if (!projectId) {
+    const admin = createAdminClient()
+    const { data: allAutoRun } = await admin.from('projects').select('id').eq('status', 'active').eq('auto_run', true)
+    const ids = (allAutoRun ?? []).map((p: { id: string }) => p.id)
+    const result = await runWorker(ids, true)
+    const todayWarsaw = currentWarsawDate()
+    await markRanAutomaticallyToday(admin, todayWarsaw)
+    await sendDailyDigestIfDue(admin, todayWarsaw, new Date().toISOString().split('T')[0])
+    return result
+  }
+
+  return runWorker([projectId], false)
 }
 
-async function runWorker(projectId: string | null) {
+// projectIds — the exact projects to process this call: a single id for a
+// manual "Run now" or the emergency full catch-up, or a bounded batch for
+// one rolling-window firing (see GET above). isAutoRunPass only affects
+// processProject's own behavior (e.g. the reconnect-notice email) — it does
+// NOT drive the owner digest anymore, that's handled entirely by the
+// caller via sendDailyDigestIfDue once it knows today's work is complete.
+async function runWorker(projectIds: string[], isAutoRunPass: boolean) {
   const supabase = createAdminClient()
   const runDate = new Date().toISOString().split('T')[0]
   // The actual GA4 date every check in this run covers — always 2 days
   // before the run, not "today"/"yesterday" (see getDailyRanges()). Passed
-  // through to the alert/digest emails so they state which day's data they
+  // through to the alert emails so they state which day's data they
   // reflect instead of implying it's yesterday's traffic.
   const checkedDate = getDailyRanges().current.startDate
 
-  // Fetch projects — manualny run bierze konkretny projekt niezależnie od
-  // auto_run; automatyczny (cron) run bierze tylko projekty z auto_run = true.
-  let query = supabase.from('projects').select('*').eq('status', 'active')
-  query = projectId ? query.eq('id', projectId) : query.eq('auto_run', true)
-  const { data: projectsRaw } = await query
+  const { data: projectsRaw } = projectIds.length
+    ? await supabase.from('projects').select('*').eq('status', 'active').in('id', projectIds)
+    : { data: [] as Project[] }
 
   // A lapsed trial (or no plan at all) used to only block creating NEW
   // projects — existing ones kept running daily checks and sending client
-  // alerts forever, for free. Batched (not one query per project) since the
-  // cron pass can cover dozens of projects at once. Projects with no
+  // alerts forever, for free. Batched (not one query per project) since a
+  // single call can cover dozens of projects at once. Projects with no
   // owner_id (a legacy/system-owned property, see getGa4Token below) aren't
   // tied to any billed account, so they're exempt rather than blocked.
   const allProjects = (projectsRaw ?? []) as Project[]
@@ -1284,13 +1520,11 @@ async function runWorker(projectId: string | null) {
 
   const processed: string[] = []
   const errors: Record<string, string> = {}
-  const digestEntries: DigestEntry[] = []
 
   const prevDateObj = new Date(runDate)
   prevDateObj.setDate(prevDateObj.getDate() - 1)
   const prevDate = prevDateObj.toISOString().split('T')[0]
 
-  const isAutoRunPass = projectId === null
   const outcomes = await runWithConcurrency(
     projects,
     WORKER_CONCURRENCY,
@@ -1301,18 +1535,6 @@ async function runWorker(projectId: string | null) {
     if (!outcome) continue
     if (outcome.processed) processed.push(outcome.projectId)
     if (outcome.errorMessage) errors[outcome.projectId] = outcome.errorMessage
-    digestEntries.push(outcome.digestEntry)
-  }
-
-  // Owner digest — only for the automatic (cron) pass across all projects,
-  // never for a single-project manual "Run now".
-  if (!projectId && digestEntries.length > 0 && process.env.DIGEST_EMAIL) {
-    // Total active projects across the whole account — distinct from
-    // digestEntries.length, which only counts projects with auto_run
-    // enabled (the ones this cron pass actually checked).
-    const { count: totalActiveProjects } = await supabase
-      .from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active')
-    await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0) })
   }
 
   return NextResponse.json({ ok: true, processed, errors, run_date: runDate, skipped_no_access: skippedNoAccess.map(p => p.id) })
