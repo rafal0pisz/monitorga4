@@ -134,13 +134,11 @@ export default async function BlogPostPage({ params }: Props) {
           {post.publishedAt && <div className="meta">{new Date(post.publishedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}</div>}
         </div>
 
-        <article className="wrap blog-post-body" dangerouslySetInnerHTML={{ __html: post.bodyHtml ?? '' }} />
-
-        {!user && (
-          <div className="wrap blog-post-body" style={{ paddingTop: 0 }}>
-            <TrialPromoBanner />
-          </div>
-        )}
+        <div className="wrap blog-post-body">
+          <article dangerouslySetInnerHTML={{ __html: post.bodyHtml ?? '' }} />
+          {!user && <TrialPromoBanner />}
+          {post.faqHtml && <div dangerouslySetInnerHTML={{ __html: post.faqHtml }} />}
+        </div>
 
         <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
       </main>

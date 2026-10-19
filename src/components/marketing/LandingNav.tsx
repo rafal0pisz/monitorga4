@@ -12,6 +12,7 @@ const NAV_LINKS = [
   { href: '/#dla-kogo', label: 'Dla kogo' },
   { href: '/funkcje', label: 'Funkcje' },
   { href: '/cennik', label: 'Cennik' },
+  { href: '/blog', label: 'Blog' },
   { href: '/kontakt', label: 'Kontakt' },
 ]
 
