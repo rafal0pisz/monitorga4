@@ -41,6 +41,7 @@ export default async function BillingPage() {
   let planId: string | null = null
   let subscriptionStatus: string | null = null
   let currentPeriodEnd: string | null = null
+  let cancelAtPeriodEnd = false
   let projectCount = 0
   let invoices: InvoiceRow[] = []
   let stripeCustomerId: string | null = null
@@ -60,7 +61,7 @@ export default async function BillingPage() {
     const [{ data: profile }, { count }, { data: quotaRows }] = await Promise.all([
       supabase
         .from('profiles')
-        .select('plan_id, subscription_status, current_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
+        .select('plan_id, subscription_status, current_period_end, cancel_at_period_end, stripe_customer_id, trial_ends_at, trial_used_at')
         .eq('id', user.id)
         .single(),
       supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
@@ -69,6 +70,7 @@ export default async function BillingPage() {
     planId = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
     subscriptionStatus = profile?.subscription_status ?? null
     currentPeriodEnd = profile?.current_period_end ?? null
+    cancelAtPeriodEnd = profile?.cancel_at_period_end ?? false
     stripeCustomerId = profile?.stripe_customer_id ?? null
     trialEndsAt = profile?.trial_ends_at ?? null
     trialUsedAt = profile?.trial_used_at ?? null
@@ -146,6 +148,15 @@ export default async function BillingPage() {
               ? `Trial ends in ${trialDaysLeft} ${trialDaysLeft === 1 ? 'day' : 'days'}`
               : currentPeriodEnd ? `Valid until: ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : hasPurchasablePlan ? '' : 'No expiry date'}
           </p>
+          {cancelAtPeriodEnd && (
+            <div style={{ background: '#fef2f2', border: '0.5px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+              <p style={{ fontSize: 12.5, color: '#991b1b', margin: 0, lineHeight: 1.5 }}>
+                <b>Subscription canceled.</b> Your {planName(planId)} plan stays active
+                {currentPeriodEnd ? ` until ${new Date(currentPeriodEnd).toLocaleDateString('en-GB')}` : ' until the end of the current billing period'},
+                then your account reverts to no plan. Changed your mind? Resume it from Manage billing below.
+              </p>
+            </div>
+          )}
           <BillingActions hasPurchasablePlan={hasPurchasablePlan} />
           {isTrial && (
             <div style={{ marginTop: 12 }}>

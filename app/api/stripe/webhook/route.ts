@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
           stripe_subscription_id: subscription.id,
           subscription_status: subscription.status,
           current_period_end: periodEndIso(subscription),
+          cancel_at_period_end: subscription.cancel_at_period_end,
         }).eq('id', profileId)
 
         // Buying through Checkout again while a different subscription is
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
           stripe_subscription_id: subscription.id,
           subscription_status: subscription.status,
           current_period_end: periodEndIso(subscription),
+          cancel_at_period_end: subscription.cancel_at_period_end,
         }).eq('id', profileId)
         break
       }
@@ -142,10 +144,12 @@ export async function POST(request: NextRequest) {
 
         // Subscription actually ended — revert to no plan (0 project limit).
         // Existing projects are NOT deleted or paused, only new creation
-        // gets blocked.
+        // gets blocked. cancel_at_period_end reset too — nothing left to
+        // show "canceled, active until X" about once there's no plan at all.
         await supabase.from('profiles').update({
           plan_id: null,
           subscription_status: subscription.status,
+          cancel_at_period_end: false,
         }).eq('id', profileId)
         break
       }
