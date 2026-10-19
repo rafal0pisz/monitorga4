@@ -87,8 +87,11 @@ export default async function BlogPostPage({ params }: Props) {
         .blog-post-body { padding: 32px 0 80px; max-width: 720px; margin: 0 auto; }
         .blog-post-body h2 { font-size: clamp(19px, 2.2vw, 23px); margin: 36px 0 14px; letter-spacing: -0.01em; }
         .blog-post-body p { font-size: 15px; color: #3a4148; line-height: 1.75; margin: 0 0 16px; }
-        .blog-post-body ul, .blog-post-body ol { font-size: 15px; color: #3a4148; line-height: 1.7; margin: 0 0 16px; padding-left: 22px; }
-        .blog-post-body li { margin-bottom: 8px; }
+        .blog-post-body ul, .blog-post-body ol { font-size: 15px; color: #3a4148; line-height: 1.7; margin: 0 0 16px; padding-left: 26px; }
+        .blog-post-body ul { list-style: disc; }
+        .blog-post-body ol { list-style: decimal; }
+        .blog-post-body li { margin-bottom: 10px; padding-left: 4px; }
+        .blog-post-body li::marker { color: #16a34a; font-weight: 600; }
         .blog-post-body a { color: #16a34a; }
         .blog-post-body i { color: #5b6570; }
 
