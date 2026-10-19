@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 }
 
 const SUBNAV = [
-  { href: '#monitoring-danych', label: 'Weryfikacja ruchu w GA4' },
+  { href: '#monitoring-danych', label: 'Pełen monitoring usługi' },
   { href: '#parametry', label: 'Weryfikacja parametrów' },
   { href: '#zdarzenia-niestandardowe', label: 'Zdarzenia niestandardowe' },
   { href: '#ecommerce', label: 'Zdarzenia e-commerce' },
@@ -189,7 +189,7 @@ export default async function FunkcjePage() {
             <div className="fx-feature-grid">
               <div className="fx-feature-text">
                 <div className="fx-feature-num">01</div>
-                <h2>Weryfikacja ruchu w GA4</h2>
+                <h2>Pełen monitoring usługi</h2>
                 <p>Codziennie porównujemy ruch, zaangażowanie i konwersje tydzień do tygodnia, żeby złapać anomalię, zanim zauważysz ją w miesięcznym raporcie.</p>
                 <ul className="fx-feature-list">
                   <li>Self-referral i skoki ruchu direct po migracji domeny</li>
