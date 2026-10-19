@@ -265,7 +265,7 @@ const NOT_SET_BODY_HTML = `
   <h2>Gdzie najczęściej widać „(not set)”</h2>
 
   <ul>
-    <li><b>Źródło/medium i kanał domyślny.</b> Najbardziej rozpoznawalny przypadek — sesja nie ma przypisanego źródła ruchu, więc trafia do kanału „(not set)” zamiast np. Organic Search czy Paid Social.</li>
+    <li><b>Źródło/medium.</b> Ważne rozróżnienie: ruch bez parametrów kampanii i bez referrera nie trafia do „(not set)”, tylko do kanału Direct, czyli „(direct)/(none)” — to inna, prawidłowa wartość. „(not set)” w źródle/medium pojawia się wtedy, gdy GA4 w ogóle nie miał dla danego zdarzenia żadnych danych sesji do odczytania, np. przy zerwanej ciągłości sesji albo zdarzeniu wysłanym poza normalnym przepływem strony.</li>
     <li><b>Strona docelowa (landing page).</b> Zdarza się przy nietypowych przekierowaniach albo gdy parametr strony nie zdążył się załadować przed wysłaniem zdarzenia.</li>
     <li><b>Kraj i miasto.</b> GA4 nie zawsze jest w stanie zgeolokalizować adres IP, zwłaszcza przy ruchu z sieci VPN, firmowych serwerów proxy czy części ruchu botowego.</li>
     <li><b>Nazwa produktu, kategoria produktu, inne wymiary e-commerce.</b> Pojawia się, gdy parametr produktu (item_name, item_category) nie został wysłany razem ze zdarzeniem, mimo że samo zdarzenie e-commerce dotarło.</li>
@@ -275,13 +275,13 @@ const NOT_SET_BODY_HTML = `
   <h2>Najczęstsze przyczyny</h2>
 
   <ol>
-    <li><b>Brak parametrów UTM na linkach z kanałów, które sam kontrolujesz.</b> Newsletter, posty organiczne w social media czy linki z materiałów PDF bez UTM-ów trafiają często do ruchu bez jasno określonego źródła.</li>
-    <li><b>Klienci poczty i aplikacje mobilne usuwające referrer.</b> Część klientów e-mail i aplikacji społecznościowych otwiera linki w wewnętrznej przeglądarce, która nie przekazuje nagłówka referrer, więc GA4 nie ma skąd wziąć źródła ruchu bez UTM-ów.</li>
-    <li><b>Brak poprawnej konfiguracji cross-domain measurement.</b> Jeśli proces zakupowy przechodzi przez inną domenę (np. zewnętrzną bramkę płatności) bez poprawnie skonfigurowanego linkowania domen, GA4 może zgubić oryginalne źródło sesji po powrocie na główną domenę.</li>
+    <li><b>To nie jest brak UTM-ów — to osobny problem.</b> Częsty mit: ruch bez parametrów kampanii i bez referrera trafia do „(not set)”. W rzeczywistości taki ruch GA4 klasyfikuje jako Direct, czyli „(direct)/(none)” — to świadoma, prawidłowa wartość, nie brak danych. Jeśli chcesz ograniczyć udział ruchu Direct, warto dodawać UTM-y do linków, które kontrolujesz, ale to osobne zadanie, niepowiązane z „(not set)”.</li>
+    <li><b>Zerwana ciągłość sesji przy cross-domain measurement.</b> Jeśli proces zakupowy przechodzi przez inną domenę (np. zewnętrzną bramkę płatności) bez poprawnie skonfigurowanego linkowania domen, GA4 może zgubić dane sesji po powrocie na główną domenę — kolejne zdarzenia trafiają wtedy z „(not set)” w źródle/medium.</li>
+    <li><b>Zdarzenia wysyłane przez Measurement Protocol albo integrację server-side bez danych sesji przeglądarki.</b> Eventy wysyłane bezpośrednio z backendu — np. potwierdzenie zamówienia złożonego telefonicznie albo import konwersji offline — nie mają powiązanej sesji z przeglądarki, więc GA4 nie ma skąd wziąć źródła ruchu.</li>
+    <li><b>Zdarzenie niestandardowe odpalone w GTM, zanim GA4 zdążył ustanowić sesję.</b> Zła kolejność triggerów — zdarzenie wystrzelone przed tagiem konfiguracyjnym GA4 — może dotrzeć bez kontekstu sesji.</li>
     <li><b>Wymiar niestandardowy zarejestrowany już po tym, jak dane zaczęły napływać.</b> GA4 nie przelicza wstecz „(not set)” na rzeczywistą wartość parametru dla zdarzeń sprzed rejestracji wymiaru niestandardowego w panelu administracyjnym.</li>
     <li><b>Kolejność ładowania zmiennych w GTM.</b> Jeśli tag wysyła zdarzenie, zanim zmienna z wartością parametru zdąży się ustawić (np. przez asynchroniczne pobranie danych produktu), parametr dociera pusty.</li>
     <li><b>Tryb zgodności i ograniczony sygnał (Consent Mode).</b> Przy braku zgody na niektóre kategorie plików cookie część sygnałów bywa modelowana albo ograniczona, co może zwiększać udział brakujących wartości w niektórych wymiarach.</li>
-    <li><b>Naturalny, niemożliwy do wyeliminowania „ciemny ruch”.</b> Część ruchu bezpośredniego i część geolokalizacji zawsze pozostanie bez pełnych danych — to nie jest błąd do naprawienia, tylko ograniczenie samego pomiaru w przeglądarce.</li>
   </ol>
 
   <h2>Jak sprawdzić skalę problemu</h2>
@@ -295,8 +295,9 @@ const NOT_SET_BODY_HTML = `
   <h2>Jak ograniczyć udział „(not set)” krok po kroku</h2>
 
   <ol>
-    <li>Dodaj parametry UTM do wszystkich linków w kanałach, które kontrolujesz: newsletter, social media, materiały PDF, podpisy mailowe.</li>
-    <li>Skonfiguruj cross-domain measurement w ustawieniach strumienia danych GA4, jeśli ścieżka zakupowa przechodzi przez zewnętrzną domenę płatności.</li>
+    <li>Skonfiguruj cross-domain measurement w ustawieniach strumienia danych GA4, jeśli ścieżka zakupowa przechodzi przez zewnętrzną domenę płatności — to najczęstsza przyczyna „(not set)” w źródle/medium.</li>
+    <li>Jeśli wysyłasz zdarzenia przez Measurement Protocol albo integrację server-side, dołączaj do nich dane sesji (client_id, session_id) zamiast wysyłać zdarzenie w oderwaniu od sesji przeglądarkowej.</li>
+    <li>W GTM sprawdź kolejność triggerów — zdarzenia niestandardowe powinny odpalać się po tagu konfiguracyjnym GA4, nie przed nim.</li>
     <li>Zarejestruj brakujące niestandardowe wymiary w Admin → Custom definitions najszybciej, jak to możliwe po wdrożeniu nowego parametru w GTM — każdy dzień zwłoki to dzień utraconych, niemożliwych do odzyskania danych.</li>
     <li>W GTM sprawdź kolejność wywołania zmiennych względem triggera tagu i w razie potrzeby opóźnij wysyłkę zdarzenia do momentu, gdy wartość parametru jest już dostępna.</li>
     <li>Ustal realistyczny próg akceptowalnego „(not set)” dla swojej branży i ruchu (zwykle kilka procent) zamiast dążyć do zera — część z tego zjawiska wynika z ograniczeń samej przeglądarki i prywatności użytkowników, nie z błędu konfiguracji.</li>
@@ -330,7 +331,7 @@ const NOT_SET_FAQ_HTML = `
     </details>
     <details class="blog-faq-item">
       <summary>Czy „(not set)” zawsze oznacza błąd w GTM?</summary>
-      <div class="blog-faq-answer"><p>Nie zawsze. Może wynikać z braku UTM-ów na linkach, z klientów pocztowych usuwających referrer, z trybu zgodności na pliki cookie albo z niezarejestrowanego wymiaru niestandardowego — dopiero rozbicie po kanale i urządzeniu pokazuje, która przyczyna dominuje.</p></div>
+      <div class="blog-faq-answer"><p>Nie zawsze. Może wynikać ze zerwanej ciągłości sesji przy cross-domain measurement, ze zdarzeń wysyłanych przez Measurement Protocol bez danych sesji, z trybu zgodności na pliki cookie albo z niezarejestrowanego wymiaru niestandardowego — dopiero rozbicie po źródle zdarzenia i urządzeniu pokazuje, która przyczyna dominuje. Ważne: to coś innego niż ruch bez UTM-ów, który GA4 klasyfikuje jako Direct, nie jako „(not set)”.</p></div>
     </details>
     <details class="blog-faq-item">
       <summary>Czy rejestracja wymiaru niestandardowego naprawi dane historyczne?</summary>
