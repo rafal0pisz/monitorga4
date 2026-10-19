@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = [
   '/login', '/auth/callback', '/share', '/privacy', '/terms', '/funkcje', '/kontakt', '/cennik',
   '/demo', '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
-  '/api/contact', '/invite', '/.well-known',
+  '/api/contact', '/invite', '/.well-known', '/blog',
 ]
 
 // API-only paths: /api/worker/run and /api/worker/trial-reminders authorize
