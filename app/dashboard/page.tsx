@@ -142,6 +142,7 @@ export default async function DashboardPage() {
   let ownLimit: number | null = null
   let ownPlan: string | null = null
   let onboardingDismissed = false
+  let ownTrialExpired = false
   if (!bypass && user) {
     const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', user.id).single()
     if (!profileErr) {
@@ -149,6 +150,10 @@ export default async function DashboardPage() {
       ownLimit = planLimit(effective)
       ownPlan = planName(effective)
       onboardingDismissed = !!profile?.onboarding_dismissed_at
+      // A lapsed trial reads as plan_id 'trial' with no effective plan —
+      // distinct from never having had a plan at all, which also resolves
+      // to an effective plan of null but shouldn't claim a trial "ended".
+      ownTrialExpired = profile?.plan_id === 'trial' && effective === null
     }
   }
   const ownAtLimit = ownLimit != null && ownList.length >= ownLimit
@@ -215,7 +220,11 @@ export default async function DashboardPage() {
           )}
           {ownAtLimit && (
             <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>You&apos;ve reached your plan&apos;s project limit ({ownLimit}). Upgrade to add more.</p>
+              <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>
+                {ownTrialExpired
+                  ? 'Your free trial has ended. Upgrade to a paid plan to keep using AlertGA4.'
+                  : `You've reached your plan's project limit (${ownLimit}). Upgrade to add more.`}
+              </p>
               <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
             </div>
           )}

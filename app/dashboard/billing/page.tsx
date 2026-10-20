@@ -176,8 +176,11 @@ export default async function BillingPage() {
                 <StartTrialButton label={`Start ${TRIAL_DAYS}-day free trial`} lang="en" />
               </div>
             ) : (
+              // Reached only when !canStartTrial, which under the !planId
+              // branch above always means trialUsedAt is set — i.e. this is
+              // a lapsed trial, not someone who never had a plan at all.
               <p style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
-                You don&apos;t have a paid plan yet — pick one below.
+                Your free trial has ended. Upgrade to a paid plan to keep using AlertGA4 — pick one below.
               </p>
             )}
           </div>

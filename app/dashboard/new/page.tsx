@@ -17,6 +17,7 @@ export default async function NewProjectPage() {
   // custom events/ecommerce/parameters.
   let ownCanCreate = false
   let ownCanStartTrial = false
+  let ownTrialExpired = false
   let ownLimit = 0
   let teamCanCreate = false
   let teamOwnerId: string | null = null
@@ -46,6 +47,7 @@ export default async function NewProjectPage() {
       ownLimit = planLimit(ownEffective)
       ownCanCreate = ownEffective !== null && (ownCount ?? 0) < ownLimit
       ownCanStartTrial = ownEffective === null && !ownProfile?.trial_used_at
+      ownTrialExpired = ownProfile?.plan_id === 'trial' && ownEffective === null
 
       if (teamResults) {
         const [{ data: teamProfile }, { count: teamCount }, { data: ownerUserRes }] = teamResults
@@ -98,7 +100,9 @@ export default async function NewProjectPage() {
       ) : (
         <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>
-            {teamOwnerId
+            {ownTrialExpired
+              ? 'Your free trial has ended. Upgrade to a paid plan to keep using AlertGA4.'
+              : teamOwnerId
               ? `Your plan's project limit (${ownLimit}) and ${teamOwnerEmail ?? 'your team'}'s are both reached. Upgrade either to add more.`
               : `You've reached your plan's project limit (${ownLimit}). Upgrade to add more.`}
           </p>
