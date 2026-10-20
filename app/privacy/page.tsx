@@ -40,7 +40,7 @@ export default function PrivacyPage() {
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Polityka prywatności</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 18 października 2026</p>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 20 października 2026</p>
 
         <h2 style={h2}>I. Definicje</h2>
         <p style={p}>Pojęcia pisane wielką literą mają znaczenie nadane im w <Link href="/terms" style={link}>Regulaminie Serwisu</Link>, chyba że z treści niniejszej Polityki wynika inaczej.</p>
@@ -144,11 +144,19 @@ export default function PrivacyPage() {
         </p>
 
         <h2 style={h2}>VIII. Pliki cookies</h2>
+        <p style={p}>Serwis wykorzystuje pliki cookies należące do następujących kategorii:</p>
+        <ul style={ol}>
+          <li style={li}><strong>Niezbędne</strong> — konieczne do działania Serwisu, w szczególności plik cookie utrzymujący sesję zalogowanego Użytkownika (uwierzytelnianie przez Supabase). Bez nich zalogowanie się i korzystanie z Serwisu nie jest możliwe.</li>
+          <li style={li}><strong>Analityczne</strong> — służą do mierzenia ruchu i sposobu korzystania z Serwisu, instalowane za pośrednictwem Google Tag Manager.</li>
+          <li style={li}><strong>Marketingowe</strong> — wykorzystywane do pomiaru skuteczności działań reklamowych oraz wyświetlania treści dopasowanych do zainteresowań Użytkownika.</li>
+          <li style={li}><strong>Funkcjonalne</strong> — zapamiętują wybory i preferencje Użytkownika, w tym jego decyzję w kwestii zgody na pliki cookies.</li>
+        </ul>
         <p style={p}>
-          Serwis wykorzystuje wyłącznie pliki cookies niezbędne do jego działania — w szczególności plik cookie utrzymujący sesję
-          zalogowanego Użytkownika (uwierzytelnianie przez Supabase). Nie wykorzystujemy plików cookies do celów marketingowych,
-          reklamowych ani do śledzenia Użytkowników między stronami. Taki rodzaj plików cookies, jako niezbędny do świadczenia usługi
-          na żądanie Użytkownika, nie wymaga zgody zgodnie z art. 173 ust. 3 pkt 2 ustawy Prawo telekomunikacyjne.
+          Pliki cookies niezbędne, jako konieczne do świadczenia usługi na żądanie Użytkownika, nie wymagają zgody zgodnie z art. 173
+          ust. 3 pkt 2 ustawy Prawo telekomunikacyjne. Pliki cookies analityczne, marketingowe i funkcjonalne są instalowane wyłącznie
+          po wyrażeniu zgody przez Użytkownika w widocznym przy pierwszej wizycie banerze cookies. Zgodę można w każdej chwili
+          wycofać lub zmienić w ustawieniach dostępnych w stopce Serwisu („Ustawienia ciasteczek”) lub bezpośrednio w ustawieniach
+          przeglądarki.
         </p>
         <p style={p}>Wyłączenie obsługi plików cookies w przeglądarce uniemożliwi zalogowanie się do Serwisu i korzystanie z niego.</p>
 
