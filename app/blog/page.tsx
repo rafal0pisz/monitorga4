@@ -5,15 +5,14 @@ import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
-import { getAllPostsForIndex } from '@/lib/blog/posts'
+import { getPublishedPosts } from '@/lib/blog/posts'
 
 const TITLE = 'Blog'
 const DESCRIPTION = 'Artykuły o jakości danych w GA4: audyty, typowe błędy pomiarowe i jak je wykrywać, zanim trafią do raportu.'
 
-// Soft-launched: indexable (robots below) and in the sitemap, so Google can
-// crawl and rank it, but still NOT linked from the main nav (LandingNav's
-// own NAV_LINKS) or the footer — reachable by direct link or search, not
-// by browsing the site. Add it to NAV_LINKS once ready to announce it.
+// Indexable (robots below) and in the sitemap, so Google can crawl and
+// rank it. Linked only from the footer, not the main nav (LandingNav's
+// own NAV_LINKS) — a deliberately lower-profile presence on the site.
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
@@ -45,8 +44,7 @@ export default async function BlogIndexPage() {
     ? null
     : { href: '/login', label: 'Zaloguj się' }
 
-  const posts = getAllPostsForIndex()
-  const publishedPosts = posts.filter(p => p.status === 'published')
+  const publishedPosts = getPublishedPosts()
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -86,8 +84,6 @@ export default async function BlogIndexPage() {
         .blog-card p { font-size: 13.5px; color: #5b6570; line-height: 1.6; margin: 0; flex: 1; }
         .blog-card a.blog-card-link { font-size: 13px; font-weight: 600; color: #16a34a; text-decoration: none; }
         .blog-card a.blog-card-link:hover { text-decoration: underline; }
-        .blog-card.is-soon { opacity: 0.6; }
-        .blog-card-soon-tag { font-size: 10.5px; font-weight: 600; color: #8b939a; background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 999px; padding: 2px 9px; width: fit-content; }
       `}</style>
 
       <LandingNav primaryCta={primaryCta} user={!!user} />
@@ -102,14 +98,11 @@ export default async function BlogIndexPage() {
 
         <div className="wrap blog-body">
           <div className="blog-grid">
-            {posts.map(post => (
-              <div key={post.slug} className={`blog-card${post.status === 'coming-soon' ? ' is-soon' : ''}`}>
-                {post.status === 'coming-soon' && <span className="blog-card-soon-tag">Wkrótce</span>}
+            {publishedPosts.map(post => (
+              <div key={post.slug} className="blog-card">
                 <h2>{post.title}</h2>
                 <p>{post.excerpt}</p>
-                {post.status === 'published' && (
-                  <Link href={`/blog/${post.slug}`} className="blog-card-link">Czytaj →</Link>
-                )}
+                <Link href={`/blog/${post.slug}`} className="blog-card-link">Czytaj →</Link>
               </div>
             ))}
           </div>

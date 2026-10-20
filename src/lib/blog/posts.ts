@@ -445,11 +445,6 @@ export function getPublishedPosts(): BlogPost[] {
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
 }
 
-export function getAllPostsForIndex(): BlogPost[] {
-  // Published posts first (newest first), then upcoming ones in catalog order.
-  return [...getPublishedPosts(), ...BLOG_POSTS.filter(p => p.status === 'coming-soon')]
-}
-
 export function getPostBySlug(slug: string): BlogPost | undefined {
   return BLOG_POSTS.find(p => p.slug === slug && p.status === 'published')
 }
