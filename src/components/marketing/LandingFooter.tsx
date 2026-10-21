@@ -33,7 +33,7 @@ export default function LandingFooter() {
           <h3>Kontakt</h3>
           <Link href="/kontakt">Formularz kontaktowy</Link>
           <a href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
-          <a href="https://www.bettersteps.pl">www.bettersteps.pl</a>
+          <a href="https://alertga4.pl">alertga4.pl</a>
         </div>
       </div>
       <div className="wrap lp-footer-bottom">
