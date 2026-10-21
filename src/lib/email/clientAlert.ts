@@ -147,7 +147,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
   // subject/hero badge reflect whether THIS run actually found anything,
   // not a score cutoff that often had nothing to do with it.
   const hasIssues = d.failing.length > 0 || d.warning.length > 0
-  const subject = `GA4 Daily Report — ${d.projectName}: score ${Math.round(d.scoreTotal)}${hasIssues ? ', issues found' : ', all clear'}`
+  const subject = `AlertGA4 Daily Report — ${d.projectName}: score ${Math.round(d.scoreTotal)}${hasIssues ? ', issues found' : ', all clear'}`
   const delta = d.prevScore != null ? Math.round(d.scoreTotal - d.prevScore) : null
   const total = d.failing.length + d.warning.length + d.passingCount
 

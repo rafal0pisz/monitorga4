@@ -134,7 +134,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
     ${ctaHtml('View full dashboard', `${APP_URL}/dashboard`)}
     ${footerHtml([
       'Automated daily report from AlertGA4, generated after the 23:00 UTC check run.',
-      'Per-project alert emails (for scores under threshold) continue to send separately.',
+      'Per-project daily report emails continue to send separately to each project\'s configured address.',
     ])}
   `
 

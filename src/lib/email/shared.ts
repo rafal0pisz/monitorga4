@@ -63,7 +63,7 @@ export function footerHtml(lines: string[]): string {
       <div style="margin-top:10px;">
         <a href="mailto:kontakt@bettersteps.pl" style="color:#ffb3ac;text-decoration:none;">kontakt@bettersteps.pl</a>
         <span style="color:#4a545b;margin:0 6px;">·</span>
-        <a href="https://www.bettersteps.pl" style="color:#ffb3ac;text-decoration:none;">www.bettersteps.pl</a>
+        <a href="${APP_URL}" style="color:#ffb3ac;text-decoration:none;">alertga4.pl</a>
       </div>
     </td></tr>
   </table>`
