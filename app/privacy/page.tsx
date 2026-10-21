@@ -27,18 +27,24 @@ export const metadata: Metadata = {
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }
 const p: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', margin: '0 0 12px' }
-const li: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', marginBottom: 6 }
-const ol: React.CSSProperties = { paddingLeft: 20, margin: '0 0 12px' }
+const li: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', marginBottom: 6, paddingLeft: 4 }
+// Tailwind's Preflight resets list-style to none on every ul/ol, so plain
+// <ul>/<ol> tags render as unmarked, indented paragraphs — the "empty"
+// look this fixes. Same root cause and fix as the blog articles
+// (src/components/marketing/landingStyles.ts's .blog-post-body ul/ol).
+const ul: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyleType: 'disc' }
+const ol: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyleType: 'decimal' }
 const link: React.CSSProperties = { color: '#16a34a' }
 
 export default function PrivacyPage() {
   return (
     <div style={{ minHeight: '100vh', color: '#111827' }}>
+      <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
       <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto' }}>
         <Link href="/" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
       </header>
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
+      <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Polityka prywatności</h1>
         <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 20 października 2026</p>
 
@@ -59,7 +65,7 @@ export default function PrivacyPage() {
 
         <h2 style={h2}>III. Jakie dane zbieramy</h2>
         <p style={p}>Logując się kontem Google, otrzymujemy i przechowujemy:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}><strong>Podstawowe dane profilu</strong> — imię, nazwisko i adres e-mail, służące do identyfikacji Konta.</li>
           <li style={li}>
             <strong>Token dostępu i token odświeżający OAuth</strong>, w zakresie{' '}
@@ -82,7 +88,7 @@ export default function PrivacyPage() {
 
         <h2 style={h2}>IV. Cele i podstawy prawne przetwarzania</h2>
         <p style={p}>Wykorzystujemy powyższe dane wyłącznie do działania Serwisu:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}>uruchamiania codziennych i ręcznych sprawdzeń jakości skonfigurowanych dla Twojej usługi GA4;</li>
           <li style={li}>wyliczania wyniku jakości implementacji i prezentowania go w panelu;</li>
           <li style={li}>wysyłki alertów e-mail (do Ciebie oraz, przy alertach per-projekt, na skonfigurowany adres odbiorcy), gdy wynik spadnie poniżej ustalonego progu, oraz codziennego podsumowania zbiorczego;</li>
@@ -92,7 +98,7 @@ export default function PrivacyPage() {
         </ul>
         <p style={p}>Nie wykorzystujemy Twoich danych do celów reklamowych, nie budujemy na ich podstawie profili behawioralnych i nie sprzedajemy ich.</p>
         <p style={p}>Podstawą prawną przetwarzania jest:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}>wykonanie umowy o świadczenie Usługi (art. 6 ust. 1 lit. b RODO) — w zakresie działania Serwisu i rozliczeń;</li>
           <li style={li}>nasz prawnie uzasadniony interes w zapewnieniu bezpieczeństwa, prawidłowego działania Serwisu i dochodzeniu ewentualnych roszczeń (art. 6 ust. 1 lit. f RODO);</li>
           <li style={li}>obowiązek prawny ciążący na Operatorze (art. 6 ust. 1 lit. c RODO) — w zakresie, w jakim przepisy prawa podatkowego i rachunkowego wymagają przechowywania dokumentacji rozliczeniowej.</li>
@@ -111,7 +117,7 @@ export default function PrivacyPage() {
 
         <h2 style={h2}>VI. Podmioty przetwarzające dane w naszym imieniu (podprocesorzy)</h2>
         <p style={p}>Do działania Serwisu korzystamy z następujących podprocesorów, każdy wyłącznie w podanym celu:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}><strong>Google</strong> — logowanie (Zaloguj się przez Google) oraz API GA4 (Data/Admin), z których czytamy dane Twojej usługi.</li>
           <li style={li}><strong>Supabase</strong> — dostawca bazy danych i uwierzytelniania; przechowuje Konto, konfigurację Projektów i tokeny OAuth.</li>
           <li style={li}><strong>Vercel</strong> — hosting Serwisu AlertGA4.</li>
@@ -145,7 +151,7 @@ export default function PrivacyPage() {
 
         <h2 style={h2}>VIII. Pliki cookies</h2>
         <p style={p}>Serwis wykorzystuje pliki cookies należące do następujących kategorii:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}><strong>Niezbędne</strong> — konieczne do działania Serwisu, w szczególności plik cookie utrzymujący sesję zalogowanego Użytkownika (uwierzytelnianie przez Supabase). Bez nich zalogowanie się i korzystanie z Serwisu nie jest możliwe.</li>
           <li style={li}><strong>Analityczne</strong> — służą do mierzenia ruchu i sposobu korzystania z Serwisu, instalowane za pośrednictwem Google Tag Manager.</li>
           <li style={li}><strong>Marketingowe</strong> — wykorzystywane do pomiaru skuteczności działań reklamowych oraz wyświetlania treści dopasowanych do zainteresowań Użytkownika.</li>
@@ -172,7 +178,7 @@ export default function PrivacyPage() {
 
         <h2 style={h2}>X. Twoje prawa</h2>
         <p style={p}>Zgodnie z RODO przysługuje Ci prawo do:</p>
-        <ul style={ol}>
+        <ul style={ul}>
           <li style={li}>dostępu do swoich danych oraz otrzymania ich kopii,</li>
           <li style={li}>sprostowania nieprawidłowych danych,</li>
           <li style={li}>usunięcia danych („prawo do bycia zapomnianym”),</li>
