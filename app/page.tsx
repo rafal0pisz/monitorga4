@@ -10,7 +10,7 @@ const STEPS = [
   { t: 'Logujesz się kontem Google', d: 'Autoryzujesz się mailem, który ma dostęp do usługi. Nie zmieniamy żadnych ustawień na koncie, a nasza aplikacja jest zaufanym dostawcą po certyfikacji Google.' },
   { t: 'Dodajesz usługę GA4', d: 'Wybierasz dowolną usługę, do której masz już dostęp. AlertGA4 od razu uruchamia pierwszy zestaw sprawdzeń.' },
   { t: 'Konfiguracja zmiennych', d: 'Dobierasz, które eventy, parametry i progi mają być monitorowane. Dopasowujesz sprawdzenia do swojego wdrożenia, nie odwrotnie.' },
-  { t: 'Podsumowanie na maila', d: 'Wynik spada poniżej progu? Aplikacja poinformuje Cię mailowo z opisem kategorii, która wymaga weryfikacji.' },
+  { t: 'Podsumowanie na maila', d: 'Codzienny wynik weryfikacji danych z podsumowaniem i opisem każdej kategorii, która wymaga uwagi.' },
 ]
 
 const EVENT_EXAMPLES = [
