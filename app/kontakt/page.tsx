@@ -47,7 +47,13 @@ export default async function KontaktPage() {
         .kontakt-hero p { font-size: 15.5px; color: #5b6570; max-width: 52ch; line-height: 1.6; }
 
         .kontakt-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 48px; align-items: start; padding: 40px 0 88px; }
-        @media (max-width: 860px) { .kontakt-grid { grid-template-columns: 1fr; gap: 32px; } }
+        @media (max-width: 860px) {
+          .kontakt-grid { grid-template-columns: 1fr; gap: 32px; }
+          /* Mobile: form only — no direct-contact card. Keeps the page to
+             one clear action on small screens instead of two competing
+             ones stacked on top of each other. */
+          .kontakt-info-card { display: none; }
+        }
 
         .kontakt-info-card { background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 14px; padding: 26px 28px; }
         .kontakt-info-card h3 { font-size: 15px; margin-bottom: 6px; }
