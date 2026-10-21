@@ -138,12 +138,18 @@ async function checkParameters(
   // events, żeby ta kategoria nie rosła bez ograniczeń wraz z liczbą
   // sprawdzanych parametrów.
   const w = +((WEIGHTS['parameter_checks'] ?? 8) / paramChecks.length).toFixed(2)
-  const results: CheckResult[] = []
 
   const rangeC = ranges.current
   const rangeP = ranges.prev
 
-  for (const pc of paramChecks) {
+  // Was a plain sequential for-loop — one GA4 round-trip pair per
+  // parameter, one after another. A project with 15-20 configured
+  // parameters dominated that project's total processing time for no
+  // reason (none of these depend on each other). Bounded concurrency
+  // instead of Promise.all-everything for the same reason as
+  // CHECKS_PER_PROJECT_CONCURRENCY below — this hits the same GA4
+  // property as runAllChecks' own checks running alongside it.
+  const processParam = async (pc: { event_name: string; parameter_name: string }): Promise<CheckResult> => {
     const { event_name, parameter_name } = pc
     const checkKey = `param_${event_name}_${parameter_name}`
     try {
@@ -222,61 +228,68 @@ async function checkParameters(
         : (covC >= 90 ? 'pass' : covC >= 70 ? 'warn' : 'fail')
       const score  = status === 'pass' ? w : status === 'warn' ? Math.round(w * 0.5) : 0
 
-      results.push({
+      return {
         check_key: checkKey, check_level: 'optional', status, score, weight: w,
         value:   { coverage_current: +covC.toFixed(1), coverage_prev: +covP.toFixed(1), delta },
         message: `${event_name}.${parameter_name}: ${covC.toFixed(1)}% coverage (${delta >= 0 ? '+' : ''}${delta}pp WoW)`,
-      })
+      }
     } catch (e: any) {
-      results.push({
+      return {
         check_key: checkKey, check_level: 'optional', status: 'fail', score: 0, weight: w,
         value: { error: e.message }, message: `${event_name}.${parameter_name}: check error`,
-      })
+      }
     }
   }
-  return results
+  return runWithConcurrency(paramChecks, CHECKS_PER_PROJECT_CONCURRENCY, processParam)
 }
 
+// Each of the ~10 checks below is independent of the others (none reads
+// another's result) but was previously run sequentially in a single
+// project's pipeline — the actual reason a "heavy" project could take
+// 20-30s despite every individual GA4 call being fast. Converting each
+// into its own thunk and running them with runWithConcurrency (defined
+// below) cuts that to roughly the time of the slowest single check,
+// which is what let WORKER_BATCH_SIZE go up without changing the cron
+// schedule or Vercel plan. See CHECKS_PER_PROJECT_CONCURRENCY for why
+// this is capped lower than cross-project concurrency.
 async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
-  const results: CheckResult[] = []
   const ranges = getDailyRanges()
 
   // ── 1. EXPECTED EVENTS ──────────────────────────────────
-  {
+  const checkExpectedEvents = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.expected_events
     const expected = project.expected_events ?? []
     if (expected.length === 0) {
-      results.push({ check_key: 'expected_events', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No expected events configured — check skipped' })
-    } else {
-      try {
-        const r = await report({
-          dateRanges: [ranges.current],
-          dimensions: [{ name: 'eventName' }],
-          metrics: [{ name: 'eventCount' }],
-          dimensionFilter: {
-            filter: {
-              fieldName: 'eventName',
-              inListFilter: { values: expected }
-            }
+      return [{ check_key: 'expected_events', check_level: 'core', status: 'pass', score: w, weight: w, value: {}, message: 'No expected events configured — check skipped' }]
+    }
+    try {
+      const r = await report({
+        dateRanges: [ranges.current],
+        dimensions: [{ name: 'eventName' }],
+        metrics: [{ name: 'eventCount' }],
+        dimensionFilter: {
+          filter: {
+            fieldName: 'eventName',
+            inListFilter: { values: expected }
           }
-        })
-        const found = new Set<string>((r.rows ?? []).map((row: any) => row.dimensionValues?.[0]?.value))
-        const missing = expected.filter(e => !found.has(e))
-        const status = missing.length === 0 ? 'pass' : missing.length === 1 ? 'warn' : 'fail'
-        const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-        results.push({
-          check_key: 'expected_events', check_level: 'core', status, score, weight: w,
-          value: { missing, found: [...found] },
-          message: missing.length === 0 ? 'All expected events present' : `Missing events: ${missing.join(', ')}`,
-        })
-      } catch (e: any) {
-        results.push({ check_key: 'expected_events', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
-      }
+        }
+      })
+      const found = new Set<string>((r.rows ?? []).map((row: any) => row.dimensionValues?.[0]?.value))
+      const missing = expected.filter(e => !found.has(e))
+      const status = missing.length === 0 ? 'pass' : missing.length === 1 ? 'warn' : 'fail'
+      const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
+      return [{
+        check_key: 'expected_events', check_level: 'core', status, score, weight: w,
+        value: { missing, found: [...found] },
+        message: missing.length === 0 ? 'All expected events present' : `Missing events: ${missing.join(', ')}`,
+      }]
+    } catch (e: any) {
+      return [{ check_key: 'expected_events', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 2. SELF-REFERRAL ─────────────────────────────────────
-  {
+  const checkSelfReferral = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.self_referral
     if (!project.own_domain) {
       // Stored status stays 'pass' — the dqs_results.status column only
@@ -286,41 +299,40 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       // run, not just this one. The "not configured" treatment is display
       // -only, driven off value.not_configured (the live self-referral
       // check on the project page does the same — see /api/ga4/checks).
-      results.push({ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' })
-    } else {
-      try {
-        const bySource = async (dateRange: object) => {
-          const r = await report({
-            dateRanges: [dateRange],
-            dimensions: [{ name: 'sessionSource' }],
-            metrics: [{ name: 'sessions' }],
-            orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
-            limit: 50,
-          })
-          const rows = r.rows ?? []
-          const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
-          const selfSessions = rows
-            .filter((row: any) => row.dimensionValues?.[0]?.value?.includes(project.own_domain!))
-            .reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
-          return { ratio: total > 0 ? selfSessions / total : 0, selfSessions, total }
-        }
-        const [curr, prev] = await Promise.all([bySource(ranges.current), bySource(ranges.prev)])
-        const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
-        const status = curr.ratio === 0 ? 'pass' : curr.ratio < 0.02 ? 'warn' : 'fail'
-        const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-        results.push({
-          check_key: 'self_referral', check_level: 'core', status, score, weight: w,
-          value: { ratio: +(curr.ratio * 100).toFixed(2), ratio_prev: +(prev.ratio * 100).toFixed(2), delta, self_sessions: curr.selfSessions, total: curr.total },
-          message: curr.ratio === 0 ? 'No self-referrals' : `Self-referral: ${(curr.ratio * 100).toFixed(2)}% of sessions (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
+      return [{ check_key: 'self_referral', check_level: 'core', status: 'pass', score: w, weight: w, value: { not_configured: true }, message: 'Self-referral check requires a domain — add it in project Settings to enable this check.' }]
+    }
+    try {
+      const bySource = async (dateRange: object) => {
+        const r = await report({
+          dateRanges: [dateRange],
+          dimensions: [{ name: 'sessionSource' }],
+          metrics: [{ name: 'sessions' }],
+          orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+          limit: 50,
         })
-      } catch (e: any) {
-        results.push({ check_key: 'self_referral', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+        const rows = r.rows ?? []
+        const total = rows.reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
+        const selfSessions = rows
+          .filter((row: any) => row.dimensionValues?.[0]?.value?.includes(project.own_domain!))
+          .reduce((s: number, row: any) => s + parseInt(row.metricValues?.[0]?.value ?? '0'), 0)
+        return { ratio: total > 0 ? selfSessions / total : 0, selfSessions, total }
       }
+      const [curr, prev] = await Promise.all([bySource(ranges.current), bySource(ranges.prev)])
+      const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
+      const status = curr.ratio === 0 ? 'pass' : curr.ratio < 0.02 ? 'warn' : 'fail'
+      const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
+      return [{
+        check_key: 'self_referral', check_level: 'core', status, score, weight: w,
+        value: { ratio: +(curr.ratio * 100).toFixed(2), ratio_prev: +(prev.ratio * 100).toFixed(2), delta, self_sessions: curr.selfSessions, total: curr.total },
+        message: curr.ratio === 0 ? 'No self-referrals' : `Self-referral: ${(curr.ratio * 100).toFixed(2)}% of sessions (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
+      }]
+    } catch (e: any) {
+      return [{ check_key: 'self_referral', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 3. BOUNCE RATE ANOMALY (WoW) ─────────────────────────
-  {
+  const checkBounceRateAnomaly = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.bounce_rate_anomaly
     try {
       // Dwa osobne requesty — GA4 nie pozwala używać dateRange jako wymiaru
@@ -334,18 +346,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const absDelta = Math.abs(delta)
       const status = absDelta <= 20 ? 'pass' : absDelta <= 35 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'bounce_rate_anomaly', check_level: 'core', status, score, weight: w,
         value: { current: +(curr * 100).toFixed(1), prev: +(prev * 100).toFixed(1), delta: +delta.toFixed(1) },
         message: `Bounce rate: ${(curr * 100).toFixed(1)}% (prev: ${(prev * 100).toFixed(1)}%, WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'bounce_rate_anomaly', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'bounce_rate_anomaly', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 4. DIRECT TRAFFIC SPIKE (WoW) ────────────────────────
-  {
+  const checkDirectTrafficSpike = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.direct_traffic_spike
     try {
       const [rC, rP] = await Promise.all([
@@ -363,18 +375,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
       const status = delta <= 15 ? 'pass' : delta <= 30 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'direct_traffic_spike', check_level: 'core', status, score, weight: w,
         value: { direct_ratio_current: +(ratioC * 100).toFixed(1), direct_ratio_prev: +(ratioP * 100).toFixed(1), delta: +delta.toFixed(1) },
         message: `Direct traffic: ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'direct_traffic_spike', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'direct_traffic_spike', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 5. CONVERSION RATE (WoW) ─────────────────────────────
-  {
+  const checkConversionRate = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.conversion_rate
     try {
       const [rC, rP] = await Promise.all([
@@ -391,18 +403,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const absDelta = Math.abs(delta)
       const status = absDelta <= 25 ? 'pass' : absDelta <= 40 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'conversion_rate', check_level: 'core', status, score, weight: w,
         value: { cr_current: +(crC * 100).toFixed(2), cr_prev: +(crP * 100).toFixed(2), delta: +delta.toFixed(1) },
         message: `CR: ${(crC * 100).toFixed(2)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'conversion_rate', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'conversion_rate', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 6. PAGE_TITLE NULL RATE (WoW) ────────────────────────
-  {
+  const checkPageTitleNull = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.page_title_null
     try {
       const nullRateFor = async (dateRange: object) => {
@@ -423,18 +435,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const delta = prev.ratio > 0 ? +(((curr.ratio - prev.ratio) / prev.ratio) * 100).toFixed(1) : 0
       const status = curr.ratio < 0.02 ? 'pass' : curr.ratio < 0.10 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'page_title_null', check_level: 'core', status, score, weight: w,
         value: { null_rate: +(curr.ratio * 100).toFixed(2), null_rate_prev: +(prev.ratio * 100).toFixed(2), delta, null_sessions: curr.nullSessions, total: curr.total },
         message: `page_title null rate: ${(curr.ratio * 100).toFixed(2)}% (WoW: ${delta >= 0 ? '+' : ''}${delta}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'page_title_null', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'page_title_null', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 7. BOT TRAFFIC — NIGHT SPIKE (WoW) ───────────────────
-  {
+  const checkBotTrafficNight = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.bot_traffic_night
     try {
       // Dwa osobne requesty — GA4 nie pozwala używać dateRange jako wymiaru
@@ -457,18 +469,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
       const status = delta <= 50 ? 'pass' : delta <= 100 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'bot_traffic_night', check_level: 'core', status, score, weight: w,
         value: { night_ratio_current: +(ratioC * 100).toFixed(1), night_ratio_prev: +(ratioP * 100).toFixed(1), delta: +delta.toFixed(1) },
         message: `Night traffic (0–5h): ${(ratioC * 100).toFixed(1)}% (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'bot_traffic_night', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'bot_traffic_night', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
   // ── 8. PURCHASE DUPLICATES (WoW) ─────────────────────────
-  {
+  const checkPurchaseDuplicates = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.purchase_duplicates
     try {
       const [rC, rP] = await Promise.all([
@@ -484,18 +496,18 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const delta = ratioP > 0 ? ((ratioC - ratioP) / ratioP) * 100 : 0
       const status = delta <= 10 ? 'pass' : delta <= 30 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'purchase_duplicates', check_level: 'core', status, score, weight: w,
         value: { ratio_current: +ratioC.toFixed(3), ratio_prev: +ratioP.toFixed(3), delta: +delta.toFixed(1) },
         message: evC === 0 ? 'No purchase events in this period' : `Purchase/session ratio: ${ratioC.toFixed(3)} (WoW: ${delta > 0 ? '+' : ''}${delta.toFixed(1)}%)`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'purchase_duplicates', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'purchase_duplicates', check_level: 'core', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
-  // ── OPTIONAL: GEO ANOMALY ─────────────────────────────────
-  {
+  // ── OPTIONAL: GEO ANOMALY + COUNTRY SHARE ────────────────
+  const checkGeoAnomalyAndCountryShare = async (): Promise<CheckResult[]> => {
     const w = WEIGHTS.geo_anomaly
     try {
       // Fetches the full country breakdown (not just the top 5) so "new"
@@ -521,13 +533,13 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
         .map(r => r.country)
       const status = newCountries.length === 0 ? 'pass' : newCountries.length === 1 ? 'warn' : 'fail'
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      const geoResult: CheckResult = {
         check_key: 'geo_anomaly', check_level: 'optional', status, score, weight: w,
         value: { new_countries: newCountries, total_sessions: totalC },
         message: newCountries.length === 0
           ? `No new countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic`
           : `New countries above ${GEO_ANOMALY_MIN_SHARE_PCT}% of traffic: ${newCountries.join(', ')}`,
-      })
+      }
 
       // Composition check, complementary to geo_anomaly above (which only
       // catches brand-new countries) — this catches drift even among
@@ -560,7 +572,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const hasDominantCountry = dominantShare > DOMINANT_COUNTRY_MIN_SHARE_PCT
       const countryShareStatus = totalC === 0 || !hasDominantCountry ? 'pass' : otherShare > 10 ? 'fail' : otherShare > 5 ? 'warn' : 'pass'
       const countryShareScore = countryShareStatus === 'pass' ? wCountryShare : countryShareStatus === 'warn' ? wCountryShare * 0.5 : 0
-      results.push({
+      const countryShareResult: CheckResult = {
         check_key: 'country_share', check_level: 'optional', status: countryShareStatus, score: countryShareScore, weight: wCountryShare,
         value: {
           dominant_country: dominant?.country ?? null,
@@ -578,15 +590,19 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           : `${dominant.country} + (not set): ${(dominantShare + notSetShare).toFixed(1)}%` + (otherShare > 5
               ? ` — other countries: ${otherCountries.slice(0, 3).map(c => `${c.country} ${c.share.toFixed(1)}%`).join(', ')}${otherCountries.length > 3 ? ` +${otherCountries.length - 3} more` : ''}`
               : ' — everything else under 5%'),
-      })
+      }
+      return [geoResult, countryShareResult]
     } catch (e: any) {
-      results.push({ check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` })
-      results.push({ check_key: 'country_share', check_level: 'optional', status: 'fail', score: 0, weight: WEIGHTS.country_share, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [
+        { check_key: 'geo_anomaly', check_level: 'optional', status: 'fail', score: 0, weight: w, value: { error: e.message }, message: `API error: ${e.message}` },
+        { check_key: 'country_share', check_level: 'optional', status: 'fail', score: 0, weight: WEIGHTS.country_share, value: { error: e.message }, message: `API error: ${e.message}` },
+      ]
     }
   }
 
   // ── CUSTOM EVENTS: configured event checks ───────────────────
-  if (customEventChecks.length > 0) {
+  const checkCustomEvents = async (): Promise<CheckResult[]> => {
+    if (customEventChecks.length === 0) return []
     try {
       const eventNames = customEventChecks.map(e => e.event_name)
       const [rC, rP] = await Promise.all([
@@ -608,38 +624,31 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       for (const row of rC.rows ?? []) countC[row.dimensionValues[0].value] = parseInt(row.metricValues[0].value ?? '0')
       for (const row of rP.rows ?? []) countP[row.dimensionValues[0].value] = parseInt(row.metricValues[0].value ?? '0')
 
-      const missing = eventNames.filter(ev => !countC[ev])
-      const drops: string[] = []
-      for (const ev of eventNames) {
-        if (countC[ev] && countP[ev]) {
-          const delta = (countC[ev] - countP[ev]) / countP[ev]
-          if (delta < -0.5) drops.push(ev)
-        }
-      }
       // Per-event results — one card per custom event
       const wPerEv = +(WEIGHTS.custom_events / Math.max(eventNames.length, 1)).toFixed(2)
-      for (const ev of eventNames) {
+      return eventNames.map((ev): CheckResult => {
         const currCount = countC[ev] ?? 0
         const prevCount = countP[ev] ?? 0
         const pctDelta  = prevCount > 0 ? ((currCount - prevCount) / prevCount) * 100 : 0
         const evStatus  = currCount === 0 ? 'fail' : Math.abs(pctDelta) > 50 ? 'warn' : 'pass'
         const evScore   = evStatus === 'pass' ? wPerEv : evStatus === 'warn' ? wPerEv * 0.5 : 0
-        results.push({
+        return {
           check_key: `custom_event_${ev}`, check_level: 'core',
           status: evStatus, score: evScore, weight: wPerEv,
           value: { current: currCount, prev: prevCount, delta: +pctDelta.toFixed(1) },
           message: currCount === 0
             ? `No ${ev} events in current period`
             : `${currCount.toLocaleString()} events (WoW: ${pctDelta > 0 ? '+' : ''}${pctDelta.toFixed(1)}%)`,
-        })
-      }
+        }
+      })
     } catch (e: any) {
-      results.push({ check_key: 'custom_events_check', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.custom_events, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'custom_events_check', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.custom_events, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
-    // ── ECOMMERCE: configured events volume check ───────────────
-  if (ecomEvents.length > 0) {
+  // ── ECOMMERCE: configured events volume check ───────────────
+  const checkEcommerceEvents = async (): Promise<CheckResult[]> => {
+    if (ecomEvents.length === 0) return []
     try {
       const [rC, rP] = await Promise.all([
         report({
@@ -672,7 +681,7 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
       const status = missing.length > 0 ? 'fail' : drops.length > 0 ? 'warn' : 'pass'
       const w = WEIGHTS.ecommerce_events
       const score = status === 'pass' ? w : status === 'warn' ? w * 0.5 : 0
-      results.push({
+      return [{
         check_key: 'ecommerce_events', check_level: 'core', status, score, weight: w,
         value: { configured: ecomEvents, current: countC, prev: countP, missing, drops },
         message: missing.length > 0
@@ -680,13 +689,27 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
           : drops.length > 0
           ? `Ecommerce volume drop >50%: ${drops.join(', ')}`
           : `All ${ecomEvents.length} ecommerce events present`,
-      })
+      }]
     } catch (e: any) {
-      results.push({ check_key: 'ecommerce_events', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.ecommerce_events, value: { error: e.message }, message: `API error: ${e.message}` })
+      return [{ check_key: 'ecommerce_events', check_level: 'core', status: 'fail', score: 0, weight: WEIGHTS.ecommerce_events, value: { error: e.message }, message: `API error: ${e.message}` }]
     }
   }
 
-  return results
+  const tasks: (() => Promise<CheckResult[]>)[] = [
+    checkExpectedEvents,
+    checkSelfReferral,
+    checkBounceRateAnomaly,
+    checkDirectTrafficSpike,
+    checkConversionRate,
+    checkPageTitleNull,
+    checkBotTrafficNight,
+    checkPurchaseDuplicates,
+    checkGeoAnomalyAndCountryShare,
+    checkCustomEvents,
+    checkEcommerceEvents,
+  ]
+  const settled = await runWithConcurrency(tasks, CHECKS_PER_PROJECT_CONCURRENCY, fn => fn())
+  return settled.flat()
 }
 
 // ============================================================
@@ -699,14 +722,28 @@ async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: s
 // at once instead, pulling the next one as soon as a slot frees up.
 const WORKER_CONCURRENCY = 8
 
+// Checks within a SINGLE project (runAllChecks' ~10 independent checks,
+// checkParameters' per-parameter loop) now also run concurrently instead
+// of one-after-another — see the comments on runAllChecks/checkParameters.
+// Capped lower than WORKER_CONCURRENCY because these all hit the SAME GA4
+// property, which has its own concurrent-request ceiling, whereas
+// WORKER_CONCURRENCY spreads across different projects/properties with
+// independent quotas. Conservative starting point; raise once production
+// logs confirm GA4 isn't rate-limiting at this level.
+const CHECKS_PER_PROJECT_CONCURRENCY = 6
+
 // How many projects ONE cron firing takes off the pending list — see the
-// rolling-window design below (ROLL_WINDOW_START_MIN etc). At concurrency 8,
-// a heavy project (many custom parameters — now unlimited on every plan,
-// each costing its own sequential GA4 call in checkParameters) can take
-// 20-30s; 50 projects / 8 concurrency * ~30s ≈ 190s, comfortably inside the
-// 300s maxDuration even in the worst case. Safe to raise once real
-// per-project timing from production logs says there's headroom.
-const WORKER_BATCH_SIZE = 50
+// rolling-window design below (ROLL_WINDOW_START_MIN etc). Before checks
+// within a project were parallelized, a heavy project (many custom
+// parameters, each a sequential GA4 call) could take 20-30s, capping this
+// at 50 to stay inside the 300s maxDuration at concurrency 8. With checks
+// now parallelized per project (CHECKS_PER_PROJECT_CONCURRENCY), a worst
+// -case heavy project should land closer to ~12-15s, so 150 projects / 8
+// concurrency * ~15s ≈ 280s — still comfortably inside 300s, while
+// tripling daily throughput (5 effective firings/day × 150 ≈ 750
+// projects/day, up from ~250). Raise further once real production timing
+// confirms there's more headroom.
+const WORKER_BATCH_SIZE = 150
 
 async function runWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length)
@@ -1333,7 +1370,7 @@ async function sendDailyDigestIfDue(admin: ReturnType<typeof createAdminClient>,
   // within the window (or the next time anything calls this) retries it.
 }
 
-// GET — wywoływany przez Vercel Cron co 10 minut (patrz vercel.json +
+// GET — wywoływany przez Vercel Cron co 30 minut (patrz vercel.json +
 // komentarz powyżej o rolling window). Za każdym razem bierze tylko kawałek
 // (WORKER_BATCH_SIZE) projektów z auto_run = true, które jeszcze nie miały
 // dzisiaj runu — reszta poczeka na kolejne odpalenie w oknie 6:30-8:30.
