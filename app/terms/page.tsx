@@ -27,18 +27,25 @@ export const metadata: Metadata = {
 
 const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '32px 0 10px', color: '#111827' }
 const p: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', margin: '0 0 12px' }
-const li: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', marginBottom: 6 }
-const ol: React.CSSProperties = { paddingLeft: 20, margin: '0 0 12px' }
+const li: React.CSSProperties = { fontSize: 14, lineHeight: 1.7, color: '#374151', marginBottom: 6, paddingLeft: 4 }
+// Tailwind's Preflight resets list-style to none on every ul/ol, so plain
+// <ol> tags rendered as unmarked, indented paragraphs — same root cause
+// and fix as /privacy and the blog articles. The nested type="a" lists
+// need their own lower-alpha variant since an explicit CSS
+// list-style-type otherwise overrides the HTML type attribute.
+const ol: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyleType: 'decimal' }
+const olAlpha: React.CSSProperties = { ...ol, listStyleType: 'lower-alpha' }
 const link: React.CSSProperties = { color: '#16a34a' }
 
 export default function TermsPage() {
   return (
     <div style={{ minHeight: '100vh', color: '#111827' }}>
+      <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
       <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto' }}>
         <Link href="/" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
       </header>
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
+      <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Regulamin</h1>
         <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 24px' }}>Ostatnia aktualizacja: 18 października 2026</p>
 
@@ -66,7 +73,7 @@ export default function TermsPage() {
             AlertGA4 łączy się z usługą GA4 wskazaną przez Użytkownika wyłącznie w zakresie odczytu (zakres{' '}
             <code style={{ fontSize: 12.5, background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>https://www.googleapis.com/auth/analytics.readonly</code>,{' '}
             odpowiadający roli „Viewer” w GA4) i na tej podstawie:
-            <ol type="a" style={{ ...ol, marginTop: 6 }}>
+            <ol type="a" style={{ ...olAlpha, marginTop: 6 }}>
               <li style={li}>uruchamia automatyczne (codzienne) oraz ręczne sprawdzenia konfiguracji i danych raportowych Projektu;</li>
               <li style={li}>wylicza na ich podstawie wynik jakości implementacji oraz trend w czasie;</li>
               <li style={li}>wysyła codzienne podsumowanie e-mail z wynikiem i wykrytymi problemami; Użytkownik może w ustawieniach Projektu ograniczyć wysyłkę wyłącznie do dni, w których sprawdzenie wykryło ostrzeżenie lub błąd.</li>
@@ -89,7 +96,7 @@ export default function TermsPage() {
 
         <h2 style={h2}>IV. Zasady korzystania z Serwisu</h2>
         <p style={p}>Użytkownik zobowiązuje się, że nie będzie:</p>
-        <ol type="a" style={ol}>
+        <ol type="a" style={olAlpha}>
           <li style={li}>podejmować prób inżynierii wstecznej, skanowania ani obchodzenia mechanizmów kontroli dostępu Serwisu;</li>
           <li style={li}>wykorzystywać Serwisu do przetwarzania danych, do których nie posiada uprawnień, w tym cudzych usług GA4;</li>
           <li style={li}>zakłócać dostępności Serwisu ani nadużywać funkcji ręcznego uruchamiania sprawdzeń w sposób nadmiernie obciążający infrastrukturę Operatora lub limity API Google;</li>
