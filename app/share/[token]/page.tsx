@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Project, DqsRun, DqsResult, ChecksCatalog } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
+import BrandWordmark from '@/components/ui/BrandWordmark'
 const ST = {
   accent: { pass:'#16a34a', warn:'#ca8a04', fail:'#dc2626' },
   color:  { pass:'#16a34a', warn:'#ca8a04', fail:'#dc2626' },
@@ -50,8 +51,8 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)' }}>
       <nav style={{ background: 'var(--color-background-primary)', borderBottom: '0.5px solid var(--color-border-tertiary)', padding: '0 24px', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--color-text-primary)' }}>GA4 <span style={{ color: '#16a34a' }}>Quality Score</span></span>
-        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>bettersteps.pl</span>
+        <BrandWordmark size={15} mono />
+        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>alertga4.pl</span>
       </nav>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
@@ -127,7 +128,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         )}
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 32 }}>
-          Raport wygenerowany przez <span style={{ color: '#16a34a' }}>bettersteps.pl</span>
+          Raport wygenerowany przez <span style={{ color: '#16a34a' }}>alertga4.pl</span>
         </p>
       </div>
     </div>
