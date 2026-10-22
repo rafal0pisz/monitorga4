@@ -26,7 +26,13 @@ export default function AdminGrowthChart({ data }: { data: GrowthPoint[] }) {
     <ResponsiveContainer width="100%" height={260}>
       <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-tertiary)" vertical={false} />
-        <XAxis dataKey="bucket" tickFormatter={fmtBucket} tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }} axisLine={{ stroke: 'var(--color-border-tertiary)' }} tickLine={false} />
+        {/* interval="preserveStartEnd" — without it Recharts' default tick
+            thinning (picking an even stride through however many buckets
+            exist) can drop the very last bucket's label whenever it isn't a
+            multiple of that stride, making the chart look like it stopped
+            updating days or weeks ago even though the data (and the line
+            itself) already extends to today. */}
+        <XAxis dataKey="bucket" interval="preserveStartEnd" tickFormatter={fmtBucket} tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }} axisLine={{ stroke: 'var(--color-border-tertiary)' }} tickLine={false} />
         <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} width={32} />
         <Tooltip
           contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }}
