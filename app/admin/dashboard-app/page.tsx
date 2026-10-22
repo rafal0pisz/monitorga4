@@ -133,18 +133,38 @@ export default async function AdminDashboardPage() {
     })
   }
 
+  // "Active" here means data is actually being pulled for that project —
+  // NOT just projects.status === 'active'. That column only tracks whether
+  // the OWNER manually paused it; it's never flipped when a trial expires
+  // or a subscription lapses (see app/api/stripe/webhook/route.ts's
+  // customer.subscription.deleted handler, which explicitly leaves
+  // existing projects' status alone). The actual gate that stops a project
+  // from running is ownerHasActiveAccess() at request/worker time, which
+  // depends on the OWNER's plan — so a project can sit at status='active'
+  // in the DB while no check has run for it in weeks. A project only
+  // counts as active below when both are true.
+  function ownerHasLicense(ownerId: string | null): boolean {
+    if (!ownerId) return false
+    const profile = billingByUserId.get(ownerId)
+    return !!effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
+  }
+
   const projects = (projectsRaw ?? []) as { created_at: string; status: string; owner_id: string | null }[]
   const projectDates = projects.map(p => new Date(p.created_at))
-  const activeCount = projects.filter(p => p.status === 'active').length
+  const activeCount = projects.filter(p => p.status === 'active' && ownerHasLicense(p.owner_id)).length
   const pausedCount = projects.filter(p => p.status === 'paused').length
+  const blockedByBillingCount = projects.filter(p => p.status === 'active' && !ownerHasLicense(p.owner_id)).length
 
-  // How many ACTIVE projects each user owns — shown per-row in the
-  // Registered users list below, instead of just a boolean "has a project"
-  // badge, so it's visible at a glance who's actually using the product.
+  // How many projects each user actually has data flowing for right now,
+  // and how many sit at status='active' but are blocked anyway because the
+  // owner has no usable license — both shown per-row in the Registered
+  // users list below.
   const activeProjectCountByOwner = new Map<string, number>()
+  const blockedProjectCountByOwner = new Map<string, number>()
   for (const p of projects) {
     if (p.status !== 'active' || !p.owner_id) continue
-    activeProjectCountByOwner.set(p.owner_id, (activeProjectCountByOwner.get(p.owner_id) ?? 0) + 1)
+    const target = ownerHasLicense(p.owner_id) ? activeProjectCountByOwner : blockedProjectCountByOwner
+    target.set(p.owner_id, (target.get(p.owner_id) ?? 0) + 1)
   }
 
   const userDates = users.map(u => new Date(u.created_at))
@@ -173,8 +193,9 @@ export default async function AdminDashboardPage() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
           <StatTile label="Registered users" value={totalUsers} />
           <StatTile label="Total projects" value={projects.length} />
-          <StatTile label="Active projects" value={activeCount} accent="#16a34a" />
+          <StatTile label="Active projects (data flowing)" value={activeCount} accent="#16a34a" />
           <StatTile label="Paused projects" value={pausedCount} accent="#9ca3af" />
+          <StatTile label="Blocked by billing" value={blockedByBillingCount} accent={blockedByBillingCount > 0 ? '#ea580c' : undefined} />
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
@@ -211,6 +232,7 @@ export default async function AdminDashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
                 const activeProjects = u.id ? activeProjectCountByOwner.get(u.id) ?? 0 : 0
+                const blockedProjects = u.id ? blockedProjectCountByOwner.get(u.id) ?? 0 : 0
                 const license = licenseInfo(u.id ? billingByUserId.get(u.id) : undefined, subscriptionStartedAt)
                 const typeStyle = license.type === 'Trial'
                   ? { bg: '#fef9c3', color: '#92400e' }
@@ -228,7 +250,12 @@ export default async function AdminDashboardPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         {activeProjects > 0 && (
                           <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                            {activeProjects} active project{activeProjects !== 1 ? 's' : ''}
+                            {activeProjects} active — data flowing
+                          </span>
+                        )}
+                        {blockedProjects > 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
+                            {blockedProjects} blocked — no license
                           </span>
                         )}
                         <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
