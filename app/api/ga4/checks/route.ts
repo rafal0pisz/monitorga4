@@ -5,6 +5,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
+import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
 export const runtime = 'nodejs'
 
@@ -245,6 +246,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ checks, comparisonLabel: label })
   } catch (err: any) {
     console.error('[/api/ga4/checks]', err.message)
+    if (isGa4ReconnectError(err.message)) {
+      return NextResponse.json({ error: GA4_RECONNECT_MESSAGE }, { status: 401 })
+    }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

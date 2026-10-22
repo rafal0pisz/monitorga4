@@ -11,18 +11,20 @@ export default function EventsDetailPanel({ projectId, expectedEvents, periodDay
   const [error, setError] = useState<string | null>(null)
   const [blocked, setBlocked] = useState(false)
   const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
+  const [needsReconnect, setNeedsReconnect] = useState(false)
   const [ranges, setRanges] = useState<{ current: any; prev: any } | null>(null)
 
   useEffect(() => {
     if (!expectedEvents.length) { setLoading(false); return }
     async function load() {
-      setLoading(true); setError(null); setBlocked(false)
+      setLoading(true); setError(null); setBlocked(false); setNeedsReconnect(false)
       try {
         const params = new URLSearchParams({ projectId, events: expectedEvents.join(','), periodDays: String(periodDays), anchorOffset: String(anchorOffset) })
         const res = await ga4Fetch(`/api/ga4/events?${params}`)
         const json = await res.json()
         if (!res.ok) {
           if (res.status === 402) { setBlocked(true); setBlockedScope(json.scope === 'member' ? 'member' : 'owner'); setError(json.error); return }
+          if (res.status === 401) { setNeedsReconnect(true); setError(json.error); return }
           throw new Error(json.error)
         }
         setData(json.events); setRanges(json.ranges)
@@ -56,6 +58,11 @@ export default function EventsDetailPanel({ projectId, expectedEvents, periodDay
           {blockedScope === 'member'
             ? <a href="/dashboard/team" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Go to Team →</a>
             : <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>}
+        </div>
+      ) : needsReconnect ? (
+        <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: '#1e3a8a' }}>{error}</span>
+          <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>
         </div>
       ) : error ? (
         <p style={{ fontSize: 12, color: '#ca8a04', margin: 0 }}>Could not load charts: {error}</p>

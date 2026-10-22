@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { resolvePropertyId } from '@/lib/ga4/resolveProperty'
+import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
 // Lists the custom dimensions registered on a GA4 property, so the project
 // settings form can validate a parameter name before saving it — a typo'd
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
     } while (pageToken)
     return NextResponse.json({ parameterNames })
   } catch (err: any) {
+    if (isGa4ReconnectError(err.message)) {
+      return NextResponse.json({ error: GA4_RECONNECT_MESSAGE }, { status: 401 })
+    }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

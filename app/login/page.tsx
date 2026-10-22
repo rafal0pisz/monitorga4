@@ -16,9 +16,19 @@ function safeNextPath(raw: string | null): string | null {
   return raw
 }
 
+// error values set by app/auth/callback/route.ts's loginRedirect().
+const ERROR_MESSAGES: Record<string, string> = {
+  insufficient_scope: 'Logowanie nie powiodło się, ponieważ nie przyznano dostępu do Google Analytics (uprawnienie „Zobacz dane Google Analytics”). To uprawnienie jest niezbędne do działania AlertGA4 — spróbuj ponownie i zaznacz wszystkie wymagane uprawnienia na ekranie Google.',
+  missing_code: 'Logowanie nie powiodło się. Spróbuj ponownie.',
+  session_failed: 'Logowanie nie powiodło się. Spróbuj ponownie.',
+}
+
 function LoginForm() {
   const [loading, setLoading] = useState(false)
-  const next = safeNextPath(useSearchParams().get('next'))
+  const params = useSearchParams()
+  const next = safeNextPath(params.get('next'))
+  const errorCode = params.get('error')
+  const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? 'Logowanie nie powiodło się. Spróbuj ponownie.') : null
 
   async function handleGoogleLogin() {
     setLoading(true)
@@ -69,6 +79,15 @@ function LoginForm() {
           <p style={{ fontSize: 12, margin: '0 0 20px', color: 'var(--color-text-secondary)' }}>
             Wymagane konto Google z dostępem Viewer do GA4. Logowanie zakłada też konto — osobna rejestracja nie jest potrzebna.
           </p>
+
+          {errorMessage && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 8, marginBottom: 16,
+              backgroundColor: '#fef2f2', border: '1px solid #fecaca',
+            }}>
+              <p style={{ fontSize: 12, color: '#991b1b', margin: 0, lineHeight: 1.5 }}>{errorMessage}</p>
+            </div>
+          )}
 
           <button
             onClick={handleGoogleLogin}

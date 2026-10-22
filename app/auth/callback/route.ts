@@ -20,6 +20,33 @@ function loginRedirect(origin: string, error: string, next: string | null): stri
   return `${origin}/login?error=${error}${next ? `&next=${encodeURIComponent(next)}` : ''}`
 }
 
+const GA4_READONLY_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly'
+
+// Requesting a scope via signInWithOAuth doesn't guarantee Google actually
+// granted it — a user can decline the specific "See your Google Analytics
+// data" permission on Google's consent screen while still completing sign-
+// in, landing on a session that authenticates fine but can't make a single
+// GA4 API call. This is the one place that can catch that before it ever
+// reaches a dashboard, by checking what the access token actually carries
+// via Google's tokeninfo endpoint.
+//
+// Returns null (undetermined) rather than false when the check itself
+// fails (tokeninfo unreachable, unexpected response shape) — a transient
+// outage here must never block a legitimate login; only a definite "scope
+// missing" answer should.
+async function hasAnalyticsScope(accessToken: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`)
+    if (!res.ok) return null
+    const info = await res.json()
+    if (typeof info.scope !== 'string') return null
+    return info.scope.split(' ').includes(GA4_READONLY_SCOPE)
+  } catch (err) {
+    console.error('[auth/callback] tokeninfo check failed:', err)
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -42,6 +69,18 @@ export async function GET(request: NextRequest) {
   const providerToken        = session.provider_token         // access token (expires ~1h)
   const providerRefreshToken = session.provider_refresh_token // refresh token (long-lived)
   const userId               = session.user.id
+
+  // Must-have check: analytics.readonly is a hard requirement for the app
+  // to function at all (every check/report is a GA4 API call), so a login
+  // that completed without it is treated as a failed login, not a degraded
+  // one. Sign the user back out before redirecting — otherwise middleware's
+  // own "/login with a session → bounce to /dashboard" rule would
+  // immediately hide the error we're about to show.
+  if (providerToken && (await hasAnalyticsScope(providerToken)) === false) {
+    console.warn('[auth/callback] Google login succeeded but analytics.readonly was not granted for user', userId)
+    await supabase.auth.signOut()
+    return NextResponse.redirect(loginRedirect(origin, 'insufficient_scope', next))
+  }
 
   // Always keep profiles.email in sync on every login — used by the team
   // invite flow (app/api/team/invite) to warn up front when the invited

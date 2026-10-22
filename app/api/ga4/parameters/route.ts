@@ -6,6 +6,7 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM
 import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
+import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
 // GA4 dimension name for a custom event parameter — shared with the worker
 // (src/lib/ga4/standardParams.ts) so this endpoint can't silently diverge
@@ -216,6 +217,9 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (err: any) {
+    if (isGa4ReconnectError(err.message)) {
+      return NextResponse.json({ error: GA4_RECONNECT_MESSAGE }, { status: 401 })
+    }
     return NextResponse.json({
       error: err.message,
       ga4_dimension: ga4DimName(paramName),

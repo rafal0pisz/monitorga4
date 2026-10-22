@@ -3,6 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { GA4_STANDARD_EVENTS } from '@/lib/ga4/standardEvents'
 import { ga4Report } from '@/lib/ga4/report'
 import { resolvePropertyId } from '@/lib/ga4/resolveProperty'
+import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
 // Lists the events actually firing on a property, ordered by volume — powers
 // the "suggest events instead of blind text entry" flows in the creation
@@ -40,6 +41,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ events, range: { start: fmt(start), end: fmt(end) } })
   } catch (err: any) {
+    if (isGa4ReconnectError(err.message)) {
+      return NextResponse.json({ error: GA4_RECONNECT_MESSAGE }, { status: 401 })
+    }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

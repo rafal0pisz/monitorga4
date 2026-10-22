@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { fetchGA4Accounts, fetchGA4Properties } from '@/lib/ga4/listProperties'
+import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
 export async function GET(request: NextRequest) {
   const token = await getGa4Token()
@@ -29,6 +30,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ accounts: results })
   } catch (err: any) {
+    if (isGa4ReconnectError(err.message)) {
+      return NextResponse.json({ error: GA4_RECONNECT_MESSAGE }, { status: 401 })
+    }
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

@@ -157,12 +157,14 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
         const res = await ga4Fetch('/api/ga4/properties')
         const data = await res.json()
         if (!res.ok) {
-          // 401 here specifically means getGa4Token() found no usable
-          // Google connection for this signed-in user (never connected, or
-          // the refresh token was revoked/expired) — distinct from a 500,
-          // where Google's Admin API answered but rejected the request
-          // (e.g. API not enabled, wrong account, no GA4 access). Only the
-          // former is fixable by the user re-authenticating with Google.
+          // 401 here means the current Google connection isn't usable —
+          // either getGa4Token() found none at all (never connected, or the
+          // refresh token was revoked/expired), or the Admin API rejected
+          // the request because the granted token lacks the analytics
+          // scope (see src/lib/ga4/errors.ts). Distinct from a 500, where
+          // Google answered but rejected the request for some other reason
+          // (e.g. API not enabled). Only the 401 case is fixable by the
+          // user re-authenticating with Google.
           setNeedsReconnect(res.status === 401)
           throw new Error(data.error ?? 'Failed to load')
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 import { type ParameterData, MiniParameterCard, ParameterCard } from './ParameterCardShared'
+import { isGa4ReconnectError } from '@/lib/ga4/errors'
 
 export type { ParameterData }
 
@@ -28,9 +29,15 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
   // every single parameter card.
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
   const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
+  // Same reasoning as blockedMessage above — an insufficient-scope/expired
+  // token applies to the whole project's Google connection, not one
+  // parameter, so it gets one combined banner instead of the identical
+  // "reconnect" error repeated on every single parameter row.
+  const [reconnectMessage, setReconnectMessage] = useState<string | null>(null)
 
   useEffect(() => {
     setBlockedMessage(null)
+    setReconnectMessage(null)
     for (const pc of parameterChecks) {
       const key = `${pc.event_name}_${pc.parameter_name}`
       setLoading(prev => ({ ...prev, [key]: true }))
@@ -47,6 +54,7 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
         .then(async res => {
           const json = await res.json()
           if (res.status === 402 && json.error) { setBlockedMessage(json.error); setBlockedScope(json.scope === 'member' ? 'member' : 'owner'); return }
+          if (res.status === 401 && json.error) { setReconnectMessage(json.error); return }
           return json
         })
         .then(json => {
@@ -63,7 +71,10 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
           }
           setData(prev => ({ ...prev, [key]: json }))
         })
-        .catch(err => setErrors(prev => ({ ...prev, [key]: { message: err.message } })))
+        .catch(err => {
+          if (isGa4ReconnectError(err.message)) { setReconnectMessage(err.message); return }
+          setErrors(prev => ({ ...prev, [key]: { message: err.message } }))
+        })
         .finally(() => setLoading(prev => ({ ...prev, [key]: false })))
     }
   }, [projectId, JSON.stringify(parameterChecks), periodDays, anchorOffset])
@@ -80,6 +91,18 @@ export default function ParameterCoveragePanel({ projectId, parameterChecks, per
         {blockedScope === 'member'
           ? <a href="/dashboard/team" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Go to Team →</a>
           : <a href="/cennik" style={{ fontSize: 12, fontWeight: 600, color: '#92400e', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</a>}
+      </div>
+    )
+  }
+
+  if (reconnectMessage) {
+    return (
+      <div style={{ padding: '12px 16px', borderRadius: 10, backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a' }}>Google connection lost</div>
+          <div style={{ fontSize: 11, color: '#1e3a8a', marginTop: 2 }}>{reconnectMessage}</div>
+        </div>
+        <a href="/login" style={{ fontSize: 12, fontWeight: 600, color: '#1e3a8a', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Reconnect with Google →</a>
       </div>
     )
   }
