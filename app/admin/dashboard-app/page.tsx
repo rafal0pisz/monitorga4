@@ -105,7 +105,9 @@ export default async function AdminDashboardPage() {
         <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 20px', height: 52, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Link href="/dashboard" style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>← Dashboard</Link>
           <span style={{ color: 'var(--color-border-tertiary)' }}>·</span>
-          <span style={{ fontSize: 13, fontWeight: 600 }}>Admin</span>
+          <span style={{ fontSize: 13, fontWeight: 600 }}>Business overview</span>
+          <span style={{ color: 'var(--color-border-tertiary)' }}>·</span>
+          <Link href="/admin/marketing" style={{ fontSize: 12, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>Marketing</Link>
         </div>
       </nav>
 
