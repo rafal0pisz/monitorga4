@@ -4,6 +4,8 @@ import Link from 'next/link'
 import AdminGrowthChart from '@/components/admin/AdminGrowthChart'
 import { fetchAllUsers, buildGrowthSeries } from '@/lib/admin/growthStats'
 import { fetchAdminStats } from '@/lib/admin/businessStats'
+import { effectivePlanId, planName } from '@/lib/billing/plans'
+import { getStripe } from '@/lib/stripe/client'
 
 const MAX_USERS_SHOWN = 50
 
@@ -41,6 +43,46 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+interface BillingProfile {
+  id: string
+  plan_id: string | null
+  trial_ends_at: string | null
+  trial_used_at: string | null
+  stripe_subscription_id: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean | null
+}
+
+interface LicenseInfo {
+  plan: string
+  type: 'Trial' | 'Subscription' | 'Internal'
+  startedAt: string | null
+  untilAt: string | null
+  canceling: boolean
+}
+
+// Only for an account with an actually-active license right now (an
+// expired trial / lapsed subscription has nothing worth showing here —
+// effectivePlanId already resolves that case to null). Subscription start
+// isn't stored anywhere in our own schema (only the rolling
+// current_period_end is) — it's read live from Stripe's subscription
+// object instead of adding a column just for this admin-only display.
+function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo | null {
+  if (!profile) return null
+  const effective = effectivePlanId(profile.plan_id, profile.trial_ends_at)
+  if (!effective) return null
+
+  const isTrial = profile.plan_id === 'trial'
+  const isInternal = profile.plan_id === 'internal'
+  const type: LicenseInfo['type'] = isTrial ? 'Trial' : isInternal ? 'Internal' : 'Subscription'
+  const startedAt = isTrial
+    ? profile.trial_used_at
+    : (profile.stripe_subscription_id && subscriptionStartedAt.get(profile.stripe_subscription_id)) || null
+  const untilAt = isTrial ? profile.trial_ends_at : isInternal ? null : profile.current_period_end
+
+  return { plan: planName(profile.plan_id), type, startedAt, untilAt, canceling: !!profile.cancel_at_period_end }
+}
+
 export default async function AdminDashboardPage() {
   const session = await createClient()
   const { data: authData } = await session.auth.getUser()
@@ -59,11 +101,33 @@ export default async function AdminDashboardPage() {
 
   const admin = createAdminClient()
 
-  const [users, { data: projectsRaw }, stats] = await Promise.all([
+  const [users, { data: projectsRaw }, stats, { data: billingProfilesRaw }] = await Promise.all([
     fetchAllUsers(admin),
     admin.from('projects').select('created_at, status, owner_id'),
     fetchAdminStats(admin),
+    admin.from('profiles').select('id, plan_id, trial_ends_at, trial_used_at, stripe_subscription_id, current_period_end, cancel_at_period_end'),
   ])
+
+  const billingProfiles = (billingProfilesRaw ?? []) as BillingProfile[]
+  const billingByUserId = new Map(billingProfiles.map(p => [p.id, p]))
+
+  // Subscription start isn't persisted anywhere in our schema — fetched
+  // live from Stripe per distinct subscription id. Promise.allSettled so
+  // one bad/deleted-on-Stripe's-side id (e.g. stale test data) just shows
+  // "—" for that one row instead of breaking the whole admin page.
+  const paidSubscriptionIds = [...new Set(
+    billingProfiles
+      .filter(p => p.plan_id && p.plan_id !== 'trial' && p.plan_id !== 'internal' && p.stripe_subscription_id)
+      .map(p => p.stripe_subscription_id as string)
+  )]
+  const subscriptionStartedAt = new Map<string, string>()
+  if (paidSubscriptionIds.length > 0) {
+    const stripe = getStripe()
+    const results = await Promise.allSettled(paidSubscriptionIds.map(id => stripe.subscriptions.retrieve(id)))
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') subscriptionStartedAt.set(paidSubscriptionIds[i], new Date(r.value.created * 1000).toISOString())
+    })
+  }
 
   const projects = (projectsRaw ?? []) as { created_at: string; status: string; owner_id: string | null }[]
   const projectDates = projects.map(p => new Date(p.created_at))
@@ -143,17 +207,37 @@ export default async function AdminDashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
                 const activeProjects = u.id ? activeProjectCountByOwner.get(u.id) ?? 0 : 0
+                const license = licenseInfo(u.id ? billingByUserId.get(u.id) : undefined, subscriptionStartedAt)
+                const typeStyle = license?.type === 'Trial'
+                  ? { bg: '#fef9c3', color: '#92400e' }
+                  : license?.type === 'Internal'
+                    ? { bg: '#e5e7eb', color: '#374151' }
+                    : { bg: '#dbeafe', color: '#1e3a8a' }
                 return (
-                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                    <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>{u.email ?? '—'}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      {activeProjects > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                          {activeProjects} active project{activeProjects !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
+                  <div key={u.id} style={{ padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>{u.email ?? '—'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {activeProjects > 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                            {activeProjects} active project{activeProjects !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
+                      </div>
                     </div>
+                    {license && (
+                      <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7, fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 8px', borderRadius: 20, backgroundColor: typeStyle.bg, color: typeStyle.color }}>
+                          {license.plan}
+                        </span>
+                        <span>{license.type}</span>
+                        {license.startedAt && <span>· Started {fmtDate(license.startedAt)}</span>}
+                        {license.untilAt
+                          ? <span>· Valid until {fmtDate(license.untilAt)}{license.canceling ? ' (canceling)' : ''}</span>
+                          : license.type === 'Internal' && <span>· No expiry</span>}
+                      </div>
+                    )}
                   </div>
                 )
               })}
