@@ -2,18 +2,12 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import AdminGrowthChart from '@/components/admin/AdminGrowthChart'
-import { fetchAllUsers, buildGrowthSeries } from '@/lib/admin/growthStats'
+import { buildGrowthSeries } from '@/lib/admin/growthStats'
 import { fetchAdminStats } from '@/lib/admin/businessStats'
-import { effectivePlanId, planName } from '@/lib/billing/plans'
-import { getStripe } from '@/lib/stripe/client'
+import { fetchRegisteredUsersData, type LicenseInfo } from '@/lib/admin/registeredUsers'
+import { isAdminEmail } from '@/lib/admin/isAdminEmail'
 
 const MAX_USERS_SHOWN = 50
-
-function isAdminEmail(email: string | undefined | null): boolean {
-  if (!email) return false
-  const allowlist = (process.env.ADMIN_EMAILS ?? '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
-  return allowlist.includes(email.toLowerCase())
-}
 
 function StatTile({ label, value, accent }: { label: string; value: string | number; accent?: string }) {
   return (
@@ -43,49 +37,36 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-interface BillingProfile {
-  id: string
-  plan_id: string | null
-  trial_ends_at: string | null
-  trial_used_at: string | null
-  stripe_subscription_id: string | null
-  current_period_end: string | null
-  cancel_at_period_end: boolean | null
-}
-
-interface LicenseInfo {
-  plan: string
-  type: 'No plan' | 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal'
-  startedAt: string | null
-  untilAt: string | null
-  canceling: boolean
-  active: boolean
-}
-
-// Always returns something to show — including "No plan" (signed up, never
-// started a trial or bought a plan) and "Trial (expired)" (used their trial,
-// never converted) — these are exactly the accounts worth seeing at a
-// glance here, not ones to hide. `active` says whether the license is live
-// right now (effectivePlanId's own notion of "usable today"). Subscription
-// start isn't stored anywhere in our own schema (only the rolling
-// current_period_end is) — it's read live from Stripe's subscription
-// object instead of adding a column just for this admin-only display.
-function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo {
-  if (!profile || !profile.plan_id) {
-    return { plan: 'No plan', type: 'No plan', startedAt: null, untilAt: null, canceling: false, active: false }
+function licenseTypeStyle(type: LicenseInfo['type']): { bg: string; color: string } {
+  switch (type) {
+    case 'Trial': return { bg: '#fef9c3', color: '#92400e' }
+    case 'Trial (expired)': return { bg: '#fee2e2', color: '#991b1b' }
+    case 'Internal': return { bg: '#e5e7eb', color: '#374151' }
+    case 'No plan': return { bg: '#f3f4f6', color: '#6b7280' }
+    default: return { bg: '#dbeafe', color: '#1e3a8a' }
   }
-
-  const isTrial = profile.plan_id === 'trial'
-  const isInternal = profile.plan_id === 'internal'
-  const active = !!effectivePlanId(profile.plan_id, profile.trial_ends_at)
-  const type: LicenseInfo['type'] = isTrial ? (active ? 'Trial' : 'Trial (expired)') : isInternal ? 'Internal' : 'Subscription'
-  const startedAt = isTrial
-    ? profile.trial_used_at
-    : (profile.stripe_subscription_id && subscriptionStartedAt.get(profile.stripe_subscription_id)) || null
-  const untilAt = isTrial ? profile.trial_ends_at : isInternal ? null : profile.current_period_end
-
-  return { plan: planName(profile.plan_id), type, startedAt, untilAt, canceling: !!profile.cancel_at_period_end, active }
 }
+
+// A plain <table> wrapped in a horizontally-scrolling container — simpler
+// and more robust on a data table like this than a card/table hybrid that
+// reflows columns into stacked key-value pairs. min-width on the table
+// keeps columns readable at any viewport; the wrapper's overflow-x lets a
+// phone swipe sideways instead of squishing everything unreadable.
+const TableStyle = () => (
+  <style>{`
+    .ru-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ru-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 12.5px; }
+    .ru-table th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); padding: 0 10px 8px; white-space: nowrap; }
+    .ru-table td { padding: 9px 10px; border-top: 1px solid var(--color-border-tertiary); vertical-align: middle; }
+    .ru-table tr:first-child td { border-top: none; }
+    .ru-table td:first-child, .ru-table th:first-child {
+      position: sticky; left: 0; background: var(--color-background-primary); padding-left: 0;
+    }
+    .ru-email { color: var(--color-text-primary); word-break: break-all; }
+    .ru-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 8px; border-radius: 20px; white-space: nowrap; }
+    .ru-muted { color: var(--color-text-secondary); white-space: nowrap; }
+  `}</style>
+)
 
 export default async function AdminDashboardPage() {
   const session = await createClient()
@@ -105,76 +86,18 @@ export default async function AdminDashboardPage() {
 
   const admin = createAdminClient()
 
-  const [users, { data: projectsRaw }, stats, { data: billingProfilesRaw }] = await Promise.all([
-    fetchAllUsers(admin),
-    admin.from('projects').select('created_at, status, owner_id'),
+  const [{ rows, projects, activeCount, pausedCount, blockedByBillingCount }, stats] = await Promise.all([
+    fetchRegisteredUsersData(admin),
     fetchAdminStats(admin),
-    admin.from('profiles').select('id, plan_id, trial_ends_at, trial_used_at, stripe_subscription_id, current_period_end, cancel_at_period_end'),
   ])
 
-  const billingProfiles = (billingProfilesRaw ?? []) as BillingProfile[]
-  const billingByUserId = new Map(billingProfiles.map(p => [p.id, p]))
-
-  // Subscription start isn't persisted anywhere in our schema — fetched
-  // live from Stripe per distinct subscription id. Promise.allSettled so
-  // one bad/deleted-on-Stripe's-side id (e.g. stale test data) just shows
-  // "—" for that one row instead of breaking the whole admin page.
-  const paidSubscriptionIds = [...new Set(
-    billingProfiles
-      .filter(p => p.plan_id && p.plan_id !== 'trial' && p.plan_id !== 'internal' && p.stripe_subscription_id)
-      .map(p => p.stripe_subscription_id as string)
-  )]
-  const subscriptionStartedAt = new Map<string, string>()
-  if (paidSubscriptionIds.length > 0) {
-    const stripe = getStripe()
-    const results = await Promise.allSettled(paidSubscriptionIds.map(id => stripe.subscriptions.retrieve(id)))
-    results.forEach((r, i) => {
-      if (r.status === 'fulfilled') subscriptionStartedAt.set(paidSubscriptionIds[i], new Date(r.value.created * 1000).toISOString())
-    })
-  }
-
-  // "Active" here means data is actually being pulled for that project —
-  // NOT just projects.status === 'active'. That column only tracks whether
-  // the OWNER manually paused it; it's never flipped when a trial expires
-  // or a subscription lapses (see app/api/stripe/webhook/route.ts's
-  // customer.subscription.deleted handler, which explicitly leaves
-  // existing projects' status alone). The actual gate that stops a project
-  // from running is ownerHasActiveAccess() at request/worker time, which
-  // depends on the OWNER's plan — so a project can sit at status='active'
-  // in the DB while no check has run for it in weeks. A project only
-  // counts as active below when both are true.
-  function ownerHasLicense(ownerId: string | null): boolean {
-    if (!ownerId) return false
-    const profile = billingByUserId.get(ownerId)
-    return !!effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-  }
-
-  const projects = (projectsRaw ?? []) as { created_at: string; status: string; owner_id: string | null }[]
   const projectDates = projects.map(p => new Date(p.created_at))
-  const activeCount = projects.filter(p => p.status === 'active' && ownerHasLicense(p.owner_id)).length
-  const pausedCount = projects.filter(p => p.status === 'paused').length
-  const blockedByBillingCount = projects.filter(p => p.status === 'active' && !ownerHasLicense(p.owner_id)).length
-
-  // How many projects each user actually has data flowing for right now,
-  // and how many sit at status='active' but are blocked anyway because the
-  // owner has no usable license — both shown per-row in the Registered
-  // users list below.
-  const activeProjectCountByOwner = new Map<string, number>()
-  const blockedProjectCountByOwner = new Map<string, number>()
-  for (const p of projects) {
-    if (p.status !== 'active' || !p.owner_id) continue
-    const target = ownerHasLicense(p.owner_id) ? activeProjectCountByOwner : blockedProjectCountByOwner
-    target.set(p.owner_id, (target.get(p.owner_id) ?? 0) + 1)
-  }
-
-  const userDates = users.map(u => new Date(u.created_at))
+  const userDates = rows.map(r => new Date(r.createdAt))
   const growth = buildGrowthSeries(userDates, projectDates)
-  const totalUsers = users.length
+  const totalUsers = rows.length
   const activationPct = totalUsers > 0 ? Math.round((stats.usersWithProject / totalUsers) * 100) : 0
   const totalRuns30d = stats.workerRunsCompleted30d + stats.workerRunsFailed30d
   const successRatePct = totalRuns30d > 0 ? Math.round((stats.workerRunsCompleted30d / totalRuns30d) * 100) : null
-
-  const usersByNewest = [...users].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)' }}>
@@ -221,59 +144,75 @@ export default async function AdminDashboardPage() {
           <AdoptionRow label="Parameter checks" count={stats.parametersAdoption} total={stats.totalActiveProjects} />
         </div>
 
+        <TableStyle />
         <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Registered users</div>
-          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
-            Newest first{usersByNewest.length > MAX_USERS_SHOWN ? ` — showing ${MAX_USERS_SHOWN} of ${usersByNewest.length}` : ''}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 700 }}>Registered users</div>
+            <a
+              href="/api/admin/registered-users.csv"
+              style={{ fontSize: 11.5, fontWeight: 600, color: '#1e3a8a', textDecoration: 'none', padding: '4px 10px', borderRadius: 7, border: '1px solid #bfdbfe', backgroundColor: '#eff6ff' }}
+            >
+              ⬇ Export CSV
+            </a>
           </div>
-          {usersByNewest.length === 0 ? (
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+            Newest first{rows.length > MAX_USERS_SHOWN ? ` — showing ${MAX_USERS_SHOWN} of ${rows.length} (full list in the CSV export)` : ''}
+          </div>
+          {rows.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>No registered users yet.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
-                const activeProjects = u.id ? activeProjectCountByOwner.get(u.id) ?? 0 : 0
-                const blockedProjects = u.id ? blockedProjectCountByOwner.get(u.id) ?? 0 : 0
-                const license = licenseInfo(u.id ? billingByUserId.get(u.id) : undefined, subscriptionStartedAt)
-                const typeStyle = license.type === 'Trial'
-                  ? { bg: '#fef9c3', color: '#92400e' }
-                  : license.type === 'Trial (expired)'
-                    ? { bg: '#fee2e2', color: '#991b1b' }
-                    : license.type === 'Internal'
-                      ? { bg: '#e5e7eb', color: '#374151' }
-                      : license.type === 'No plan'
-                        ? { bg: '#f3f4f6', color: '#6b7280' }
-                        : { bg: '#dbeafe', color: '#1e3a8a' }
-                return (
-                  <div key={u.id} style={{ padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 12.5, color: 'var(--color-text-primary)' }}>{u.email ?? '—'}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {activeProjects > 0 && (
-                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                            {activeProjects} active — data flowing
+            <div className="ru-scroll">
+              <table className="ru-table">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Registered</th>
+                    <th>Plan</th>
+                    <th>Type</th>
+                    <th>Started</th>
+                    <th>Valid until</th>
+                    <th>Projects</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice(0, MAX_USERS_SHOWN).map(r => {
+                    const typeStyle = licenseTypeStyle(r.license.type)
+                    return (
+                      <tr key={r.id}>
+                        <td className="ru-email">{r.email ?? '—'}</td>
+                        <td className="ru-muted">{fmtDate(r.createdAt)}</td>
+                        <td>
+                          <span className="ru-badge" style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}>
+                            {r.license.plan}
                           </span>
-                        )}
-                        {blockedProjects > 0 && (
-                          <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
-                            {blockedProjects} blocked — no license
-                          </span>
-                        )}
-                        <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7, fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 8px', borderRadius: 20, backgroundColor: typeStyle.bg, color: typeStyle.color }}>
-                        {license.plan}
-                      </span>
-                      <span>{license.type}</span>
-                      {license.startedAt && <span>· Started {fmtDate(license.startedAt)}</span>}
-                      {license.untilAt
-                        ? <span>· Valid until {fmtDate(license.untilAt)}{license.canceling ? ' (canceling)' : ''}</span>
-                        : license.type === 'Internal' && <span>· No expiry</span>}
-                    </div>
-                  </div>
-                )
-              })}
+                        </td>
+                        <td className="ru-muted">{r.license.type}</td>
+                        <td className="ru-muted">{r.license.startedAt ? fmtDate(r.license.startedAt) : '—'}</td>
+                        <td className="ru-muted">
+                          {r.license.untilAt
+                            ? `${fmtDate(r.license.untilAt)}${r.license.canceling ? ' (canceling)' : ''}`
+                            : r.license.type === 'Internal' ? 'No expiry' : '—'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                            {r.activeProjects > 0 && (
+                              <span className="ru-badge" style={{ backgroundColor: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
+                                {r.activeProjects} active
+                              </span>
+                            )}
+                            {r.blockedProjects > 0 && (
+                              <span className="ru-badge" style={{ backgroundColor: '#fff7ed', color: '#9a3412', border: '1px solid #fed7aa' }}>
+                                {r.blockedProjects} blocked
+                              </span>
+                            )}
+                            {r.activeProjects === 0 && r.blockedProjects === 0 && <span className="ru-muted">—</span>}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
