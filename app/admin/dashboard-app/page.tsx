@@ -55,32 +55,36 @@ interface BillingProfile {
 
 interface LicenseInfo {
   plan: string
-  type: 'Trial' | 'Subscription' | 'Internal'
+  type: 'No plan' | 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal'
   startedAt: string | null
   untilAt: string | null
   canceling: boolean
+  active: boolean
 }
 
-// Only for an account with an actually-active license right now (an
-// expired trial / lapsed subscription has nothing worth showing here —
-// effectivePlanId already resolves that case to null). Subscription start
-// isn't stored anywhere in our own schema (only the rolling
+// Always returns something to show — including "No plan" (signed up, never
+// started a trial or bought a plan) and "Trial (expired)" (used their trial,
+// never converted) — these are exactly the accounts worth seeing at a
+// glance here, not ones to hide. `active` says whether the license is live
+// right now (effectivePlanId's own notion of "usable today"). Subscription
+// start isn't stored anywhere in our own schema (only the rolling
 // current_period_end is) — it's read live from Stripe's subscription
 // object instead of adding a column just for this admin-only display.
-function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo | null {
-  if (!profile) return null
-  const effective = effectivePlanId(profile.plan_id, profile.trial_ends_at)
-  if (!effective) return null
+function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo {
+  if (!profile || !profile.plan_id) {
+    return { plan: 'No plan', type: 'No plan', startedAt: null, untilAt: null, canceling: false, active: false }
+  }
 
   const isTrial = profile.plan_id === 'trial'
   const isInternal = profile.plan_id === 'internal'
-  const type: LicenseInfo['type'] = isTrial ? 'Trial' : isInternal ? 'Internal' : 'Subscription'
+  const active = !!effectivePlanId(profile.plan_id, profile.trial_ends_at)
+  const type: LicenseInfo['type'] = isTrial ? (active ? 'Trial' : 'Trial (expired)') : isInternal ? 'Internal' : 'Subscription'
   const startedAt = isTrial
     ? profile.trial_used_at
     : (profile.stripe_subscription_id && subscriptionStartedAt.get(profile.stripe_subscription_id)) || null
   const untilAt = isTrial ? profile.trial_ends_at : isInternal ? null : profile.current_period_end
 
-  return { plan: planName(profile.plan_id), type, startedAt, untilAt, canceling: !!profile.cancel_at_period_end }
+  return { plan: planName(profile.plan_id), type, startedAt, untilAt, canceling: !!profile.cancel_at_period_end, active }
 }
 
 export default async function AdminDashboardPage() {
@@ -208,11 +212,15 @@ export default async function AdminDashboardPage() {
               {usersByNewest.slice(0, MAX_USERS_SHOWN).map(u => {
                 const activeProjects = u.id ? activeProjectCountByOwner.get(u.id) ?? 0 : 0
                 const license = licenseInfo(u.id ? billingByUserId.get(u.id) : undefined, subscriptionStartedAt)
-                const typeStyle = license?.type === 'Trial'
+                const typeStyle = license.type === 'Trial'
                   ? { bg: '#fef9c3', color: '#92400e' }
-                  : license?.type === 'Internal'
-                    ? { bg: '#e5e7eb', color: '#374151' }
-                    : { bg: '#dbeafe', color: '#1e3a8a' }
+                  : license.type === 'Trial (expired)'
+                    ? { bg: '#fee2e2', color: '#991b1b' }
+                    : license.type === 'Internal'
+                      ? { bg: '#e5e7eb', color: '#374151' }
+                      : license.type === 'No plan'
+                        ? { bg: '#f3f4f6', color: '#6b7280' }
+                        : { bg: '#dbeafe', color: '#1e3a8a' }
                 return (
                   <div key={u.id} style={{ padding: '9px 0', borderBottom: '1px solid var(--color-border-tertiary)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -226,18 +234,16 @@ export default async function AdminDashboardPage() {
                         <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>{fmtDate(u.created_at)}</span>
                       </div>
                     </div>
-                    {license && (
-                      <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7, fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 8px', borderRadius: 20, backgroundColor: typeStyle.bg, color: typeStyle.color }}>
-                          {license.plan}
-                        </span>
-                        <span>{license.type}</span>
-                        {license.startedAt && <span>· Started {fmtDate(license.startedAt)}</span>}
-                        {license.untilAt
-                          ? <span>· Valid until {fmtDate(license.untilAt)}{license.canceling ? ' (canceling)' : ''}</span>
-                          : license.type === 'Internal' && <span>· No expiry</span>}
-                      </div>
-                    )}
+                    <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 7, fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 8px', borderRadius: 20, backgroundColor: typeStyle.bg, color: typeStyle.color }}>
+                        {license.plan}
+                      </span>
+                      <span>{license.type}</span>
+                      {license.startedAt && <span>· Started {fmtDate(license.startedAt)}</span>}
+                      {license.untilAt
+                        ? <span>· Valid until {fmtDate(license.untilAt)}{license.canceling ? ' (canceling)' : ''}</span>
+                        : license.type === 'Internal' && <span>· No expiry</span>}
+                    </div>
                   </div>
                 )
               })}
