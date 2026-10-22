@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import type { Project, DqsRun, DqsResult, ChecksCatalog } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import BrandWordmark from '@/components/ui/BrandWordmark'
@@ -9,6 +10,11 @@ const ST = {
   bg:     { pass:'#dcfce7', warn:'#fef9c3', fail:'#fee2e2' },
   icon:   { pass:'✓', warn:'!', fail:'✕' },
 }
+// Severity order for the check list — fail first, then warn, then pass, so
+// what needs attention is visible without scrolling. Supabase's own
+// `.order('status')` sorts alphabetically (fail, pass, warn), which buried
+// warn at the very bottom.
+const STATUS_ORDER: Record<string, number> = { fail: 0, warn: 1, pass: 2 }
 
 // The daily checks behind this report always compare data from 2 days ago
 // vs. the same day last week (see getDailyRanges() in
@@ -39,20 +45,21 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
   const cat = (catalog ?? []) as ChecksCatalog[]
   let results: DqsResult[] = []
   if (run) {
-    const { data } = await supabase.from('dqs_results').select('*').eq('run_id', run.id).order('status')
-    results = (data ?? []) as DqsResult[]
+    const { data } = await supabase.from('dqs_results').select('*').eq('run_id', run.id)
+    results = ((data ?? []) as DqsResult[]).sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
   }
 
   const grade = getScoreGrade(run?.score_total ?? null)
   const ranges = getDailyRanges()
   const passCount = results.filter(r => r.status === 'pass').length
+  const warnCount = results.filter(r => r.status === 'warn').length
   const failCount = results.filter(r => r.status === 'fail').length
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--color-background-tertiary)' }}>
       <nav style={{ background: 'var(--color-background-primary)', borderBottom: '0.5px solid var(--color-border-tertiary)', padding: '0 24px', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <BrandWordmark size={15} mono />
-        <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>alertga4.pl</span>
+        <Link href="https://alertga4.pl" style={{ fontSize: 11, color: 'var(--color-text-secondary)', textDecoration: 'none' }}>alertga4.pl</Link>
       </nav>
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
@@ -84,18 +91,19 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
                 <span style={{ display: 'inline-block', marginTop: 6, fontSize: 12, fontWeight: 500, padding: '3px 10px', borderRadius: 6, background: G[grade].bg, border: `0.5px solid ${G[grade].border}`, color: G[grade].color }}>{G[grade].label}</span>
               </div>
               <div style={{ paddingLeft: 24, borderLeft: '0.5px solid var(--color-border-tertiary)' }}>
-                <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>Podsumowanie</p>
+                <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '0 0 8px' }}>Summary</p>
                 <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
                   <span><strong style={{ color: '#16a34a' }}>{passCount}</strong> <span style={{ color: 'var(--color-text-secondary)' }}>OK</span></span>
-                  <span><strong style={{ color: '#dc2626' }}>{failCount}</strong> <span style={{ color: 'var(--color-text-secondary)' }}>wymaga uwagi</span></span>
+                  <span><strong style={{ color: '#ca8a04' }}>{warnCount}</strong> <span style={{ color: 'var(--color-text-secondary)' }}>Warning</span></span>
+                  <span><strong style={{ color: '#dc2626' }}>{failCount}</strong> <span style={{ color: 'var(--color-text-secondary)' }}>Failing</span></span>
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '8px 0 0' }}>
-                  {new Date(run.run_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(run.run_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
             </div>
           ) : (
-            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Raport zostanie opublikowany wkrótce</p>
+            <p style={{ fontSize: 14, color: 'var(--color-text-secondary)' }}>Report will be published soon</p>
           )}
         </div>
 
@@ -128,7 +136,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         )}
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 32 }}>
-          Raport wygenerowany przez <span style={{ color: '#16a34a' }}>alertga4.pl</span>
+          Report generated by <Link href="https://alertga4.pl" style={{ color: '#16a34a', textDecoration: 'none' }}>alertga4.pl</Link>
         </p>
       </div>
     </div>
