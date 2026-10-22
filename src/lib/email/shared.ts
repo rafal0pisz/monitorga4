@@ -55,15 +55,21 @@ export function hstack(cells: { html: string; width?: number; align?: 'left' | '
   }</tr></table>`
 }
 
-export function footerHtml(lines: string[]): string {
+// contact: override the default "kontakt@bettersteps.pl · alertga4.pl" row
+// with a single link instead — used by client-facing report emails, which
+// should point recipients at the contact form rather than a direct inbox
+// at the parent company's domain.
+export function footerHtml(lines: string[], contact?: { label: string; href: string }): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.ink};">
     <tr><td style="padding:22px 32px 26px;color:#aab0b5;font-size:11.5px;line-height:1.7;">
       ${lines.map((l, i) => `<div style="${i === 0 ? `color:#d7dadc;margin-bottom:8px;` : ''}">${l}</div>`).join('')}
       <div style="margin-top:10px;">
-        <a href="mailto:kontakt@bettersteps.pl" style="color:#ffb3ac;text-decoration:none;">kontakt@bettersteps.pl</a>
+        ${contact
+          ? `<a href="${contact.href}" style="color:#ffb3ac;text-decoration:none;">${contact.label}</a>`
+          : `<a href="mailto:kontakt@bettersteps.pl" style="color:#ffb3ac;text-decoration:none;">kontakt@bettersteps.pl</a>
         <span style="color:#4a545b;margin:0 6px;">·</span>
-        <a href="${APP_URL}" style="color:#ffb3ac;text-decoration:none;">alertga4.pl</a>
+        <a href="${APP_URL}" style="color:#ffb3ac;text-decoration:none;">alertga4.pl</a>`}
       </div>
     </td></tr>
   </table>`

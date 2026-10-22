@@ -170,7 +170,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
   ])
 
   const body = `
-    <div style="padding:16px 32px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND.soft};">AlertGA4 quality alert · issued by Bettersteps</div>
+    <div style="padding:16px 32px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND.soft};">AlertGA4 quality alert</div>
 
     <div style="padding:6px 32px 22px;border-bottom:1px solid ${BRAND.line};">
       <div class="serif" style="font-size:26px;font-weight:600;color:${BRAND.ink};margin:4px 0 2px;">${d.projectName}</div>
@@ -194,10 +194,13 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
 
     ${ctaHtml('View full report →', `${APP_URL}/share/${d.shareToken}`)}
 
-    ${footerHtml([
-      `This automated quality report is issued by AlertGA4 on behalf of Bettersteps for ${d.projectName}.`,
-      'Questions about this report?',
-    ])}
+    ${footerHtml(
+      [
+        `This automated quality report is issued by AlertGA4 on behalf of Bettersteps for ${d.projectName}.`,
+        'Questions about this report?',
+      ],
+      { label: 'alertga4.pl/kontakt', href: `${APP_URL}/kontakt` }
+    )}
   `
 
   return { subject, html: emailShell({ preheader: subject, body }) }
