@@ -57,8 +57,11 @@ an untested assumption about exact Vercel cron timing).
   live database reflects it — ask, or give idempotent SQL that's safe to
   run regardless.
 - Everything behind login (`/dashboard/*`, `/project/*`, and anything else
-  a signed-in user sees) must be English-only. The public marketing site
-  (`/`, `/funkcje`, `/cennik`, `/kontakt`, `/privacy`, `/terms`) is Polish.
+  a signed-in user sees), plus the functional app/auth flow (`/login`,
+  `/auth/callback`, `/invite/*`) must be English-only — the app targets
+  foreign markets too, so app functionality is English even where no one is
+  signed in yet. The public marketing site (`/`, `/funkcje`, `/cennik`,
+  `/kontakt`, `/privacy`, `/terms`) is Polish.
 - `kontakt@bettersteps.pl` / `www.bettersteps.pl` refer to the parent
   company (Bettersteps Sp. z o.o.) and should stay as-is — don't confuse
   these with the app's own domain when doing domain-related work.

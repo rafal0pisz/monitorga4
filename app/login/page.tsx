@@ -18,9 +18,9 @@ function safeNextPath(raw: string | null): string | null {
 
 // error values set by app/auth/callback/route.ts's loginRedirect().
 const ERROR_MESSAGES: Record<string, string> = {
-  insufficient_scope: 'Logowanie nie powiodło się, ponieważ nie przyznano dostępu do Google Analytics (uprawnienie „Zobacz dane Google Analytics”). To uprawnienie jest niezbędne do działania AlertGA4 — spróbuj ponownie i zaznacz wszystkie wymagane uprawnienia na ekranie Google.',
-  missing_code: 'Logowanie nie powiodło się. Spróbuj ponownie.',
-  session_failed: 'Logowanie nie powiodło się. Spróbuj ponownie.',
+  insufficient_scope: "Sign-in failed because access to Google Analytics wasn't granted (the \"See your Google Analytics data\" permission). This permission is required for AlertGA4 to work — please try again and make sure to allow all requested permissions on Google's screen.",
+  missing_code: 'Sign-in failed. Please try again.',
+  session_failed: 'Sign-in failed. Please try again.',
 }
 
 function LoginForm() {
@@ -28,7 +28,7 @@ function LoginForm() {
   const params = useSearchParams()
   const next = safeNextPath(params.get('next'))
   const errorCode = params.get('error')
-  const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? 'Logowanie nie powiodło się. Spróbuj ponownie.') : null
+  const errorMessage = errorCode ? (ERROR_MESSAGES[errorCode] ?? 'Sign-in failed. Please try again.') : null
 
   async function handleGoogleLogin() {
     setLoading(true)
@@ -62,7 +62,7 @@ function LoginForm() {
             <BrandWordmark size={26} />
           </div>
           <p style={{ fontSize: 12, margin: 0, color: 'var(--color-text-secondary)' }}>
-            Monitor jakości implementacji GA4
+            GA4 implementation quality monitor
           </p>
         </div>
 
@@ -74,10 +74,10 @@ function LoginForm() {
           padding: '24px 24px 20px',
         }}>
           <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>
-            Zaloguj się
+            Sign in
           </p>
           <p style={{ fontSize: 12, margin: '0 0 20px', color: 'var(--color-text-secondary)' }}>
-            Wymagane konto Google z dostępem Viewer do GA4. Logowanie zakłada też konto — osobna rejestracja nie jest potrzebna.
+            Requires a Google account with Viewer access to GA4. Signing in also creates your account — no separate registration needed.
           </p>
 
           {errorMessage && (
@@ -117,18 +117,18 @@ function LoginForm() {
               <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.548 0 9s.348 2.825.957 4.039l3.007-2.332z"/>
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
             </svg>
-            {loading ? 'Przekierowywanie…' : 'Kontynuuj przez Google'}
+            {loading ? 'Redirecting…' : 'Continue with Google'}
           </button>
 
           <p style={{ fontSize: 11, textAlign: 'center', margin: '14px 0 0', color: 'var(--color-text-secondary)' }}>
-            Dostęp tylko do odczytu Google Analytics
+            Read-only access to Google Analytics
           </p>
         </div>
 
         <p style={{ fontSize: 11, textAlign: 'center', margin: '16px 0 0', color: '#6b7280' }}>
-          <a href="/privacy" style={{ color: '#6b7280', textDecoration: 'none' }}>Polityka prywatności</a>
+          <a href="/privacy" style={{ color: '#6b7280', textDecoration: 'none' }}>Privacy Policy</a>
           <span style={{ margin: '0 6px' }}>·</span>
-          <a href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>Regulamin</a>
+          <a href="/terms" style={{ color: '#6b7280', textDecoration: 'none' }}>Terms of Service</a>
         </p>
         <p style={{ fontSize: 11, textAlign: 'center', margin: '8px 0 0', color: '#6b7280' }}>
           bettersteps.pl · 2026
