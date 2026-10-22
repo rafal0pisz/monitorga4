@@ -23,7 +23,7 @@ const STATUS_ORDER: Record<string, number> = { fail: 0, warn: 1, pass: 2 }
 // skips it) regardless of what this label used to show.
 function getDailyRanges() {
   const today = new Date()
-  const fmt = (d: Date) => d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })
+  const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const checkedDate = new Date(today); checkedDate.setDate(today.getDate() - 2)
   const lastWeek = new Date(today); lastWeek.setDate(today.getDate() - 9)
   return { current: fmt(checkedDate), prev: fmt(lastWeek) }
@@ -70,7 +70,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
 
         {/* Period bar */}
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '9px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>📅 Okres weryfikacji</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>📅 Verification period</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
             <span style={{ color: 'var(--color-text-primary)' }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: '#16a34a', display: 'inline-block', marginRight: 5, verticalAlign: 'middle' }}/><strong>{ranges.current}</strong></span>
             <span style={{ color: 'var(--color-text-secondary)' }}>vs {ranges.prev}</span>
@@ -111,7 +111,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
         {results.length > 0 && (
           <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
             <div style={{ padding: '12px 20px', borderBottom: '0.5px solid var(--color-border-tertiary)' }}>
-              <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: 'var(--color-text-primary)' }}>Wyniki checków</p>
+              <p style={{ fontSize: 13, fontWeight: 500, margin: 0, color: 'var(--color-text-primary)' }}>Check results</p>
             </div>
             {results.map(r => {
               const def = cat.find(c => c.check_key === r.check_key)
@@ -127,7 +127,7 @@ export default async function SharePage({ params }: { params: Promise<{ token: s
                     </div>
                   </div>
                   <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 5, background: ST.bg[st], color: ST.color[st] }}>{r.score.toFixed(0)}/{r.weight.toFixed(0)} pkt</span>
+                    <span style={{ fontSize: 11, fontWeight: 500, padding: '2px 8px', borderRadius: 5, background: ST.bg[st], color: ST.color[st] }}>{r.score.toFixed(0)}/{r.weight.toFixed(0)} pts</span>
                   </div>
                 </div>
               )
