@@ -4,17 +4,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = [
   '/login', '/auth/callback', '/share', '/privacy', '/terms', '/funkcje', '/kontakt', '/cennik',
   '/demo', '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
-  '/api/contact', '/invite', '/.well-known', '/blog',
+  '/api/contact', '/invite', '/.well-known', '/blog', '/trial-winback',
 ]
 
-// API-only paths: /api/worker/run and /api/worker/trial-reminders authorize
-// themselves (session OR CRON_SECRET bearer token) inside the route handler
-// — redirecting an unauthenticated API/cron request to the HTML /login page
-// would be wrong regardless, and would break Vercel Cron (which never
-// carries a session cookie). Same reasoning for /api/stripe/webhook: Stripe
-// never carries a session cookie, it self-authorizes via the
-// stripe-signature header instead.
-const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/worker/watchdog', '/api/stripe/webhook']
+// API-only paths: /api/worker/run, /api/worker/trial-reminders and
+// /api/worker/trial-winback authorize themselves (session OR CRON_SECRET
+// bearer token) inside the route handler — redirecting an unauthenticated
+// API/cron request to the HTML /login page would be wrong regardless, and
+// would break Vercel Cron (which never carries a session cookie). Same
+// reasoning for /api/stripe/webhook: Stripe never carries a session
+// cookie, it self-authorizes via the stripe-signature header instead.
+// /api/trial-winback/survey is reached from a one-click link in an email
+// with no session at all — it self-authorizes via the per-profile token in
+// the link itself.
+const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/worker/trial-winback', '/api/worker/watchdog', '/api/stripe/webhook', '/api/trial-winback']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })

@@ -13,6 +13,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/worker/trial-winback",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/worker/watchdog",
       "schedule": "0 12 * * *"
     }
