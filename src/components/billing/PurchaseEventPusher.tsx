@@ -27,11 +27,23 @@ export default function PurchaseEventPusher(props: {
       // and fire anyway rather than silently never tracking the purchase.
     }
 
+    // GA4's documented ecommerce shape nests these fields under
+    // "ecommerce" (what GTM's built-in Ecommerce variable and a GA4 Event
+    // tag's "Send Ecommerce Data" option both read from) — a flat push
+    // would be invisible to that mechanism. Clearing it first matches
+    // Google's own recommended pattern, in case GTM or a prior page left a
+    // stale ecommerce object around.
+    if (typeof window !== 'undefined') {
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({ ecommerce: null })
+    }
     pushDataLayerEvent('purchase', {
-      transaction_id: props.transactionId,
-      value: props.value,
-      currency: props.currency,
-      items: [{ item_id: props.planId, item_name: props.planName, price: props.value, quantity: 1 }],
+      ecommerce: {
+        transaction_id: props.transactionId,
+        value: props.value,
+        currency: props.currency,
+        items: [{ item_id: props.planId, item_name: props.planName, price: props.value, quantity: 1 }],
+      },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
