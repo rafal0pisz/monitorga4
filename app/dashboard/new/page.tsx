@@ -88,7 +88,7 @@ export default async function NewProjectPage() {
       ) : ownCanStartTrial ? (
         <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px' }}>
           <p style={{ fontSize: 13, color: '#166534', margin: '0 0 10px' }}>
-            You don&apos;t have a paid plan yet, so you can&apos;t create a project{teamOwnerId ? ' of your own' : ''}. Start your free {TRIAL_DAYS}-day trial on Agency terms (up to 100 GA4 properties) — no card required, one-time only.
+            You don&apos;t have a paid plan yet, so you can&apos;t create a project{teamOwnerId ? ' of your own' : ''}. Start your free {TRIAL_DAYS}-day trial on Pro terms (up to 15 GA4 properties) — no card required, one-time only.
           </p>
           <StartTrialButton label={`Start ${TRIAL_DAYS}-day free trial`} lang="en" />
           {teamOwnerId && (

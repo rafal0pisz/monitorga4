@@ -1,7 +1,7 @@
 import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, fmtDate } from './shared'
 
 const FEATURES = [
-  'Monitor up to 100 GA4 properties',
+  'Monitor up to 15 GA4 properties',
   'Daily automated monitoring, no manual checks needed',
   'Unlimited custom event, e-commerce and parameter checks per property',
   'Email alerts the moment something looks wrong',
@@ -16,7 +16,7 @@ export function renderTrialWelcomeEmail(trialEndsAt: Date): { subject: string; h
     <div style="padding:6px 32px 4px;">
       <div class="serif" style="font-size:24px;font-weight:600;color:${BRAND.ink};margin:4px 0 10px;">Thanks for starting your trial</div>
       <p style="font-size:13.5px;color:#4a5157;line-height:1.6;margin:0 0 4px;">
-        Your account now runs on Agency terms for the next <b style="color:${BRAND.ink};">14 days</b> — no card required.
+        Your account now runs on Pro terms for the next <b style="color:${BRAND.ink};">14 days</b> — no card required.
         Your trial ends on <b style="color:${BRAND.ink};">${fmtDate(trialEndsAt)}</b>.
       </p>
     </div>

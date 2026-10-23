@@ -65,13 +65,13 @@ export const TRIAL_DAYS = 14
 
 export function planLimit(planId: string | null | undefined): number {
   if (planId === 'internal') return Number.MAX_SAFE_INTEGER
-  if (planId === 'trial') return 100 // same ceiling as Agency — see supabase/migrations/013_trial.sql
+  if (planId === 'trial') return 15 // same ceiling as Pro — see supabase/migrations/032_trial_pro_terms.sql
   return PLANS.find(p => p.id === planId)?.projectLimit ?? 0
 }
 
 export function planName(planId: string | null | undefined): string {
   if (planId === 'internal') return 'Internal'
-  if (planId === 'trial') return 'Trial (Agency)'
+  if (planId === 'trial') return 'Trial (Pro)'
   return PLANS.find(p => p.id === planId)?.name ?? 'No plan'
 }
 

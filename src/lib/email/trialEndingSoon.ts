@@ -8,7 +8,7 @@ export function renderTrialEndingSoonEmail(trialEndsAt: Date, daysLeft: number):
     <div style="padding:6px 32px 22px;">
       <div class="serif" style="font-size:24px;font-weight:600;color:${BRAND.ink};margin:4px 0 10px;">Your trial ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}</div>
       <p style="font-size:13.5px;color:#4a5157;line-height:1.6;margin:0 0 12px;">
-        Your 14-day AlertGA4 trial (on Agency terms) ends on <b style="color:${BRAND.ink};">${fmtDate(trialEndsAt)}</b>.
+        Your 14-day AlertGA4 trial (on Pro terms) ends on <b style="color:${BRAND.ink};">${fmtDate(trialEndsAt)}</b>.
         After that, monitoring keeps your existing data but won't let you add new GA4 properties until you pick a plan.
       </p>
       <p style="font-size:13.5px;color:#4a5157;line-height:1.6;margin:0;">

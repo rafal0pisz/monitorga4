@@ -57,7 +57,7 @@ export default function TermsPage() {
           <li style={li}><strong>Użytkownik</strong> — osoba fizyczna, osoba prawna lub jednostka organizacyjna nieposiadająca osobowości prawnej, której ustawa przyznaje zdolność prawną, korzystająca z Usługi na zasadach niniejszego Regulaminu.</li>
           <li style={li}><strong>Konto</strong> — przestrzeń w Serwisie przypisana do konta Google Użytkownika, wraz z utworzonymi Projektami i ich konfiguracją.</li>
           <li style={li}><strong>Projekt</strong> — pojedyncza usługa GA4 dodana przez Użytkownika do monitorowania, wraz z jej konfiguracją (nazwa, zdefiniowane sprawdzenia, progi alertów, odbiorcy alertów).</li>
-          <li style={li}><strong>Okres Próbny</strong> — bezpłatny, jednorazowy okres testowy Konta, wskazany na stronie alertga4.pl/cennik, udostępniany na zasadach planu Agency, bez konieczności podania danych karty płatniczej.</li>
+          <li style={li}><strong>Okres Próbny</strong> — bezpłatny, jednorazowy okres testowy Konta, wskazany na stronie alertga4.pl/cennik, udostępniany na zasadach planu Pro, bez konieczności podania danych karty płatniczej.</li>
           <li style={li}><strong>Plan Abonamentowy</strong> — wariant odpłatnego korzystania z Konta (Individual, Pro lub Agency), różniący się m.in. limitem liczby monitorowanych usług GA4, opisany szczegółowo na stronie alertga4.pl/cennik.</li>
           <li style={li}><strong>Okres Rozliczeniowy</strong> — miesięczny lub roczny okres, za jaki pobierana jest Opłata Abonamentowa, zgodnie z wyborem Użytkownika przy zakupie Planu Abonamentowego.</li>
           <li style={li}><strong>Opłata Abonamentowa</strong> — opłata z tytułu korzystania z Konta w ramach wybranego Planu Abonamentowego, w wysokości wskazanej w Cenniku.</li>
@@ -90,7 +90,7 @@ export default function TermsPage() {
           <li style={li}>Dostęp do Serwisu wymaga zalogowania się za pomocą konta Google. Serwis nie oferuje rejestracji loginem i hasłem ani logowania anonimowego.</li>
           <li style={li}>Aby dodać Projekt, Użytkownik musi posiadać uprawnienia co najmniej na poziomie „Viewer” do odpowiedniej usługi GA4 w Google Analytics. Użytkownikowi zabrania się wykorzystywania Serwisu do uzyskiwania lub prób uzyskiwania dostępu do usługi GA4, do której nie posiada uprawnień.</li>
           <li style={li}>Użytkownik odpowiada za konfigurację swoich Projektów, w tym za poprawność adresów e-mail odbiorców alertów, które sam wprowadza.</li>
-          <li style={li}>Po pierwszym zalogowaniu Użytkownikowi udostępniany jest jednorazowy, 14-dniowy Okres Próbny na zasadach planu Agency, bez konieczności podania danych karty płatniczej. Po jego zakończeniu dalsze korzystanie z Konta wymaga wykupienia Planu Abonamentowego.</li>
+          <li style={li}>Po pierwszym zalogowaniu Użytkownikowi udostępniany jest jednorazowy, 14-dniowy Okres Próbny na zasadach planu Pro, bez konieczności podania danych karty płatniczej. Po jego zakończeniu dalsze korzystanie z Konta wymaga wykupienia Planu Abonamentowego.</li>
           <li style={li}>Operator zastrzega sobie prawo do zablokowania dostępu do Konta w przypadku uzasadnionego podejrzenia naruszenia Regulaminu, w szczególności podania nieprawdziwych danych lub naruszenia zasad opisanych w rozdziale IV.</li>
         </ol>
 

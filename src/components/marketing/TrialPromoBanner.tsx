@@ -9,7 +9,7 @@ export default function TrialPromoBanner() {
   return (
     <div className="trial-promo-banner">
       <h3>{TRIAL_DAYS} dni za darmo. <em>Bez karty.</em> Bez zobowiązań.</h3>
-      <p>Pełny dostęp do AlertGA4 na zasadach planu Agency — do 100 monitorowanych usług GA4.</p>
+      <p>Pełny dostęp do AlertGA4 na zasadach planu Pro — do 15 monitorowanych usług GA4.</p>
       <Link href="/login" className="trial-promo-link">Rozpocznij bezpłatny okres próbny →</Link>
     </div>
   )
