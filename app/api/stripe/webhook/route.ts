@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getStripe } from '@/lib/stripe/client'
-import { planByStripePriceId } from '@/lib/billing/plans'
+import { planByStripePriceId, planById } from '@/lib/billing/plans'
+import { sendEmail } from '@/lib/email/resend'
+import { renderPurchaseConfirmationEmail } from '@/lib/email/purchaseConfirmation'
 
 async function alreadyProcessed(supabase: ReturnType<typeof createAdminClient>, eventId: string): Promise<boolean> {
   const { data } = await supabase.from('billing_events').select('id').eq('stripe_event_id', eventId).maybeSingle()
@@ -102,6 +104,28 @@ export async function POST(request: NextRequest) {
             await stripe.subscriptions.cancel(previousSubscriptionId)
           } catch {
             // Already canceled or gone — nothing to do.
+          }
+        }
+
+        // Best-effort — a failed confirmation email must never fail the
+        // webhook itself (the subscription/profile update above already
+        // succeeded and must not be retried/undone over an email glitch).
+        if (planId) {
+          try {
+            const { data: authUser } = await supabase.auth.admin.getUserById(profileId)
+            const email = authUser?.user?.email
+            if (email) {
+              await sendEmail({
+                to: email,
+                ...renderPurchaseConfirmationEmail({
+                  planName: planById(planId)?.name ?? planId,
+                  cycle: cycle === 'yearly' ? 'yearly' : 'monthly',
+                  currentPeriodEnd: periodEndIso(subscription) ? new Date(periodEndIso(subscription)!) : null,
+                }),
+              })
+            }
+          } catch (err) {
+            console.error('[stripe/webhook] Failed to send purchase confirmation email:', err instanceof Error ? err.message : err)
           }
         }
         break
