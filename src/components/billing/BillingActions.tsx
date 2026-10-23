@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 export default function BillingActions({ hasPurchasablePlan }: { hasPurchasablePlan: boolean }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('billing_actions')
 
   async function openPortal() {
     setError(null)

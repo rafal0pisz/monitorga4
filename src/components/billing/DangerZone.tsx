@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 export default function DangerZone() {
   const [exporting, setExporting] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('billing_danger_zone')
 
   async function handleExport() {
     setExporting(true)

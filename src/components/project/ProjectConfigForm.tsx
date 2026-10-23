@@ -8,6 +8,7 @@ import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 import { parseEmailList } from '@/lib/email/shared'
 import { checkLabel } from '@/lib/ga4/checkLabels'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -102,7 +103,7 @@ export default function ProjectConfigForm({ project }: Props) {
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
   const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState<string | null>(null)
+  const [error,       setError]       = useTrackedError('project_config_form')
   const [success,     setSuccess]     = useState(false)
 
   const [showDeleteModal,  setShowDeleteModal]  = useState(false)

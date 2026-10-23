@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 import { type CheckResult, SectionBlock } from './CheckCardShared'
 
 export type { CheckResult }
@@ -111,7 +112,7 @@ const LCStyle = () => (
 export default function LiveChecksPanel({ projectId, period, anchorOffset = 0, extraChecks = [] }: Props) {
   const [checks,  setChecks]  = useState<CheckResult[] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState<string | null>(null)
+  const [error,   setError]   = useTrackedError('project_live_checks_panel')
   const [blocked, setBlocked] = useState(false)
   const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
   const [needsReconnect, setNeedsReconnect] = useState(false)

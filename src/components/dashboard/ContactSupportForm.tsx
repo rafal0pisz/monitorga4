@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 // Values sent to /api/contact must match CATEGORIES in that route exactly
 // (shared with the public Polish contact form) — only the labels shown
@@ -22,7 +23,7 @@ export default function ContactSupportForm({ defaultEmail }: { defaultEmail?: st
   const [message, setMessage] = useState('')
   const [website, setWebsite] = useState('') // honeypot — left blank by real users
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('dashboard_contact_support')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

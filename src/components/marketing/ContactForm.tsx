@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 const CATEGORIES = ['Wsparcie z obsługi', 'Chęć przetestowania aplikacji', 'Błąd w aplikacji', 'Inne']
 
@@ -11,7 +12,7 @@ export default function ContactForm() {
   const [message, setMessage] = useState('')
   const [website, setWebsite] = useState('') // honeypot — left blank by real users
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('marketing_contact_form')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

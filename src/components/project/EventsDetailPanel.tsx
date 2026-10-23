@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 import { type EventData, EventCard } from './EventCardShared'
 
 export type { EventData }
@@ -8,7 +9,7 @@ export type { EventData }
 export default function EventsDetailPanel({ projectId, expectedEvents, periodDays, anchorOffset = 0 }: { projectId: string; expectedEvents: string[]; periodDays: number; anchorOffset?: number }) {
   const [data, setData] = useState<Record<string, EventData> | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('project_events_detail_panel')
   const [blocked, setBlocked] = useState(false)
   const [blockedScope, setBlockedScope] = useState<'owner' | 'member'>('owner')
   const [needsReconnect, setNeedsReconnect] = useState(false)

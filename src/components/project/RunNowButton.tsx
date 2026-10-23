@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 export default function RunNowButton({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('run_now_button')
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()

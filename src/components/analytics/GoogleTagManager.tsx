@@ -1,29 +1,19 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 
 const GTM_ID = 'GTM-KV5FTJFD'
 
-// The authenticated app surface (behind Google login) stays untagged — GTM
-// is for the public site and marketing funnel around it, not the app
-// itself. Matches middleware.ts's own split between public and auth-gated
-// paths.
-const APP_PATH_PREFIXES = ['/dashboard', '/project', '/admin']
-
-// Exact paths (never prefixes) under an excluded area above that still load
-// GTM, because a specific funnel event has to fire from there — the "start
-// trial" CTA (StartTrialButton, rendered on these two post-login pages) and
-// the purchase-confirmation page. Everything else under /dashboard
-// (billing, team, project detail — anywhere real customer GA4 data shows
-// up) stays untagged.
-const TRACKED_EXCEPTIONS = ['/dashboard', '/dashboard/new', '/dashboard/billing/success']
-
+// Loaded on every page, including the authenticated app (dashboard/project/
+// admin) — this only ever sees what the app explicitly pushes to
+// dataLayer (trial_click, sign_up, purchase, exception — see
+// src/lib/analytics/) or reads off the URL/DOM via a configured GTM
+// variable; it has no access to the GA4 report data itself (fetched
+// server-side from Google's API, never put in page content GTM could read).
+// Was previously excluded from /dashboard, /project and /admin, with
+// path-specific exceptions carved out for the handful of pages that needed
+// an event — removed once that distinction stopped mattering.
 export default function GoogleTagManager() {
-  const pathname = usePathname()
-  const inExcludedArea = APP_PATH_PREFIXES.some(prefix => pathname?.startsWith(prefix))
-  if (inExcludedArea && !TRACKED_EXCEPTIONS.includes(pathname ?? '')) return null
-
   return (
     <>
       <Script id="gtm-script" strategy="afterInteractive">

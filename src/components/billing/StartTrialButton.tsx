@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { pushDataLayerEvent } from '@/lib/analytics/dataLayer'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 export default function StartTrialButton({
   label, lang = 'en', style,
@@ -11,7 +12,7 @@ export default function StartTrialButton({
   style?: React.CSSProperties
 }) {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('start_trial_button')
 
   async function handleClick() {
     pushDataLayerEvent('trial_click')

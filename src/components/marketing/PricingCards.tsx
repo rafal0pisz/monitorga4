@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 interface PlanCard {
   id: string
@@ -19,7 +20,7 @@ export default function PricingCards({
 }) {
   const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('pricing_cards')
 
   async function handleSelect(planId: string) {
     if (!loggedIn) {

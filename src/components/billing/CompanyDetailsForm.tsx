@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 interface Props {
   hasCustomer: boolean
@@ -25,7 +26,7 @@ export default function CompanyDetailsForm({ hasCustomer, initialName, initialLi
   const [postalCode, setPostalCode] = useState(initialPostalCode)
   const [nip, setNip] = useState(initialNip)
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('billing_company_details')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

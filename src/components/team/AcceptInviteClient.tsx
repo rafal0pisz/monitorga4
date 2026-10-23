@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 interface Props {
   token: string
@@ -14,7 +15,7 @@ interface Props {
 export default function AcceptInviteClient({ token, invitedEmail, ownerEmail, alreadyAccepted, notFound }: Props) {
   const [sessionEmail, setSessionEmail] = useState<string | null | undefined>(undefined) // undefined = loading
   const [accepting, setAccepting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('team_accept_invite')
   const [done, setDone] = useState(false)
 
   useEffect(() => {

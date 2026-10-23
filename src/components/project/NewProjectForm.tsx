@@ -7,6 +7,7 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -99,7 +100,7 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('new_project_form')
 
   // GA4 property picker
   const [properties, setProperties] = useState<GA4Property[]>([])

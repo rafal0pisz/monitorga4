@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 export default function LeaveTeamButton() {
   const [confirming, setConfirming] = useState(false)
   const [leaving, setLeaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('team_leave_button')
 
   async function handleLeave() {
     setLeaving(true)

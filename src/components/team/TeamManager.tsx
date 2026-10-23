@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 export interface TeamMemberRow {
   id: string
@@ -15,7 +16,7 @@ export default function TeamManager({ members, maxSeats, appUrl }: { members: Te
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [inviting, setInviting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useTrackedError('team_manager')
   const [notice, setNotice] = useState<string | null>(null)
   const [removingId, setRemovingId] = useState<string | null>(null)
 
