@@ -28,12 +28,12 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
   }
 }
 
-const RETENTION_DAYS = 60
+const RETENTION_DAYS = 40
 
 // GET — Vercel Cron, once daily. Prunes daily check history
 // (dqs_runs/dqs_results) older than RETENTION_DAYS so the DB doesn't grow
 // unbounded — this table gets a row per check per project per day, forever,
-// with no cap until this ran. 60 days is comfortably more than anything
+// with no cap until this ran. 40 days is comfortably more than anything
 // currently reads: the history page shows the last 30 completed runs
 // (app/project/[id]/history/page.tsx's HISTORY_RUNS) and the worker's own
 // trend/baseline comparisons look back at most a few weeks. Only touches

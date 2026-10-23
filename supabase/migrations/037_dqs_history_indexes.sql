@@ -2,7 +2,7 @@
 -- GA4 Quality Score — Migration 037: indexes for history cleanup
 -- ============================================================
 -- app/api/worker/cleanup-old-data/route.ts deletes dqs_runs/dqs_results
--- rows older than 60 days, once a day. Its WHERE clause filters on run_date
+-- rows older than 40 days, once a day. Its WHERE clause filters on run_date
 -- alone (across every project, not scoped to one), and the dqs_results
 -- delete filters on run_id — this project's base schema predates the
 -- supabase/migrations/ convention (nothing here defines dqs_runs/
