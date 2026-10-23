@@ -46,9 +46,23 @@ export default async function KontaktPage() {
         .kontakt-hero h1 { font-size: clamp(26px, 4vw, 36px); letter-spacing: -0.01em; margin-bottom: 12px; }
         .kontakt-hero p { font-size: 15.5px; color: #5b6570; max-width: 52ch; line-height: 1.6; }
 
-        /* Form-only layout — the direct-contact card was dropped entirely
-           (mobile and desktop alike) in favor of one clear action. */
-        .kontakt-form-wrap { max-width: 520px; margin: 0 auto; padding: 40px 0 88px; }
+        .kontakt-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 48px; align-items: start; padding: 40px 0 88px; }
+        @media (max-width: 860px) {
+          .kontakt-grid { grid-template-columns: 1fr; gap: 32px; }
+          /* Form first on mobile, company info below it — reversed from the
+             DOM order (info card first) desktop's two columns use. Ordered
+             by position, not by tag, since ContactForm renders a <form>
+             normally but a plain <div> once the message is sent. */
+          .kontakt-grid > *:nth-child(1) { order: 2; }
+          .kontakt-grid > *:nth-child(2) { order: 1; }
+        }
+
+        .kontakt-info-card { background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 14px; padding: 26px 28px; }
+        .kontakt-info-card h3 { font-size: 15px; margin-bottom: 6px; }
+        .kontakt-info-card p { font-size: 13.5px; color: #5b6570; line-height: 1.6; margin: 0 0 18px; }
+        .kontakt-info-card a.email { display: inline-block; font-family: var(--font-mono), monospace; font-size: 14.5px; font-weight: 600; color: #232b31; text-decoration: none; padding: 9px 14px; border-radius: 8px; background: #fff; border: 1px solid #e2e6e8; margin-bottom: 22px; }
+        .kontakt-info-card a.email:hover { border-color: #8b939a; }
+        .kontakt-info-addr { font-size: 12.5px; color: #8b939a; line-height: 1.7; border-top: 1px solid #e2e6e8; padding-top: 16px; }
 
         .contact-form { display: flex; flex-direction: column; gap: 16px; background: #fff; border: 1px solid #e2e6e8; border-radius: 14px; padding: 28px; box-shadow: 0 1px 2px rgba(35,43,49,0.04), 0 20px 40px -24px rgba(35,43,49,0.18); }
         .contact-field { display: flex; flex-direction: column; gap: 6px; }
@@ -75,7 +89,17 @@ export default async function KontaktPage() {
           <p>Pytanie o wsparcie, chęć przetestowania AlertGA4, zgłoszenie błędu albo coś zupełnie innego — napisz do nas.</p>
         </div>
 
-        <div className="wrap kontakt-form-wrap">
+        <div className="wrap kontakt-grid">
+          <div className="kontakt-info-card">
+            <h3>Napisz bezpośrednio</h3>
+            <a className="email" href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
+            <div className="kontakt-info-addr">
+              Bettersteps Sp. z o.o.<br />
+              ul. Domaniewska 47, 02-672 Warszawa<br />
+              KRS 0001011888 · NIP 5214000359
+            </div>
+          </div>
+
           <ContactForm />
         </div>
       </main>
