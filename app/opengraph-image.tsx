@@ -69,9 +69,9 @@ export default async function OpengraphImage() {
           fontFamily: plexSansRegular ? 'PlexSans' : undefined,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 84, letterSpacing: 5, marginTop: -40 }}>
-          <span style={{ color: '#ffffff', fontFamily: poppinsBoldItalic ? 'Poppins' : undefined, fontWeight: 700, fontStyle: 'italic' }}>ALERT</span>
-          <span style={{ color: '#fffd73', fontFamily: plexSansRegular ? 'PlexSans' : undefined, fontWeight: 400 }}>GA4.</span>
+        <div style={{ display: 'flex', fontSize: 84, fontFamily: poppinsBoldItalic ? 'Poppins' : undefined, fontWeight: 700, fontStyle: 'italic', letterSpacing: 5, marginTop: -40 }}>
+          <span style={{ color: '#ffffff' }}>ALERT</span>
+          <span style={{ color: '#fffd73' }}>GA4.</span>
         </div>
         <div style={{ display: 'flex', marginTop: 24, fontSize: 30, color: '#ffffff', textAlign: 'center' }}>
           {tagline}
