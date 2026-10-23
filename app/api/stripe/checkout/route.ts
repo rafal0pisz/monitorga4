@@ -56,6 +56,13 @@ export async function POST(request: NextRequest) {
       customer_update: { name: 'auto', address: 'auto' },
       billing_address_collection: 'required',
       tax_id_collection: { enabled: true },
+      // Stripe Tax: calculates VAT per the customer's billing address and
+      // the account's Tax settings (registrations: Poland domestic + EU
+      // OSS; "Include tax in prices" = No, so prices in plans.ts are net
+      // and VAT is added on top). Requires Stripe Tax to be configured
+      // (origin address + registrations) — without that, Checkout Session
+      // creation itself fails, so this must only ship once that's done.
+      automatic_tax: { enabled: true },
       // Shows a "Add promotion code" field on the Stripe-hosted checkout
       // page — the actual coupons/promotion codes are created and managed
       // directly in the Stripe Dashboard, not in this app.
