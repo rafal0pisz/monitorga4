@@ -1,0 +1,40 @@
+'use client'
+
+import { useEffect } from 'react'
+import { pushDataLayerEvent } from '@/lib/analytics/dataLayer'
+
+export default function PurchaseEventPusher(props: {
+  transactionId: string
+  value: number
+  currency: string
+  planId: string
+  planName: string
+}) {
+  useEffect(() => {
+    // Guards against double-counting the same purchase — this page can be
+    // revisited (back button, refresh, bookmarked link) with the same
+    // session_id, which would otherwise fire a second identical purchase
+    // event every time. Keyed per tab/session, not per browser, which is
+    // the right scope here (a different tab re-landing here legitimately
+    // wouldn't be a second purchase either, but that's an edge case not
+    // worth more machinery for).
+    const key = `ga4_purchase_sent_${props.transactionId}`
+    try {
+      if (sessionStorage.getItem(key)) return
+      sessionStorage.setItem(key, '1')
+    } catch {
+      // sessionStorage unavailable (private mode, blocked) — fall through
+      // and fire anyway rather than silently never tracking the purchase.
+    }
+
+    pushDataLayerEvent('purchase', {
+      transaction_id: props.transactionId,
+      value: props.value,
+      currency: props.currency,
+      items: [{ item_id: props.planId, item_name: props.planName, price: props.value, quantity: 1 }],
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return null
+}

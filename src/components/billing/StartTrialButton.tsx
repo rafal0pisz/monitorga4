@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { pushDataLayerEvent } from '@/lib/analytics/dataLayer'
 
 export default function StartTrialButton({
   label, lang = 'en', style,
@@ -13,6 +14,7 @@ export default function StartTrialButton({
   const [error, setError] = useState<string | null>(null)
 
   async function handleClick() {
+    pushDataLayerEvent('trial_click')
     setError(null)
     setLoading(true)
     try {

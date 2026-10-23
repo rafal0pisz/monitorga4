@@ -90,6 +90,14 @@ export async function GET(request: NextRequest) {
   // token, which meant an existing user's email was never backfilled here
   // at all if GA4 tokens were saved by some other path.
   const admin = createAdminClient()
+
+  // Determined BEFORE the upsert below (which runs on every login and would
+  // otherwise make this always look like an existing row) — used only to
+  // decide whether to route through /auth/welcome for a one-time sign_up
+  // analytics event, never for anything access-related.
+  const { data: existingProfile } = await admin.from('profiles').select('id').eq('id', userId).maybeSingle()
+  const isFirstLogin = !existingProfile
+
   const basePayload: Record<string, string | null> = {
     id: userId,
     org_id: '00000000-0000-0000-0000-000000000001',
@@ -124,5 +132,18 @@ export async function GET(request: NextRequest) {
       providerRefreshToken ? '(with refresh_token)' : '(no refresh_token — re-login with prompt=consent needed)')
   }
 
-  return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+  const destination = next ?? '/dashboard'
+
+  // Route first-ever logins through a tiny bridge page that fires the
+  // sign_up analytics event with this user's id, then forwards on to the
+  // real destination — keeps that one-time event off of every other login,
+  // without needing GTM loaded on whatever page "next" happens to be.
+  if (isFirstLogin) {
+    const welcomeUrl = new URL('/auth/welcome', origin)
+    welcomeUrl.searchParams.set('uid', userId)
+    welcomeUrl.searchParams.set('next', destination)
+    return NextResponse.redirect(welcomeUrl)
+  }
+
+  return NextResponse.redirect(`${origin}${destination}`)
 }

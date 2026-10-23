@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getStripe } from '@/lib/stripe/client'
 import { planById } from '@/lib/billing/plans'
+import PurchaseEventPusher from '@/components/billing/PurchaseEventPusher'
 
 export default async function BillingSuccessPage({
   searchParams,
@@ -11,11 +12,22 @@ export default async function BillingSuccessPage({
 
   let planLabel: string | null = null
   let paid = false
+  let purchaseEvent: { transactionId: string; value: number; currency: string; planId: string; planName: string } | null = null
   if (session_id) {
     try {
       const session = await getStripe().checkout.sessions.retrieve(session_id)
       paid = session.payment_status === 'paid' || session.status === 'complete'
-      planLabel = planById(session.metadata?.plan_id ?? '')?.name ?? null
+      const plan = planById(session.metadata?.plan_id ?? '')
+      planLabel = plan?.name ?? null
+      if (paid && plan && session.amount_total != null && session.currency) {
+        purchaseEvent = {
+          transactionId: session.id,
+          value: session.amount_total / 100,
+          currency: session.currency.toUpperCase(),
+          planId: plan.id,
+          planName: plan.name,
+        }
+      }
     } catch {
       // Invalid or expired session ID — show a generic thank-you instead of
       // an error; the purchase is confirmed asynchronously by the webhook
@@ -25,6 +37,7 @@ export default async function BillingSuccessPage({
 
   return (
     <div style={{ maxWidth: 480, margin: '60px auto 0', textAlign: 'center' }}>
+      {purchaseEvent && <PurchaseEventPusher {...purchaseEvent} />}
       <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 22, fontWeight: 700 }}>✓</div>
       <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 8px', color: 'var(--color-text-primary)' }}>
         Thanks for subscribing{planLabel ? ` to ${planLabel}` : ''}!

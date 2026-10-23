@@ -11,9 +11,18 @@ const GTM_ID = 'GTM-KV5FTJFD'
 // paths.
 const APP_PATH_PREFIXES = ['/dashboard', '/project', '/admin']
 
+// Exact paths (never prefixes) under an excluded area above that still load
+// GTM, because a specific funnel event has to fire from there — the "start
+// trial" CTA (StartTrialButton, rendered on these two post-login pages) and
+// the purchase-confirmation page. Everything else under /dashboard
+// (billing, team, project detail — anywhere real customer GA4 data shows
+// up) stays untagged.
+const TRACKED_EXCEPTIONS = ['/dashboard', '/dashboard/new', '/dashboard/billing/success']
+
 export default function GoogleTagManager() {
   const pathname = usePathname()
-  if (APP_PATH_PREFIXES.some(prefix => pathname?.startsWith(prefix))) return null
+  const inExcludedArea = APP_PATH_PREFIXES.some(prefix => pathname?.startsWith(prefix))
+  if (inExcludedArea && !TRACKED_EXCEPTIONS.includes(pathname ?? '')) return null
 
   return (
     <>
