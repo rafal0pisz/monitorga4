@@ -5,7 +5,7 @@
 export type BillingCycle = 'monthly' | 'yearly'
 
 export interface Plan {
-  id: 'individual' | 'pro' | 'agency'
+  id: 'lite' | 'pro' | 'agency'
   name: string
   projectLimit: number
   priceMonthlyPLN: number
@@ -13,10 +13,15 @@ export interface Plan {
   stripePriceId: Record<BillingCycle, string | undefined>
 }
 
+// id 'lite' was 'individual' until the rename in migration 033 — the env
+// var names below (STRIPE_PRICE_INDIVIDUAL_*) are kept as-is deliberately:
+// they're arbitrary internal Vercel variable names with no user-facing
+// meaning, and renaming them would require creating new ones in Vercel for
+// zero functional benefit.
 export const PLANS: Plan[] = [
   {
-    id: 'individual',
-    name: 'Individual',
+    id: 'lite',
+    name: 'Lite',
     projectLimit: 3,
     priceMonthlyPLN: 29,
     // -40% off the annualized monthly price (29*12=348), rounded down so

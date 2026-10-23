@@ -2,30 +2,31 @@ import PlanComparisonCarousel from './PlanComparisonCarousel'
 
 export interface Row {
   label: string
-  individual: string
+  lite: string
   pro: string
   agency: string
 }
 
-// Individual caps custom events/e-commerce/parameters at 5 each per
-// service (plan_item_limit() in supabase/migrations/031_...) — Pro and
-// Agency stay unlimited. Beyond that and the service count itself, the
-// monitoring functionality is identical across plans; support level and
-// the analyst consultation (Agency only) are the other real differences.
+// Lite (plan_id 'lite' — renamed from 'individual' in migration 033) caps
+// custom events/e-commerce/parameters at 5 each per service
+// (plan_item_limit() in supabase/migrations/031_...) — Pro and Agency stay
+// unlimited. Beyond that and the service count itself, the monitoring
+// functionality is identical across plans; support level and the analyst
+// consultation (Agency only) are the other real differences.
 export const ROWS: Row[] = [
-  { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 15', agency: 'do 100' },
-  { label: 'Codzienny automatyczny monitoring', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Niestandardowe zdarzenia (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
-  { label: 'Zdarzenia e-commerce (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
-  { label: 'Parametry (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
-  { label: 'Codzienny alert mailowy', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Kreator konfiguracji z podpowiedziami z GA4', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Wsparcie', individual: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
-  { label: 'Konsultacja z analitykiem GA4', individual: '—', pro: '—', agency: '1h / miesiąc' },
+  { label: 'Monitorowane usługi GA4', lite: 'do 3', pro: 'do 15', agency: 'do 100' },
+  { label: 'Codzienny automatyczny monitoring', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Niestandardowe zdarzenia (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Zdarzenia e-commerce (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Parametry (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Codzienny alert mailowy', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Kreator konfiguracji z podpowiedziami z GA4', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Wsparcie', lite: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
+  { label: 'Konsultacja z analitykiem GA4', lite: '—', pro: '—', agency: '1h / miesiąc' },
 ]
 
-export const PLAN_KEYS = ['individual', 'pro', 'agency'] as const
-export const PLAN_LABELS: Record<typeof PLAN_KEYS[number], string> = { individual: 'Individual', pro: 'Pro', agency: 'Agency' }
+export const PLAN_KEYS = ['lite', 'pro', 'agency'] as const
+export const PLAN_LABELS: Record<typeof PLAN_KEYS[number], string> = { lite: 'Lite', pro: 'Pro', agency: 'Agency' }
 
 export default function PlanComparisonTable() {
   return (
@@ -36,7 +37,7 @@ export default function PlanComparisonTable() {
           <thead>
             <tr>
               <th></th>
-              <th>Individual</th>
+              <th>Lite</th>
               <th>Pro</th>
               <th>Agency</th>
             </tr>

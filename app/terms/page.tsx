@@ -58,7 +58,7 @@ export default function TermsPage() {
           <li style={li}><strong>Konto</strong> — przestrzeń w Serwisie przypisana do konta Google Użytkownika, wraz z utworzonymi Projektami i ich konfiguracją.</li>
           <li style={li}><strong>Projekt</strong> — pojedyncza usługa GA4 dodana przez Użytkownika do monitorowania, wraz z jej konfiguracją (nazwa, zdefiniowane sprawdzenia, progi alertów, odbiorcy alertów).</li>
           <li style={li}><strong>Okres Próbny</strong> — bezpłatny, jednorazowy okres testowy Konta, wskazany na stronie alertga4.pl/cennik, udostępniany na zasadach planu Pro, bez konieczności podania danych karty płatniczej.</li>
-          <li style={li}><strong>Plan Abonamentowy</strong> — wariant odpłatnego korzystania z Konta (Individual, Pro lub Agency), różniący się m.in. limitem liczby monitorowanych usług GA4, opisany szczegółowo na stronie alertga4.pl/cennik.</li>
+          <li style={li}><strong>Plan Abonamentowy</strong> — wariant odpłatnego korzystania z Konta (Lite, Pro lub Agency), różniący się m.in. limitem liczby monitorowanych usług GA4, opisany szczegółowo na stronie alertga4.pl/cennik.</li>
           <li style={li}><strong>Okres Rozliczeniowy</strong> — miesięczny lub roczny okres, za jaki pobierana jest Opłata Abonamentowa, zgodnie z wyborem Użytkownika przy zakupie Planu Abonamentowego.</li>
           <li style={li}><strong>Opłata Abonamentowa</strong> — opłata z tytułu korzystania z Konta w ramach wybranego Planu Abonamentowego, w wysokości wskazanej w Cenniku.</li>
           <li style={li}><strong>Cennik</strong> — aktualny cennik Usługi dostępny pod adresem alertga4.pl/cennik.</li>
@@ -107,7 +107,7 @@ export default function TermsPage() {
 
         <h2 style={h2}>V. Plany, opłaty i rozliczenia</h2>
         <ol style={ol}>
-          <li style={li}>Korzystanie z Serwisu po zakończeniu Okresu Próbnego jest odpłatne, zgodnie z wybranym Planem Abonamentowym (Individual, Pro lub Agency), różniącym się limitem liczby monitorowanych Projektów. Aktualne limity i ceny wskazane są w Cenniku.</li>
+          <li style={li}>Korzystanie z Serwisu po zakończeniu Okresu Próbnego jest odpłatne, zgodnie z wybranym Planem Abonamentowym (Lite, Pro lub Agency), różniącym się limitem liczby monitorowanych Projektów. Aktualne limity i ceny wskazane są w Cenniku.</li>
           <li style={li}>Opłaty rozliczane są miesięcznie lub rocznie, zgodnie z wyborem Użytkownika, z góry za dany Okres Rozliczeniowy.</li>
           <li style={li}>Obsługę płatności zapewnia Stripe. Dokonując płatności kartą, Użytkownik wyraża zgodę na automatyczne odnawianie subskrypcji i pobieranie Opłaty Abonamentowej za kolejne Okresy Rozliczeniowe, do czasu anulowania subskrypcji.</li>
           <li style={li}>Użytkownik zarządza swoją subskrypcją samodzielnie — zmiana Planu Abonamentowego, zmiana metody płatności oraz anulowanie subskrypcji odbywają się przez panel zarządzania płatnościami (Stripe Customer Portal), dostępny z poziomu ustawień Konta.</li>

@@ -125,7 +125,7 @@ const ALERTS_BODY_HTML = `
     <tr><td>Widok wielu usług i klientów w jednym miejscu</td><td>Nie, każda usługa osobno</td><td>Tak, jeden dashboard</td></tr>
     <tr><td>Osobny alert dla wybranych, krytycznych metryk</td><td>Tak, ale na poziomie ogólnej metryki</td><td>Tak, na poziomie konkretnego checka</td></tr>
     <tr><td>Czas potrzebny na skonfigurowanie pierwszego alertu</td><td>Trzeba samodzielnie dobrać metrykę, próg i częstotliwość</td><td>Kreator podpowiada na podstawie realnych danych z usługi</td></tr>
-    <tr><td>Koszt</td><td>Wliczone w GA4, bezpłatne</td><td>Płatny abonament, od planu Individual</td></tr>
+    <tr><td>Koszt</td><td>Wliczone w GA4, bezpłatne</td><td>Płatny abonament, od planu Lite</td></tr>
   </table>
 
   <h2>Jak połączyć oba rozwiązania</h2>
