@@ -49,7 +49,7 @@ export default async function OpengraphImage() {
   const [poppinsBoldItalic, plexSansRegular] = await Promise.all([
     loadGoogleFontTtf(`https://fonts.googleapis.com/css2?family=Poppins:ital,wght@1,700&text=${encodeURIComponent('ALERTGA4.')}&display=swap`)
       .catch(err => { console.error('[opengraph-image] Poppins load failed, wordmark falls back to default font:', err instanceof Error ? err.message : err); return null }),
-    loadGoogleFontTtf(`https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&text=${encodeURIComponent(tagline + markerLabel)}&display=swap`)
+    loadGoogleFontTtf(`https://fonts.googleapis.com/css2?family=IBM+Plex+Sans&text=${encodeURIComponent(tagline + markerLabel + 'GA4.')}&display=swap`)
       .catch(err => { console.error('[opengraph-image] IBM Plex Sans load failed, body text falls back to default font:', err instanceof Error ? err.message : err); return null }),
   ])
 
@@ -69,9 +69,9 @@ export default async function OpengraphImage() {
           fontFamily: plexSansRegular ? 'PlexSans' : undefined,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 84, fontFamily: poppinsBoldItalic ? 'Poppins' : undefined, fontWeight: 700, fontStyle: 'italic', letterSpacing: 5, marginTop: -40 }}>
-          <span style={{ color: '#ffffff' }}>ALERT</span>
-          <span style={{ color: '#fffd73' }}>GA4.</span>
+        <div style={{ display: 'flex', fontSize: 84, letterSpacing: 5, marginTop: -40 }}>
+          <span style={{ color: '#ffffff', fontFamily: poppinsBoldItalic ? 'Poppins' : undefined, fontWeight: 700, fontStyle: 'italic' }}>ALERT</span>
+          <span style={{ color: '#fffd73', fontFamily: plexSansRegular ? 'PlexSans' : undefined, fontWeight: 400 }}>GA4.</span>
         </div>
         <div style={{ display: 'flex', marginTop: 24, fontSize: 30, color: '#ffffff', textAlign: 'center' }}>
           {tagline}
