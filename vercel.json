@@ -15,6 +15,10 @@
     {
       "path": "/api/worker/watchdog",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/worker/cleanup-old-data",
+      "schedule": "0 13 * * *"
     }
   ]
 }

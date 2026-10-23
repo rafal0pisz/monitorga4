@@ -17,7 +17,7 @@ const PUBLIC_PATHS = [
 // /api/trial-winback/survey is reached from a one-click link in an email
 // with no session at all — it self-authorizes via the per-profile token in
 // the link itself.
-const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/worker/trial-winback', '/api/worker/watchdog', '/api/stripe/webhook', '/api/trial-winback']
+const AUTH_EXEMPT_API_PATHS = ['/api/worker/run', '/api/worker/trial-reminders', '/api/worker/trial-winback', '/api/worker/watchdog', '/api/worker/cleanup-old-data', '/api/stripe/webhook', '/api/trial-winback']
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
