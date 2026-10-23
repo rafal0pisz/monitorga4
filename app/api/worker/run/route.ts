@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
-import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT, ITEM_SCOPED_METRICS, TRANSACTION_SCOPED_EVENTS } from '@/lib/ga4/standardParams'
 import { sendEmail } from '@/lib/email/resend'
 import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
@@ -161,22 +161,59 @@ async function checkParameters(
         const eventFilter = { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } }
 
         if (stdMetric) {
-          // For value/price/quantity/shipping/tax — these are metrics, not
-          // dimensions, so GA4 has no "(not set)" bucket to query the way
-          // the dimension branches below do (a metric that's genuinely 0
-          // and a metric that was never included in the event both report
-          // as 0 — there's no way to tell them apart from a single
-          // aggregate). The previous version queried ONE total for the
-          // whole period and called it "100%" the moment the sum was
-          // nonzero anywhere — true even if the field only fired once in
-          // the entire period and was missing every other time.
-          // Breaking the same query down by dateHour gets real, if
-          // coarser-than-ideal, coverage: the fraction of hours that had
-          // this event at all where the metric was also present, instead
-          // of a single yes/no for the whole range. dateHour (not date)
-          // because this is also called with a single-day range (today vs
-          // the same day last week — see getDailyRanges above), where a
-          // date-level breakdown would only ever produce one bucket.
+          // value/price/quantity/shipping/tax are metrics, not dimensions —
+          // GA4 has no "(not set)" bucket for a metric (a genuinely-zero
+          // value and a field that was never included both just report as
+          // 0), so the dimension branches' exact technique doesn't apply
+          // directly. Three cases, in order of how precise they can be:
+
+          // 1. purchase/refund — each instance has its own transaction_id,
+          // so breaking the query down by it gives TRUE per-event coverage:
+          // how many actual transactions had this field vs. didn't, exactly
+          // like counting individual events.
+          if (TRANSACTION_SCOPED_EVENTS.has(event_name)) {
+            const data = await report({
+              dateRanges: [dateRange],
+              dimensions: [{ name: 'transactionId' }],
+              metrics: [{ name: 'eventCount' }, { name: stdMetric }],
+              dimensionFilter: eventFilter,
+            })
+            let totalEvents = 0, eventsWithMetric = 0
+            for (const r of (data.rows ?? []) as any[]) {
+              const count = parseFloat(r.metricValues?.[0]?.value ?? '0')
+              const metricVal = parseFloat(r.metricValues?.[1]?.value ?? '0')
+              totalEvents += count
+              if (metricVal > 0) eventsWithMetric += count
+            }
+            return totalEvents > 0 ? (eventsWithMetric / totalEvents) * 100 : 0
+          }
+
+          // 2. price/quantity on an item-scoped event (add_to_cart) — no
+          // per-instance id exists for an individual item occurrence (unlike
+          // transactionId for a whole purchase), so true per-event coverage
+          // isn't obtainable here. The honest signal available instead is
+          // per-PRODUCT: of the distinct items that appeared, how many ever
+          // report this field at all.
+          if (ITEM_SCOPED_METRICS.has(stdMetric)) {
+            const data = await report({
+              dateRanges: [dateRange],
+              dimensions: [{ name: 'itemId' }],
+              metrics: [{ name: stdMetric }],
+              dimensionFilter: eventFilter,
+            })
+            const rows = (data.rows ?? []) as any[]
+            if (rows.length === 0) return 0
+            const itemsWithMetric = rows.filter(r => parseFloat(r.metricValues?.[0]?.value ?? '0') > 0).length
+            return (itemsWithMetric / rows.length) * 100
+          }
+
+          // 3. Everything else (value/currency on begin_checkout, view_cart,
+          // add_to_wishlist, add_shipping_info, add_payment_info — events
+          // with no per-instance id of their own) — fall back to a per-hour
+          // approximation: the fraction of hours that had this event at all
+          // where the metric was also present. Coarser, but still catches
+          // real partial/intermittent breakage that a single whole-period
+          // yes/no never could.
           const [eventsByHour, metricByHour] = await Promise.all([
             report({ dateRanges: [dateRange], dimensions: [{ name: 'dateHour' }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
             report({ dateRanges: [dateRange], dimensions: [{ name: 'dateHour' }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),

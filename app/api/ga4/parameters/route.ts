@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT } from '@/lib/ga4/standardParams'
+import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT, ITEM_SCOPED_METRICS, TRANSACTION_SCOPED_EVENTS } from '@/lib/ga4/standardParams'
 import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
@@ -38,16 +38,55 @@ async function getCoverage(propertyId: string, token: string, eventName: string,
   const stdMetric = GA4_STANDARD_METRICS[parameterName]
 
   // Standard GA4 metrics (value, price, quantity, shipping, tax) aren't
-  // dimensions at all — GA4 has no "(not set)" bucket for a metric the way
-  // it does for a dimension (a metric that's genuinely 0 and one that was
-  // never included in the event both just report as 0, indistinguishable
-  // from a single aggregate). This used to query ONE total for the whole
-  // period and call it "100%" the moment the sum was nonzero anywhere —
-  // true even if the field only fired once in the entire period. Breaking
-  // the same query down by dateHour gets real, if coarser-than-ideal,
-  // coverage instead: the fraction of hours that had this event at all
-  // where the metric was also present. Matches app/api/worker/run/route.ts.
+  // dimensions at all — GA4 has no "(not set)" bucket for a metric (a
+  // genuinely-zero value and a field that was never included both just
+  // report as 0). Three cases, in order of how precise they can be —
+  // mirrors app/api/worker/run/route.ts exactly so the two can't diverge.
   if (stdMetric) {
+    // 1. purchase/refund — each instance has its own transaction_id, so
+    // breaking the query down by it gives TRUE per-event coverage.
+    if (TRANSACTION_SCOPED_EVENTS.has(eventName)) {
+      const data = await ga4Report(propertyId, token, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'transactionId' }],
+        metrics: [{ name: 'eventCount' }, { name: stdMetric }],
+        dimensionFilter: eventFilter,
+      })
+      let totalEvents = 0, eventsWithMetric = 0
+      for (const r of (data.rows ?? []) as any[]) {
+        const count = parseFloat(r.metricValues?.[0]?.value ?? '0')
+        const metricVal = parseFloat(r.metricValues?.[1]?.value ?? '0')
+        totalEvents += count
+        if (metricVal > 0) eventsWithMetric += count
+      }
+      const coverage = totalEvents > 0 ? eventsWithMetric / totalEvents : 0
+      return { total_events: totalEvents, events_with_value: eventsWithMetric, coverage, top_values: [] }
+    }
+
+    // 2. price/quantity on an item-scoped event (add_to_cart) — no
+    // per-instance id exists for an individual item occurrence, so true
+    // per-event coverage isn't obtainable. The honest signal available
+    // instead is per-PRODUCT: of the distinct items that appeared, how many
+    // ever report this field at all. total_events/events_with_value are
+    // product counts here, not event counts.
+    if (ITEM_SCOPED_METRICS.has(stdMetric)) {
+      const data = await ga4Report(propertyId, token, {
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'itemId' }],
+        metrics: [{ name: stdMetric }],
+        dimensionFilter: eventFilter,
+      })
+      const rows = (data.rows ?? []) as any[]
+      const itemsWithMetric = rows.filter(r => parseFloat(r.metricValues?.[0]?.value ?? '0') > 0).length
+      const coverage = rows.length > 0 ? itemsWithMetric / rows.length : 0
+      return { total_events: rows.length, events_with_value: itemsWithMetric, coverage, top_values: [] }
+    }
+
+    // 3. Everything else (value/currency on begin_checkout, view_cart,
+    // add_to_wishlist, add_shipping_info, add_payment_info) — no
+    // per-instance id of their own, fall back to a per-hour approximation:
+    // the fraction of hours that had this event at all where the metric was
+    // also present.
     const [eventsByHourR, metricByHourR, totalR] = await Promise.all([
       ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], dimensions: [{ name: 'dateHour' }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
       ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], dimensions: [{ name: 'dateHour' }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),

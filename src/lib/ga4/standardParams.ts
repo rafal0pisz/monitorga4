@@ -48,3 +48,27 @@ export const ITEM_METRIC_BY_EVENT: Record<string, string> = {
   view_promotion:    'itemListViewEvents',
   select_promotion:  'itemsClickedInPromotion',
 }
+
+// GA4_STANDARD_METRICS entries that are themselves item-scoped (price →
+// itemRevenue, quantity → itemsAddedToCart). GA4 has no "(not set)" signal
+// for a numeric metric the way it does for a dimension (a genuinely-zero
+// value and a field that was never included both just report as 0) and, for
+// an item-scoped field, there's no per-event-instance identifier to break a
+// query down by either — unlike transactionId for purchase/refund, there's
+// no equivalent "this specific item occurrence" id. So true per-event
+// coverage isn't obtainable for these the way it is for text dimensions or
+// transaction-bearing metrics; the best honest signal available is
+// per-PRODUCT: of the distinct items that appeared, how many ever report
+// this field at all (breaking the query down by itemId instead of by
+// event). Shared so the worker and the live endpoint can't diverge on which
+// metrics get this treatment.
+export const ITEM_SCOPED_METRICS = new Set(['itemRevenue', 'itemsAddedToCart'])
+
+// Events whose instances are reliably identified by their own transaction_id
+// — purchase and refund. For a metric checked on one of these (value,
+// shipping, tax), breaking the query down by transactionId gives TRUE
+// per-event coverage (how many distinct transactions had this field vs.
+// didn't), not an approximation. Events without their own id (begin_checkout,
+// view_cart, add_to_wishlist, add_shipping_info, add_payment_info) have no
+// equivalent and fall back to a coarser per-hour approximation.
+export const TRANSACTION_SCOPED_EVENTS = new Set(['purchase', 'refund'])
