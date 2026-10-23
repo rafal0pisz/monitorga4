@@ -6,6 +6,7 @@ import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 import { getTeamContext } from '@/lib/team/access'
 import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
+import StartTrialButton from '@/components/billing/StartTrialButton'
 import Link from 'next/link'
 
 // Small on/off status chip used in the "All projects" list (e.g. Email,
@@ -143,8 +144,9 @@ export default async function DashboardPage() {
   let ownPlan: string | null = null
   let onboardingDismissed = false
   let ownTrialExpired = false
+  let ownCanStartTrial = false
   if (!bypass && user) {
-    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, onboarding_dismissed_at').eq('id', user.id).single()
+    const { data: profile, error: profileErr } = await supabase.from('profiles').select('plan_id, trial_ends_at, trial_used_at, onboarding_dismissed_at').eq('id', user.id).single()
     if (!profileErr) {
       const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
       ownLimit = planLimit(effective)
@@ -154,6 +156,16 @@ export default async function DashboardPage() {
       // distinct from never having had a plan at all, which also resolves
       // to an effective plan of null but shouldn't claim a trial "ended".
       ownTrialExpired = profile?.plan_id === 'trial' && effective === null
+      // Same eligibility check as app/dashboard/new/page.tsx's
+      // ownCanStartTrial — never had an effective plan AND never used the
+      // one-time trial (so this excludes e.g. someone who subscribed,
+      // canceled, and is back at effective=null but already used their
+      // trial long before that). A brand-new account also resolves to
+      // ownLimit=0 / ownAtLimit=true below, same as someone who genuinely
+      // used up a paid plan's allowance — but "you've reached your limit
+      // (0)" is a confusing, alarmist thing to tell someone who's never
+      // started anything. Gets its own inviting banner instead (below).
+      ownCanStartTrial = effective === null && !profile?.trial_used_at
     }
   }
   const ownAtLimit = ownLimit != null && ownList.length >= ownLimit
@@ -219,14 +231,26 @@ export default async function DashboardPage() {
             />
           )}
           {ownAtLimit && (
-            <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>
-                {ownTrialExpired
-                  ? 'Your free trial has ended. Upgrade to a paid plan to keep using AlertGA4.'
-                  : `You've reached your plan's project limit (${ownLimit}). Upgrade to add more.`}
-              </p>
-              <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
-            </div>
+            ownCanStartTrial ? (
+              <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <p style={{ fontSize: 12.5, color: '#166534', margin: 0 }}>
+                  Ready to start monitoring your GA4 properties? Try AlertGA4 free for 14 days, or pick a plan that fits.
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <StartTrialButton label="Start 14-day free trial" lang="en" style={{ padding: '7px 14px', fontSize: 12.5 }} />
+                  <Link href="/cennik" style={{ fontSize: 12.5, color: '#166534', fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>View plans →</Link>
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: '#fff7ed', border: '0.5px solid #fdba74', borderRadius: 10, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <p style={{ fontSize: 12.5, color: '#9a3412', margin: 0 }}>
+                  {ownTrialExpired
+                    ? 'Your free trial has ended. Upgrade to a paid plan to keep using AlertGA4.'
+                    : `You've reached your plan's project limit (${ownLimit}). Upgrade to add more.`}
+                </p>
+                <Link href="/cennik" style={{ fontSize: 12.5, color: '#9a3412', fontWeight: 500, textDecoration: 'underline', whiteSpace: 'nowrap' }}>Upgrade plan →</Link>
+              </div>
+            )
           )}
           {ownList.length === 0 ? (
             <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '48px 24px', textAlign: 'center', marginBottom: teamList.length > 0 ? 28 : 0 }}>
