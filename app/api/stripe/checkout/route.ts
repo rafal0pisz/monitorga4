@@ -78,9 +78,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: checkoutSession.url })
   } catch (err) {
-    // Surfaced to the caller (Stripe SDK errors are safe to show — messages
-    // like "No such price" contain no secrets) instead of a bare 500 that
-    // hides the actual cause behind a generic "coś poszło nie tak".
-    return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+    // Never surface the raw Stripe/API error to the customer — everything
+    // caught here happens BEFORE any redirect to Stripe's own checkout
+    // page, so it's always a server-side problem (misconfigured API key,
+    // missing/mismatched Price id, Stripe Tax not set up, etc.), never
+    // something the customer did wrong or needs the detail of. A past
+    // version of this deliberately showed the raw message "since Stripe
+    // SDK errors are safe" — but "safe" isn't the bar for a paying
+    // customer mid-checkout; logged in full here instead (Vercel function
+    // logs) for actual debugging.
+    console.error('[stripe/checkout] Failed to create checkout session:', err instanceof Error ? err.message : err)
+    return NextResponse.json({ error: 'Nie udało się rozpocząć płatności. Spróbuj ponownie za chwilę lub napisz do nas: kontakt@bettersteps.pl' }, { status: 500 })
   }
 }
