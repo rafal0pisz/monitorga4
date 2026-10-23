@@ -33,6 +33,14 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 const DAY_MS = 86400000
 const WINBACK_DELAY_DAYS = 2
 
+// PAUSED as of 2026-10-23 — the cron entry for this route was removed from
+// vercel.json. Privacy policy currently states data isn't used for
+// marketing purposes, which this email (a promotional discount code)
+// contradicts; paused until that's resolved (policy update, or scoping this
+// as a disclosed transactional/lifecycle email) rather than shipped with a
+// known compliance gap. Route and logic left intact — re-add the cron entry
+// to resume once decided.
+//
 // GET — Vercel Cron, once daily. Finds trials whose trial_ends_at fell
 // 2-3 days ago (a 1-day window so a daily cron catches each account
 // exactly once) and that haven't had a win-back email yet, emails a recap
