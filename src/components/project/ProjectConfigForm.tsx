@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardParams'
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
+import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 import { parseEmailList } from '@/lib/email/shared'
 import { checkLabel } from '@/lib/ga4/checkLabels'
@@ -298,6 +299,27 @@ export default function ProjectConfigForm({ project }: Props) {
 
   function cancelAddParam() {
     setPendingParam(null); setParamWarning(null)
+  }
+
+  // Same catalog-driven suggestion mechanism as the new-project wizard
+  // (NewProjectForm.tsx) — ported here so adding ecommerce/custom events to
+  // an EXISTING project later also gets parameter suggestions, instead of
+  // only the raw manual "type event_name + parameter_name" form this page
+  // had on its own.
+  const selectedEventNames = [...new Set([...customEvents.filter(e => e.is_enabled).map(e => e.event_name), ...ecomEnabled])]
+  const suggestedParams = PARAMETER_CATALOG.filter(p => selectedEventNames.includes(p.event_name))
+  const suggestedParamsByEvent: Record<string, typeof suggestedParams> = {}
+  for (const p of suggestedParams) (suggestedParamsByEvent[p.event_name] ??= []).push(p)
+
+  function isSuggestedParamSelected(eventName: string, paramName: string) {
+    return params.some(p => p.event_name === eventName && p.parameter_name === paramName)
+  }
+  function toggleSuggestedParam(eventName: string, paramName: string) {
+    setParams(prev =>
+      prev.some(p => p.event_name === eventName && p.parameter_name === paramName)
+        ? prev.filter(p => !(p.event_name === eventName && p.parameter_name === paramName))
+        : [...prev, { event_name: eventName, parameter_name: paramName }]
+    )
   }
 
   async function handleSave() {
@@ -663,6 +685,37 @@ export default function ProjectConfigForm({ project }: Props) {
             {customDimensions && params.some(p => isUnrecognizedParam(p.parameter_name)) && (
               <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, backgroundColor: '#fefce8', border: '1px solid #fde68a', fontSize: 11.5, color: '#854d0e' }}>
                 ⚠ Rows highlighted above (⚠) don't match a registered GA4 custom dimension — they'll keep failing in the nightly check until fixed or removed.
+              </div>
+            )}
+            {Object.keys(suggestedParamsByEvent).length > 0 && (
+              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-secondary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Suggested, based on the events you've enabled
+                </p>
+                {Object.entries(suggestedParamsByEvent).map(([eventName, entries]) => (
+                  <div key={eventName}>
+                    <p style={{ fontFamily: 'monospace', fontSize: 12.5, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 8px' }}>{eventName}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {entries.map(p => {
+                        const checked = isSuggestedParamSelected(p.event_name, p.parameter_name)
+                        return (
+                          <label key={p.parameter_name} style={{
+                            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                            border: `0.5px solid ${checked ? '#bbf7d0' : 'var(--color-border-tertiary)'}`,
+                            background: checked ? '#f0fdf4' : 'var(--color-background-secondary)',
+                          }}>
+                            <input type="checkbox" checked={checked} onChange={() => toggleSuggestedParam(p.event_name, p.parameter_name)} style={{ accentColor: '#16a34a' }} />
+                            <span style={{ fontSize: 13, color: checked ? '#16a34a' : 'var(--color-text-primary)' }}>{p.label}</span>
+                            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-text-secondary)' }}>{p.parameter_name}</span>
+                            {!p.is_required_default && (
+                              <span style={{ marginLeft: 'auto', fontSize: 10.5, color: 'var(--color-text-secondary)' }}>optional</span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
