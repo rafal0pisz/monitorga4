@@ -14,10 +14,9 @@ export interface Plan {
 }
 
 // id 'lite' was 'individual' until the rename in migration 033 — the env
-// var names below (STRIPE_PRICE_INDIVIDUAL_*) are kept as-is deliberately:
-// they're arbitrary internal Vercel variable names with no user-facing
-// meaning, and renaming them would require creating new ones in Vercel for
-// zero functional benefit.
+// var names were renamed to match (STRIPE_PRICE_LITE_*) once the new
+// Vercel env vars existed alongside the old ones, so there was no window
+// where this plan's price was unavailable for purchase.
 export const PLANS: Plan[] = [
   {
     id: 'lite',
@@ -28,8 +27,8 @@ export const PLANS: Plan[] = [
     // the real discount is never less than advertised.
     priceYearlyPLN: 327,
     stripePriceId: {
-      monthly: process.env.STRIPE_PRICE_INDIVIDUAL_MONTHLY,
-      yearly: process.env.STRIPE_PRICE_INDIVIDUAL_YEARLY,
+      monthly: process.env.STRIPE_PRICE_LITE_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_LITE_YEARLY,
     },
   },
   {
