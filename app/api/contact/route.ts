@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/resend'
 import { renderContactMessageEmail } from '@/lib/email/contactMessage'
 
 const CONTACT_TO = 'kontakt@bettersteps.pl'
 const CATEGORIES = ['Wsparcie z obsługi', 'Chęć przetestowania aplikacji', 'Błąd w aplikacji', 'Inne']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const RATE_LIMIT_WINDOW_MINUTES = 10
+const RATE_LIMIT_MAX_PER_WINDOW = 5
+
+function getClientIp(request: NextRequest): string {
+  const forwardedFor = request.headers.get('x-forwarded-for')
+  if (forwardedFor) return forwardedFor.split(',')[0].trim()
+  return request.headers.get('x-real-ip') ?? 'unknown'
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
@@ -16,6 +26,34 @@ export async function POST(request: NextRequest) {
   if (typeof body.website === 'string' && body.website.trim() !== '') {
     return NextResponse.json({ ok: true })
   }
+
+  const ip = getClientIp(request)
+  const supabase = createAdminClient()
+
+  // Fail open — a Supabase hiccup here should never block a real person
+  // from reaching us, only repeat submissions from the same IP should be.
+  try {
+    const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000).toISOString()
+    const { count, error: countError } = await supabase
+      .from('contact_submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('ip', ip)
+      .gte('created_at', windowStart)
+    if (countError) throw countError
+    if ((count ?? 0) >= RATE_LIMIT_MAX_PER_WINDOW) {
+      return NextResponse.json({ error: 'Zbyt wiele zgłoszeń z tego adresu. Spróbuj ponownie za kilka minut.' }, { status: 429 })
+    }
+  } catch (err) {
+    console.error('[contact] Rate limit check failed, allowing through:', err instanceof Error ? err.message : err)
+  }
+
+  // Record the attempt against the limit even if validation below rejects
+  // it — a script hammering the endpoint with garbage payloads should still
+  // get throttled, not just well-formed spam. Best-effort, never blocks.
+  // Awaited (not fire-and-forget) since a serverless function can freeze
+  // right after it returns a response, which would drop an un-awaited write.
+  const { error: insertError } = await supabase.from('contact_submissions').insert({ ip })
+  if (insertError) console.error('[contact] Failed to record rate-limit row:', insertError.message)
 
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 200) : ''
   const email = typeof body.email === 'string' ? body.email.trim().slice(0, 200) : ''
