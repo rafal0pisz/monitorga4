@@ -47,7 +47,7 @@ export default function PricingCards({
     <div>
       <div className="pricing-toggle">
         <button type="button" className={cycle === 'monthly' ? 'active' : ''} onClick={() => setCycle('monthly')}>Miesięcznie</button>
-        <button type="button" className={cycle === 'yearly' ? 'active' : ''} onClick={() => setCycle('yearly')}>Rocznie <span className="pricing-toggle-badge">taniej</span></button>
+        <button type="button" className={cycle === 'yearly' ? 'active' : ''} onClick={() => setCycle('yearly')}>Rocznie <span className="pricing-toggle-badge">-40%</span></button>
       </div>
 
       {error && <div className="contact-error" style={{ maxWidth: 480, margin: '0 auto 24px' }}>{error}</div>}

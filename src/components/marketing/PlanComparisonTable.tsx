@@ -7,14 +7,18 @@ export interface Row {
   agency: string
 }
 
-// Poza limitem usług, funkcjonalność monitoringu jest dziś identyczna na
-// każdym planie — realne różnice między pakietami to limit oraz poziom
-// wsparcia. Konsultacja z analitykiem to nowy wyróżnik najwyższego planu.
+// Individual caps custom events/e-commerce/parameters at 5 each per
+// service (plan_item_limit() in supabase/migrations/031_...) — Pro and
+// Agency stay unlimited. Beyond that and the service count itself, the
+// monitoring functionality is identical across plans; support level and
+// the analyst consultation (Agency only) are the other real differences.
 export const ROWS: Row[] = [
-  { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 30', agency: 'do 100' },
+  { label: 'Monitorowane usługi GA4', individual: 'do 3', pro: 'do 15', agency: 'do 100' },
   { label: 'Codzienny automatyczny monitoring', individual: '✓', pro: '✓', agency: '✓' },
-  { label: 'Zdarzenia niestandardowe, parametry i e-commerce (na usługę)', individual: 'bez limitu', pro: 'bez limitu', agency: 'bez limitu' },
-  { label: 'Alerty e-mail przy wykrytych błędach', individual: '✓', pro: '✓', agency: '✓' },
+  { label: 'Niestandardowe zdarzenia (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Zdarzenia e-commerce (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Parametry (na usługę)', individual: '5', pro: 'bez limitu', agency: 'bez limitu' },
+  { label: 'Codzienny alert mailowy', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', individual: '✓', pro: '✓', agency: '✓' },
   { label: 'Wsparcie', individual: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
   { label: 'Konsultacja z analitykiem GA4', individual: '—', pro: '—', agency: '1h / miesiąc' },

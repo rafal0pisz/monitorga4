@@ -11,7 +11,7 @@ import { PLANS, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
 import Link from 'next/link'
 
 const TITLE = 'Cennik'
-const DESCRIPTION = 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 30 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.'
+const DESCRIPTION = 'Plany AlertGA4: Individual (do 3 usług GA4), Pro (do 15 usług), Agency (do 100 usług). Rozliczenie miesięczne lub roczne w PLN.'
 
 // See app/funkcje/page.tsx for why canonical/openGraph/twitter are spelled
 // out explicitly here instead of relying on the root layout's defaults.
