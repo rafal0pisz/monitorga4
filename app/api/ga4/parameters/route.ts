@@ -64,19 +64,25 @@ async function getCoverage(propertyId: string, token: string, eventName: string,
     if (!itemMetric) {
       throw new Error(`Coverage check not supported for item-scoped parameter "${parameterName}" on event "${eventName}" — GA4 has no matching item-level metric for this event.`)
     }
-    // No eventName filter — the item metric is already specific to that
-    // event (e.g. itemsAddedToCart only counts add_to_cart).
+    // Explicit eventName filter required here — querying an item-scoped
+    // metric like itemsAddedToCart with no eventName filter at all does NOT
+    // implicitly scope it to that one event; it aggregates across the whole
+    // property, which is how this used to report a "total" many orders of
+    // magnitude larger than the event's own actual count (e.g. 20M+ for an
+    // event that only fired ~10k times). Matches the eventFilter usage in
+    // the event-scoped branch below.
     const [totalR, emptyR, topR] = await Promise.all([
-      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: itemMetric }] }),
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: itemMetric }], dimensionFilter: eventFilter }),
       ga4Report(propertyId, token, {
         dateRanges: [{ startDate, endDate }],
         metrics: [{ name: itemMetric }],
-        dimensionFilter: { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } },
+        dimensionFilter: { andGroup: { expressions: [eventFilter, { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } }] } },
       }),
       ga4Report(propertyId, token, {
         dateRanges: [{ startDate, endDate }],
         dimensions: [{ name: stdDim }],
         metrics: [{ name: itemMetric }],
+        dimensionFilter: eventFilter,
         orderBys: [{ metric: { metricName: itemMetric }, desc: true }],
         limit: 20,
       }),

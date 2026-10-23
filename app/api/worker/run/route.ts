@@ -185,14 +185,20 @@ async function checkParameters(
           if (!itemMetric) {
             throw new Error(`Coverage check not supported for item-scoped parameter "${parameter_name}" on event "${event_name}"`)
           }
-          // No eventName filter here — the item metric is already specific
-          // to that event (e.g. itemsAddedToCart only counts add_to_cart).
+          // Explicit eventName filter required here — querying an
+          // item-scoped metric like itemsAddedToCart with no eventName
+          // filter at all does NOT implicitly scope it to that one event;
+          // it aggregates across the whole property, which is how this
+          // used to report a "total" many orders of magnitude larger than
+          // the event's own actual count (e.g. 20M+ for an event that only
+          // fired ~10k times). Matches the eventFilter usage in the
+          // event-scoped branch below.
           const [totalData, emptyData] = await Promise.all([
-            report({ dateRanges: [dateRange], metrics: [{ name: itemMetric }] }),
+            report({ dateRanges: [dateRange], metrics: [{ name: itemMetric }], dimensionFilter: eventFilter }),
             report({
               dateRanges: [dateRange],
               metrics:    [{ name: itemMetric }],
-              dimensionFilter: { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } },
+              dimensionFilter: { andGroup: { expressions: [eventFilter, { filter: { fieldName: stdDim, inListFilter: { values: ['(not set)', ''] } } }] } },
             }),
           ])
           const total     = parseFloat(totalData.rows?.[0]?.metricValues?.[0]?.value ?? '0')
