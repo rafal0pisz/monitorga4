@@ -278,8 +278,8 @@ export default async function HomePage() {
               <span className="chip"><span className="chip-dot chip-dot--warn" />parametry</span>
             </div>
             <div className="readout-foot">
-              <span>ostatnie sprawdzenie: dziś, 23:04</span>
-              <span>kolejne: jutro, 23:00</span>
+              <span>ostatnie sprawdzenie: dziś, 6:33</span>
+              <span>kolejne: jutro, 6:30</span>
             </div>
           </div>
         </div>
