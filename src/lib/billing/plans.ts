@@ -23,10 +23,10 @@ export const PLANS: Plan[] = [
     id: 'lite',
     name: 'Lite',
     projectLimit: 3,
-    priceMonthlyPLN: 29,
-    // -40% off the annualized monthly price (29*12=348), rounded down so
+    priceMonthlyPLN: 39,
+    // -30% off the annualized monthly price (39*12=468), rounded down so
     // the real discount is never less than advertised.
-    priceYearlyPLN: 208,
+    priceYearlyPLN: 327,
     stripePriceId: {
       monthly: process.env.STRIPE_PRICE_INDIVIDUAL_MONTHLY,
       yearly: process.env.STRIPE_PRICE_INDIVIDUAL_YEARLY,
@@ -37,8 +37,8 @@ export const PLANS: Plan[] = [
     name: 'Pro',
     projectLimit: 15,
     priceMonthlyPLN: 139,
-    // -40% off 139*12=1668, rounded down.
-    priceYearlyPLN: 1000,
+    // -30% off 139*12=1668, rounded down.
+    priceYearlyPLN: 1167,
     stripePriceId: {
       monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
       yearly: process.env.STRIPE_PRICE_PRO_YEARLY,
@@ -48,9 +48,9 @@ export const PLANS: Plan[] = [
     id: 'agency',
     name: 'Agency',
     projectLimit: 100,
-    priceMonthlyPLN: 399,
-    // -40% off 399*12=4788, rounded down.
-    priceYearlyPLN: 2872,
+    priceMonthlyPLN: 499,
+    // -30% off 499*12=5988, rounded down.
+    priceYearlyPLN: 4191,
     stripePriceId: {
       monthly: process.env.STRIPE_PRICE_AGENCY_MONTHLY,
       yearly: process.env.STRIPE_PRICE_AGENCY_YEARLY,
