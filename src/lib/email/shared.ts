@@ -32,7 +32,7 @@ export function emailShell(opts: { preheader?: string; body: string }): string {
 </style>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;">
-  ${opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${opts.preheader}</div>` : ''}
+  ${opts.preheader ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(opts.preheader)}</div>` : ''}
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f5;">
     <tr>
       <td align="center" style="padding:24px 12px;">
