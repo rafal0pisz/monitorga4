@@ -38,18 +38,31 @@ async function getCoverage(propertyId: string, token: string, eventName: string,
   const stdMetric = GA4_STANDARD_METRICS[parameterName]
 
   // Standard GA4 metrics (value, price, quantity, shipping, tax) aren't
-  // dimensions at all — there's no per-event "value" to break down, so
-  // coverage here is a coarse presence check (did this metric register
-  // anything in the period), matching how the worker treats the same
-  // standard-metric params.
+  // dimensions at all — GA4 has no "(not set)" bucket for a metric the way
+  // it does for a dimension (a metric that's genuinely 0 and one that was
+  // never included in the event both just report as 0, indistinguishable
+  // from a single aggregate). This used to query ONE total for the whole
+  // period and call it "100%" the moment the sum was nonzero anywhere —
+  // true even if the field only fired once in the entire period. Breaking
+  // the same query down by dateHour gets real, if coarser-than-ideal,
+  // coverage instead: the fraction of hours that had this event at all
+  // where the metric was also present. Matches app/api/worker/run/route.ts.
   if (stdMetric) {
-    const [totalR, metricR] = await Promise.all([
+    const [eventsByHourR, metricByHourR, totalR] = await Promise.all([
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], dimensions: [{ name: 'dateHour' }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
+      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], dimensions: [{ name: 'dateHour' }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),
       ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
-      ga4Report(propertyId, token, { dateRanges: [{ startDate, endDate }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),
     ])
+    const hoursWithEvents = new Set<string>((eventsByHourR.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value).filter(Boolean))
+    const metricByHourMap = new Map<string, number>((metricByHourR.rows ?? []).map((r: any): [string, number] => [r.dimensionValues?.[0]?.value, parseFloat(r.metricValues?.[0]?.value ?? '0')]))
     const total = parseInt(totalR.rows?.[0]?.metricValues?.[0]?.value ?? '0')
-    const covered = parseFloat(metricR.rows?.[0]?.metricValues?.[0]?.value ?? '0') > 0
-    return { total_events: total, events_with_value: covered ? total : 0, coverage: covered ? 1 : 0, top_values: [] }
+    if (hoursWithEvents.size === 0) return { total_events: total, events_with_value: 0, coverage: 0, top_values: [] }
+    let hoursWithMetric = 0
+    for (const h of hoursWithEvents) {
+      if ((metricByHourMap.get(h) ?? 0) > 0) hoursWithMetric++
+    }
+    const coverage = hoursWithMetric / hoursWithEvents.size
+    return { total_events: total, events_with_value: Math.round(total * coverage), coverage, top_values: [] }
   }
 
   // Item-scoped dimensions (item_id, item_name, ...) can't be combined

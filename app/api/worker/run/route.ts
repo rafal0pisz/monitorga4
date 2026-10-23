@@ -161,14 +161,34 @@ async function checkParameters(
         const eventFilter = { filter: { fieldName: 'eventName', stringFilter: { value: event_name } } }
 
         if (stdMetric) {
-          // For value/price etc — check if metric > 0 (presence, not coverage)
-          const data = await report({
-            dateRanges: [dateRange],
-            metrics:    [{ name: stdMetric }],
-            dimensionFilter: eventFilter,
-          })
-          const val = parseFloat(data.rows?.[0]?.metricValues?.[0]?.value ?? '0')
-          return val > 0 ? 100 : 0
+          // For value/price/quantity/shipping/tax — these are metrics, not
+          // dimensions, so GA4 has no "(not set)" bucket to query the way
+          // the dimension branches below do (a metric that's genuinely 0
+          // and a metric that was never included in the event both report
+          // as 0 — there's no way to tell them apart from a single
+          // aggregate). The previous version queried ONE total for the
+          // whole period and called it "100%" the moment the sum was
+          // nonzero anywhere — true even if the field only fired once in
+          // the entire period and was missing every other time.
+          // Breaking the same query down by dateHour gets real, if
+          // coarser-than-ideal, coverage: the fraction of hours that had
+          // this event at all where the metric was also present, instead
+          // of a single yes/no for the whole range. dateHour (not date)
+          // because this is also called with a single-day range (today vs
+          // the same day last week — see getDailyRanges above), where a
+          // date-level breakdown would only ever produce one bucket.
+          const [eventsByHour, metricByHour] = await Promise.all([
+            report({ dateRanges: [dateRange], dimensions: [{ name: 'dateHour' }], metrics: [{ name: 'eventCount' }], dimensionFilter: eventFilter }),
+            report({ dateRanges: [dateRange], dimensions: [{ name: 'dateHour' }], metrics: [{ name: stdMetric }], dimensionFilter: eventFilter }),
+          ])
+          const hoursWithEvents = new Set<string>((eventsByHour.rows ?? []).map((r: any) => r.dimensionValues?.[0]?.value).filter(Boolean))
+          const metricByHourMap = new Map<string, number>((metricByHour.rows ?? []).map((r: any): [string, number] => [r.dimensionValues?.[0]?.value, parseFloat(r.metricValues?.[0]?.value ?? '0')]))
+          if (hoursWithEvents.size === 0) return 0
+          let hoursWithMetric = 0
+          for (const h of hoursWithEvents) {
+            if ((metricByHourMap.get(h) ?? 0) > 0) hoursWithMetric++
+          }
+          return (hoursWithMetric / hoursWithEvents.size) * 100
         }
 
         // total/withParam used to come from a `limit: 100`-bounded dimension
