@@ -1,4 +1,4 @@
-import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
+import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate, escapeHtml } from './shared'
 import { checkLabel } from '@/lib/ga4/checkLabels'
 
 export interface DigestEntry {
@@ -46,7 +46,7 @@ function runRow(e: DigestEntry): string {
 
   const row = hstack([
     { html: `<span style="display:inline-block;width:16px;height:16px;line-height:16px;border-radius:50%;background:${BRAND.ink};color:${hasIssue ? BRAND.alert : '#fff'};font-size:10px;text-align:center;">${hasIssue ? '!' : '✓'}</span>`, width: 24, valign: 'top' },
-    { html: `<span style="color:#3a4046;font-size:13.5px;"><b style="color:${BRAND.ink};">${e.name}</b> — ${statusText}</span>${note}`, valign: 'top' },
+    { html: `<span style="color:#3a4046;font-size:13.5px;"><b style="color:${BRAND.ink};">${escapeHtml(e.name)}</b> — ${statusText}</span>${note}`, valign: 'top' },
   ])
 
   return `<div style="padding:9px 12px;border-radius:8px;border:1px solid ${BRAND.line};${hasIssue ? `background:${BRAND.alert};border-color:#ece94a;` : ''}margin-bottom:8px;">${row}</div>`
@@ -61,7 +61,7 @@ function scoreRow(e: DigestEntry): string {
   const color = e.scoreTotal != null ? scoreColor(e.scoreTotal) : BRAND.soft
 
   const body = `
-    <div><span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${e.name}</span>${badge ? ' ' + badge : ''}</div>
+    <div><span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${escapeHtml(e.name)}</span>${badge ? ' ' + badge : ''}</div>
     <div style="font-size:12.5px;color:${BRAND.soft};margin-top:2px;">${e.topSignal}</div>`
 
   const row = hstack([
@@ -95,7 +95,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
       <h3 style="margin:0 0 6px;font-size:13.5px;color:${BRAND.ink};">Worth checking</h3>
       ${attention.map(e => `
         <p style="margin:0 0 8px;font-size:13px;color:#3a4046;line-height:1.5;">
-          <b>${e.name}</b>${e.scoreTotal != null ? ` scored ${Math.round(e.scoreTotal)}, below its alert threshold of ${e.alertThreshold}.` : ` failed to complete its run — ${e.errorMessage ?? 'unknown error'}.`}
+          <b>${escapeHtml(e.name)}</b>${e.scoreTotal != null ? ` scored ${Math.round(e.scoreTotal)}, below its alert threshold of ${e.alertThreshold}.` : ` failed to complete its run — ${escapeHtml(e.errorMessage ?? 'unknown error')}.`}
           ${e.topSignal ? `${e.topSignal} — ` : ''}
           <a href="${APP_URL}/project/${e.projectId}" style="font-weight:600;color:${BRAND.coralLink};text-decoration:none;">Open in dashboard →</a>
         </p>`).join('')}

@@ -1,4 +1,4 @@
-import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate } from './shared'
+import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate, escapeHtml } from './shared'
 import { checkLabel, checkCategory, CATEGORY_LABEL, CATEGORY_ORDER } from '@/lib/ga4/checkLabels'
 
 export interface TrendPoint { runDate: string; score: number }
@@ -173,7 +173,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
     <div style="padding:16px 32px 0;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${BRAND.soft};">AlertGA4 quality alert</div>
 
     <div style="padding:6px 32px 22px;border-bottom:1px solid ${BRAND.line};">
-      <div class="serif" style="font-size:26px;font-weight:600;color:${BRAND.ink};margin:4px 0 2px;">${d.projectName}</div>
+      <div class="serif" style="font-size:26px;font-weight:600;color:${BRAND.ink};margin:4px 0 2px;">${escapeHtml(d.projectName)}</div>
       <p style="font-size:13px;color:#6b7278;margin:0 0 18px;">GA4 property health check · data for ${fmtDate(d.dataDate)}</p>
       ${scoreHero}
     </div>
@@ -196,7 +196,7 @@ export function renderClientAlertEmail(d: ClientAlertData): { subject: string; h
 
     ${footerHtml(
       [
-        `This automated quality report is issued by AlertGA4 on behalf of Bettersteps for ${d.projectName}.`,
+        `This automated quality report is issued by AlertGA4 on behalf of Bettersteps for ${escapeHtml(d.projectName)}.`,
         'Questions about this report?',
       ],
       { label: 'alertga4.pl/kontakt', href: `${APP_URL}/kontakt` }
