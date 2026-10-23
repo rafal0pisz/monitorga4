@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Next.js 16.4+ auto-writes an AGENTS.md at the repo root on every dev/build
+  // run — not something we want tracked or regenerated unexpectedly.
+  agentRules: false,
   experimental: {
     // alertga4.pl is the current production domain; the previous domains
     // are kept alongside it in case anything still resolves there during
