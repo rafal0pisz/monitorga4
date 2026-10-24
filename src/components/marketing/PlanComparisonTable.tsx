@@ -1,4 +1,5 @@
 import PlanComparisonCarousel from './PlanComparisonCarousel'
+import type { Locale } from '@/lib/i18n/routes'
 
 export interface Row {
   label: string
@@ -34,10 +35,27 @@ export const ROWS: Row[] = [
   // for each just repeated the same checkmark three times.
 ]
 
+// Mirrors ROWS exactly (same order, same underlying facts) — kept as a
+// parallel array rather than a translation function so the two can't
+// silently drift in meaning, only in wording.
+export const ROWS_EN: Row[] = [
+  { label: 'Monitored GA4 properties', lite: 'up to 3', pro: 'up to 15', agency: 'up to 100' },
+  { label: 'Users', lite: '1', pro: '1', agency: '5' },
+  { label: 'Daily automatic monitoring', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Custom events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },
+  { label: 'E-commerce events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },
+  { label: 'Parameters (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },
+  { label: 'Daily email alert', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Setup wizard with suggestions from GA4', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Support', lite: 'email', pro: 'email', agency: 'dedicated channel' },
+  { label: 'GA4 analyst consultation', lite: '—', pro: '—', agency: '✓' },
+]
+
 export const PLAN_KEYS = ['lite', 'pro', 'agency'] as const
 export const PLAN_LABELS: Record<typeof PLAN_KEYS[number], string> = { lite: 'Lite', pro: 'Pro', agency: 'Agency' }
 
-export default function PlanComparisonTable() {
+export default function PlanComparisonTable({ lang = 'pl' }: { lang?: Locale }) {
+  const rows = lang === 'en' ? ROWS_EN : ROWS
   return (
     <>
       {/* Desktop — full table, all 3 plans visible at once (≥641px) */}
@@ -52,7 +70,7 @@ export default function PlanComparisonTable() {
             </tr>
           </thead>
           <tbody>
-            {ROWS.map(row => (
+            {rows.map(row => (
               <tr key={row.label}>
                 <th scope="row">{row.label}</th>
                 {PLAN_KEYS.map(key => (
@@ -67,7 +85,7 @@ export default function PlanComparisonTable() {
       {/* Mobile — one plan fully in view at a time, swipe/arrows/dots to move
           between them (≤640px) */}
       <div className="plan-table-mobile">
-        <PlanComparisonCarousel />
+        <PlanComparisonCarousel lang={lang} />
       </div>
     </>
   )

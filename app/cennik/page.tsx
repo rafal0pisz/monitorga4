@@ -19,7 +19,10 @@ const DESCRIPTION = 'Plany AlertGA4: Lite (do 3 usług GA4), Pro (do 15 usług),
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: '/cennik' },
+  alternates: {
+    canonical: '/cennik',
+    languages: { 'pl': '/cennik', 'en': '/en/pricing' },
+  },
   openGraph: {
     type: 'website',
     locale: 'pl_PL',
@@ -167,7 +170,7 @@ export default async function CennikPage() {
         .plan-carousel-dot.active { background: #16a34a; width: 18px; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="pl" routeKey="pricing" />
 
       <main>
         <div className="wrap cennik-hero">
@@ -197,20 +200,21 @@ export default async function CennikPage() {
             loggedIn={!!user}
             currentPlanId={currentPlanId}
             plans={PLANS.map(p => ({ id: p.id, name: p.name, projectLimit: p.projectLimit, priceMonthlyPLN: p.priceMonthlyPLN, priceYearlyPLN: p.priceYearlyPLN }))}
+            lang="pl"
           />
         </div>
 
         <div className="wrap plan-table-section">
           <h2>Porównanie planów</h2>
-          <PlanComparisonTable />
+          <PlanComparisonTable lang="pl" />
         </div>
 
-        <TrustStrip />
+        <TrustStrip lang="pl" />
 
-        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
+        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} lang="pl" />
       </main>
 
-      <LandingFooter />
+      <LandingFooter lang="pl" />
     </div>
   )
 }

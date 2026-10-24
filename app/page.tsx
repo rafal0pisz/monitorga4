@@ -243,7 +243,7 @@ export default async function HomePage() {
         .lp-faq-item p { color: #5b6570; font-size: 14.5px; line-height: 1.65; margin: 0 0 22px; max-width: 62ch; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="pl" routeKey="home" />
 
       {/* Hero */}
       <header className="lp-hero">
@@ -314,7 +314,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <TrustStrip />
+        <TrustStrip lang="pl" />
 
         {/* Co sprawdzamy */}
         <section id="co-sprawdzamy">
@@ -477,10 +477,10 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
+        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} lang="pl" />
       </main>
 
-      <LandingFooter />
+      <LandingFooter lang="pl" />
     </div>
   )
 }

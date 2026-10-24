@@ -18,7 +18,15 @@ export const LANDING_BASE_STYLES = `
   .lp-nav-links { display: flex; align-items: center; gap: 30px; margin-left: 40px; }
   .lp-nav-links a { font-size: 14px; font-weight: 500; text-decoration: none; color: #fff; }
   .lp-nav-links a:hover { color: rgba(255,255,255,0.8); }
-  .lp-nav-cta { display: flex; align-items: center; gap: 18px; margin-left: auto; }
+  .lp-nav-cta { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+
+  /* Language switcher — always visible next to the CTA, never hidden
+     inside the hamburger menu (deliberate: language is a decision a
+     visitor makes before anything else, not a settings toggle). */
+  .lang-switch { display: flex; align-items: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; padding: 3px; gap: 2px; flex-shrink: 0; }
+  .lang-switch-btn { display: flex; align-items: center; gap: 6px; padding: 6px 10px 6px 8px; border-radius: 999px; font-family: var(--font-sans), sans-serif; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.55); text-decoration: none; }
+  .lang-switch-btn.active { background: #fff; color: #232b31; }
+  .lang-switch-btn:not(.active):hover { color: #fff; }
   .lp-nav-cta .btn--primary { background: #fffd73; color: #3a3800; }
   .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }
   .lp-nav .nav-cta-full { display: inline; }

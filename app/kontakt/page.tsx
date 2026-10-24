@@ -13,7 +13,10 @@ const DESCRIPTION = 'Skontaktuj się z zespołem AlertGA4 — wsparcie, testy ap
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: '/kontakt' },
+  alternates: {
+    canonical: '/kontakt',
+    languages: { 'pl': '/kontakt', 'en': '/en/contact' },
+  },
   openGraph: {
     type: 'website',
     locale: 'pl_PL',
@@ -81,7 +84,7 @@ export default async function KontaktPage() {
         .contact-sent p { font-size: 13.5px; color: #5b6570; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="pl" routeKey="contact" />
 
       <main>
         <div className="wrap kontakt-hero">
@@ -100,11 +103,11 @@ export default async function KontaktPage() {
             </div>
           </div>
 
-          <ContactForm />
+          <ContactForm lang="pl" />
         </div>
       </main>
 
-      <LandingFooter />
+      <LandingFooter lang="pl" />
     </div>
   )
 }

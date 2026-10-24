@@ -1,13 +1,21 @@
 import Link from 'next/link'
+import type { Locale } from '@/lib/i18n/routes'
 
 interface Cta { href: string; label: string }
 
+const STRINGS = {
+  pl: { h: 'Zacznij monitorować poprawność danych w GA4', p: 'Logowanie kontem Google zajmuje mniej niż minutę.' },
+  en: { h: 'Start monitoring data quality in GA4', p: 'Signing in with Google takes less than a minute.' },
+}
+
 export default function LandingCtaBand({
-  primaryCta, secondaryCta,
+  primaryCta, secondaryCta, lang = 'pl',
 }: {
   primaryCta: Cta
   secondaryCta: Cta | null
+  lang?: Locale
 }) {
+  const t = STRINGS[lang]
   return (
     <section className="lp-cta-band">
       <svg className="lp-cta-chart" viewBox="0 0 1080 117" preserveAspectRatio="none" width="100%" height="117" aria-hidden="true">
@@ -20,8 +28,8 @@ export default function LandingCtaBand({
         <span className="lp-cta-marker-dot" />
       </div>
       <div className="wrap wrap--narrow">
-        <h2>Zacznij monitorować poprawność danych w GA4</h2>
-        <p>Logowanie kontem Google zajmuje mniej niż minutę.</p>
+        <h2>{t.h}</h2>
+        <p>{t.p}</p>
         <div className="lp-hero-ctas" style={{ justifyContent: 'center', marginBottom: 0 }}>
           <Link href={primaryCta.href} className="btn btn--primary">{primaryCta.label}</Link>
           {secondaryCta && <Link href={secondaryCta.href} className="btn btn--ghost">{secondaryCta.label}</Link>}

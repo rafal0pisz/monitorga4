@@ -1,7 +1,50 @@
 import Link from 'next/link'
 import BrandWordmark from '@/components/ui/BrandWordmark'
+import type { Locale } from '@/lib/i18n/routes'
 
-export default function LandingFooter() {
+export default function LandingFooter({ lang = 'pl' }: { lang?: Locale }) {
+  if (lang === 'en') {
+    return (
+      <footer className="lp-footer">
+        <div className="wrap lp-footer-body">
+          <div>
+            <BrandWordmark size={18} dark />
+            <div className="lp-footer-addr">
+              Bettersteps Sp. z o.o.<br />
+              ul. Domaniewska 47, 02-672 Warsaw, Poland<br />
+              KRS 0001011888 · NIP (VAT ID) 5214000359
+            </div>
+          </div>
+          <div className="lp-footer-col">
+            <h3>Product</h3>
+            <a href="/en#how-it-works">Process</a>
+            <a href="/en#what-we-check">Monitoring</a>
+            <a href="/en#who-its-for">Who it&rsquo;s for</a>
+            <Link href="/en/features">Features</Link>
+            <Link href="/en/pricing">Pricing</Link>
+            <Link href="/blog">Blog</Link>
+            <Link href="/en/contact">Contact</Link>
+          </div>
+          <div className="lp-footer-col">
+            <h3>Legal</h3>
+            <Link href="/en/privacy">Privacy Policy</Link>
+            <Link href="/en/terms">Terms of Service</Link>
+            <a href="#" className="csconsentlink">Cookie settings</a>
+          </div>
+          <div className="lp-footer-col">
+            <h3>Contact</h3>
+            <Link href="/en/contact">Contact form</Link>
+            <a href="mailto:kontakt@bettersteps.pl">kontakt@bettersteps.pl</a>
+            <a href="https://alertga4.pl/en">alertga4.pl</a>
+          </div>
+        </div>
+        <div className="wrap lp-footer-bottom">
+          <span>© {new Date().getFullYear()} Bettersteps Sp. z o.o. · AlertGA4</span>
+        </div>
+      </footer>
+    )
+  }
+
   return (
     <footer className="lp-footer">
       <div className="wrap lp-footer-body">

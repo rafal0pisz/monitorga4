@@ -9,7 +9,10 @@ const DESCRIPTION = 'Jakie dane zbiera AlertGA4, w jakim celu i jak je przechowu
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: '/privacy' },
+  alternates: {
+    canonical: '/privacy',
+    languages: { 'pl': '/privacy', 'en': '/en/privacy' },
+  },
   openGraph: {
     type: 'website',
     locale: 'pl_PL',
@@ -40,8 +43,9 @@ export default function PrivacyPage() {
   return (
     <div style={{ minHeight: '100vh', color: '#111827' }}>
       <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
-      <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto' }}>
+      <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
+        <Link href="/en/privacy" hrefLang="en" style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', textDecoration: 'none' }}>English version →</Link>
       </header>
 
       <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>

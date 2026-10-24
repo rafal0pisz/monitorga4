@@ -1,10 +1,12 @@
+import type { Locale } from '@/lib/i18n/routes'
+
 // Wariant A from the pricing-page design session: a centered row of pills —
 // no scrolling/JS needed, three short items always fit on one line down to
 // phone width's CSS stack (see .lp-trust-strip-track's mobile breakpoint in
 // landingStyles.ts). Shared between /cennik (below the plan comparison
 // table) and the homepage (below "Jak to działa") so the two can't silently
-// drift on wording.
-const ITEMS = [
+// drift on wording — same for the /en equivalents.
+const ITEMS_PL = [
   {
     title: 'Dostęp tylko do odczytu',
     sub: 'Read-only access Google',
@@ -37,12 +39,31 @@ const ITEMS = [
   },
 ]
 
-export default function TrustStrip() {
+const ITEMS_EN = [
+  {
+    title: 'Read-only access',
+    sub: 'We can never change anything in your GA4 account',
+    icon: ITEMS_PL[0].icon,
+  },
+  {
+    title: 'GDPR compliant',
+    sub: 'Data processing compliant with the GDPR',
+    icon: ITEMS_PL[1].icon,
+  },
+  {
+    title: 'Verified by Google',
+    sub: 'Compliant with the Google API Services User Data Policy',
+    icon: ITEMS_PL[2].icon,
+  },
+]
+
+export default function TrustStrip({ lang = 'pl' }: { lang?: Locale }) {
+  const items = lang === 'en' ? ITEMS_EN : ITEMS_PL
   return (
     <div className="lp-trust-strip">
       <div className="wrap">
         <div className="lp-trust-strip-track">
-          {ITEMS.map(item => (
+          {items.map(item => (
             <div className="lp-trust-chip" key={item.title}>
               {item.icon}
               <span>

@@ -18,7 +18,10 @@ const DESCRIPTION = 'Co AlertGA4 sprawdza każdego dnia w Twojej usłudze GA4: w
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: '/funkcje' },
+  alternates: {
+    canonical: '/funkcje',
+    languages: { 'pl': '/funkcje', 'en': '/en/features' },
+  },
   openGraph: {
     type: 'website',
     locale: 'pl_PL',
@@ -167,7 +170,7 @@ export default async function FunkcjePage() {
 
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} user={!!user} />
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="pl" routeKey="features" />
 
       <main>
         <section className="fx-hero">
@@ -180,7 +183,7 @@ export default async function FunkcjePage() {
 
         <div className="fx-subnav">
           <div className="wrap">
-            <FeatureSubnav items={SUBNAV} />
+            <FeatureSubnav items={SUBNAV} lang="pl" />
           </div>
         </div>
 
@@ -441,10 +444,10 @@ export default async function FunkcjePage() {
           </div>
         </section>
 
-        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
+        <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} lang="pl" />
       </main>
 
-      <LandingFooter />
+      <LandingFooter lang="pl" />
     </div>
   )
 }

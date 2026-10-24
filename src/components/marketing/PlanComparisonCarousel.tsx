@@ -1,12 +1,20 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { ROWS, PLAN_KEYS, PLAN_LABELS } from './PlanComparisonTable'
+import { ROWS, ROWS_EN, PLAN_KEYS, PLAN_LABELS } from './PlanComparisonTable'
 import { PLANS } from '@/lib/billing/plans'
+import type { Locale } from '@/lib/i18n/routes'
 
 const SWIPE_THRESHOLD = 40
 
-export default function PlanComparisonCarousel() {
+const STRINGS = {
+  pl: { prev: 'Poprzedni plan', next: 'Następny plan', show: (name: string) => `Pokaż plan ${name}`, price: (n: number) => `${n} zł + VAT/mies.` },
+  en: { prev: 'Previous plan', next: 'Next plan', show: (name: string) => `Show ${name} plan`, price: (n: number) => `${n} PLN + VAT/mo` },
+}
+
+export default function PlanComparisonCarousel({ lang = 'pl' }: { lang?: Locale }) {
+  const t = STRINGS[lang]
+  const rows = lang === 'en' ? ROWS_EN : ROWS
   const [index, setIndex] = useState(0)
   const touchStartX = useRef<number | null>(null)
 
@@ -36,14 +44,14 @@ export default function PlanComparisonCarousel() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        <button type="button" className="plan-carousel-arrow" onClick={() => go(index - 1)} disabled={index === 0} aria-label="Poprzedni plan">‹</button>
+        <button type="button" className="plan-carousel-arrow" onClick={() => go(index - 1)} disabled={index === 0} aria-label={t.prev}>‹</button>
 
         <div className="plan-carousel-card">
           <div className="plan-carousel-head">
             <span className="name">{PLAN_LABELS[planKey]}</span>
-            {plan && <span className="price">{plan.priceMonthlyPLN} zł + VAT/mies.</span>}
+            {plan && <span className="price">{t.price(plan.priceMonthlyPLN)}</span>}
           </div>
-          {ROWS.map(row => (
+          {rows.map(row => (
             <div key={row.label} className="plan-carousel-row">
               <span className="k">{row.label}</span>
               <span className={`v${row[planKey] === '✓' ? ' check' : ''}${row[planKey] === '—' ? ' dash' : ''}`}>{row[planKey]}</span>
@@ -51,7 +59,7 @@ export default function PlanComparisonCarousel() {
           ))}
         </div>
 
-        <button type="button" className="plan-carousel-arrow" onClick={() => go(index + 1)} disabled={index === PLAN_KEYS.length - 1} aria-label="Następny plan">›</button>
+        <button type="button" className="plan-carousel-arrow" onClick={() => go(index + 1)} disabled={index === PLAN_KEYS.length - 1} aria-label={t.next}>›</button>
       </div>
 
       <div className="plan-carousel-dots">
@@ -61,7 +69,7 @@ export default function PlanComparisonCarousel() {
             type="button"
             className={`plan-carousel-dot${i === index ? ' active' : ''}`}
             onClick={() => go(i)}
-            aria-label={`Pokaż plan ${PLAN_LABELS[key]}`}
+            aria-label={t.show(PLAN_LABELS[key])}
           />
         ))}
       </div>

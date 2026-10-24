@@ -5,6 +5,10 @@ const PUBLIC_PATHS = [
   '/login', '/auth/callback', '/share', '/privacy', '/terms', '/funkcje', '/kontakt', '/cennik',
   '/demo', '/robots.txt', '/sitemap.xml', '/llms.txt', '/icon', '/apple-icon', '/opengraph-image',
   '/api/contact', '/invite', '/.well-known', '/blog', '/trial-winback',
+  // English marketing pages (app/en/*) — mirrors the Polish public pages
+  // above; '/en' alone (via startsWith) covers /en, /en/features,
+  // /en/pricing, /en/contact, /en/privacy and /en/terms in one entry.
+  '/en',
 ]
 
 // API-only paths: /api/worker/run, /api/worker/trial-reminders and

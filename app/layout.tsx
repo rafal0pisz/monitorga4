@@ -48,6 +48,11 @@ export const metadata: Metadata = {
   publisher: 'Bettersteps Sp. z o.o.',
   alternates: {
     canonical: '/',
+    languages: {
+      'pl': '/',
+      'en': '/en',
+      'x-default': '/en',
+    },
   },
   robots: {
     index: true,
