@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import LandingNav from '@/components/marketing/LandingNav'
+import LandingFooter from '@/components/marketing/LandingFooter'
 import SetHtmlLang from '@/components/marketing/SetHtmlLang'
+import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const TITLE = 'Terms of Service'
 const DESCRIPTION = 'AlertGA4 Terms of Service — definitions, registration rules, plans and billing, service availability, liability, complaints.'
@@ -34,15 +38,23 @@ const ol: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyle
 const olAlpha: React.CSSProperties = { ...ol, listStyleType: 'lower-alpha' }
 const link: React.CSSProperties = { color: '#16a34a' }
 
-export default function TermsPageEn() {
+export default async function TermsPageEn() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const primaryCta = user
+    ? { href: '/dashboard', label: 'Go to dashboard' }
+    : { href: '/login', label: 'Sign up with Google' }
+
   return (
-    <div style={{ minHeight: '100vh', color: '#111827' }}>
+    <div className="lp" style={{ minHeight: '100vh', color: '#111827' }}>
       <SetHtmlLang lang="en" />
-      <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
-      <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/en" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
-        <Link href="/terms" hrefLang="pl" style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', textDecoration: 'none' }}>← Wersja polska</Link>
-      </header>
+      <style>{`
+        ${LANDING_BASE_STYLES}
+        .legal-doc li::marker { color: #16a34a; font-weight: 600; }
+      `}</style>
+
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="en" routeKey="terms" />
 
       <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Terms of Service</h1>
@@ -179,6 +191,8 @@ export default function TermsPageEn() {
           See also our <Link href="/en/privacy" style={link}>Privacy Policy</Link>.
         </p>
       </main>
+
+      <LandingFooter lang="en" />
     </div>
   )
 }

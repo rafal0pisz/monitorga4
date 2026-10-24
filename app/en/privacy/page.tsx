@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import LandingNav from '@/components/marketing/LandingNav'
+import LandingFooter from '@/components/marketing/LandingFooter'
 import SetHtmlLang from '@/components/marketing/SetHtmlLang'
+import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const TITLE = 'Privacy Policy'
 const DESCRIPTION = 'What data AlertGA4 collects, for what purpose, and how it stores it — a full, GDPR-compliant privacy policy.'
@@ -34,15 +38,23 @@ const ul: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyle
 const ol: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyleType: 'decimal' }
 const link: React.CSSProperties = { color: '#16a34a' }
 
-export default function PrivacyPageEn() {
+export default async function PrivacyPageEn() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const primaryCta = user
+    ? { href: '/dashboard', label: 'Go to dashboard' }
+    : { href: '/login', label: 'Sign up with Google' }
+
   return (
-    <div style={{ minHeight: '100vh', color: '#111827' }}>
+    <div className="lp" style={{ minHeight: '100vh', color: '#111827' }}>
       <SetHtmlLang lang="en" />
-      <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
-      <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/en" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
-        <Link href="/privacy" hrefLang="pl" style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', textDecoration: 'none' }}>← Wersja polska</Link>
-      </header>
+      <style>{`
+        ${LANDING_BASE_STYLES}
+        .legal-doc li::marker { color: #16a34a; font-weight: 600; }
+      `}</style>
+
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="en" routeKey="privacy" />
 
       <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Privacy Policy</h1>
@@ -218,6 +230,8 @@ export default function PrivacyPageEn() {
           · <a href="https://www.bettersteps.pl" style={link}>www.bettersteps.pl</a>
         </p>
       </main>
+
+      <LandingFooter lang="en" />
     </div>
   )
 }

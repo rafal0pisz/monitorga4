@@ -1,5 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
+import LandingNav from '@/components/marketing/LandingNav'
+import LandingFooter from '@/components/marketing/LandingFooter'
+import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 
 const TITLE = 'Polityka prywatności'
 const DESCRIPTION = 'Jakie dane zbiera AlertGA4, w jakim celu i jak je przechowuje — pełna polityka prywatności zgodna z RODO.'
@@ -39,14 +43,22 @@ const ul: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyle
 const ol: React.CSSProperties = { paddingLeft: 22, margin: '0 0 12px', listStyleType: 'decimal' }
 const link: React.CSSProperties = { color: '#16a34a' }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const primaryCta = user
+    ? { href: '/dashboard', label: 'Przejdź do panelu' }
+    : { href: '/login', label: 'Zarejestruj się przez Google' }
+
   return (
-    <div style={{ minHeight: '100vh', color: '#111827' }}>
-      <style>{`.legal-doc li::marker { color: #16a34a; font-weight: 600; }`}</style>
-      <header style={{ padding: '20px 24px', maxWidth: 720, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', textDecoration: 'none' }}>← AlertGA4</Link>
-        <Link href="/en/privacy" hrefLang="en" style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', textDecoration: 'none' }}>English version →</Link>
-      </header>
+    <div className="lp" style={{ minHeight: '100vh', color: '#111827' }}>
+      <style>{`
+        ${LANDING_BASE_STYLES}
+        .legal-doc li::marker { color: #16a34a; font-weight: 600; }
+      `}</style>
+
+      <LandingNav primaryCta={primaryCta} user={!!user} lang="pl" routeKey="privacy" />
 
       <main className="legal-doc" style={{ maxWidth: 720, margin: '0 auto', padding: '8px 24px 80px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, margin: '0 0 4px' }}>Polityka prywatności</h1>
@@ -230,6 +242,8 @@ export default function PrivacyPage() {
           · <a href="https://www.bettersteps.pl" style={link}>www.bettersteps.pl</a>
         </p>
       </main>
+
+      <LandingFooter lang="pl" />
     </div>
   )
 }
