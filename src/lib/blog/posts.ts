@@ -343,6 +343,340 @@ const NOT_SET_FAQ_HTML = `
   </div>
 `
 
+const THRESHOLDS_BODY_HTML = `
+  <p>Czasem raport w GA4 wygląda, jakby część ruchu po prostu zniknęła. Rozbijasz sesje po płci i kampanii, a dla jednej z grup widzisz puste pole, mimo że wiesz, że ten segment miał tego dnia realny ruch. To nie jest błąd pomiarowy ani kolejna odmiana „(not set)” — to progi danych (data thresholds), mechanizm prywatności, który GA4 stosuje świadomie i bez wyjątków, gdy łączysz zbyt wrażliwe wymiary przy zbyt małej grupie użytkowników.</p>
+
+  <h2>Czym są progi danych w GA4</h2>
+
+  <p>Progi danych to zabezpieczenie zbliżone do k-anonimowości: GA4 nie pokaże wiersza raportu, jeśli opisywana przez niego grupa użytkowników jest na tyle mała, że teoretycznie dałoby się ją zidentyfikować. Dotyczy to przede wszystkim wymiarów powiązanych z Google Signals — wieku, płci, kategorii zainteresowań — zwłaszcza gdy łączysz je z dodatkowym, zawężającym wymiarem, takim jak kampania, miasto czy konkretne zdarzenie.</p>
+
+  <p>To mechanizm celowy, działający niezależnie od tego, czy korzystasz z niego świadomie. Nie da się go wyłączyć wybiórczo dla jednego raportu — można jedynie ograniczyć sytuacje, w których się uruchamia.</p>
+
+  <p>Warto odróżnić to od „(not set)”, które opisaliśmy osobno w <a href="/blog/not-set-ga4">artykule o „(not set)” w GA4</a>. „(not set)” oznacza, że zdarzenie dotarło, ale zabrakło mu wartości dla danego wymiaru. Próg danych działa inaczej: zdarzenie i jego wartości istnieją, ale GA4 świadomie nie pokazuje całego wiersza, żeby nie ujawnić zbyt małej, potencjalnie identyfikowalnej grupy.</p>
+
+  <p>Z perspektywy osoby czytającej raport obie sytuacje wyglądają podobnie — pusty wiersz albo brakująca wartość — ale wymagają zupełnie innej reakcji. „(not set)” zwykle da się ograniczyć poprawą konfiguracji pomiaru. Progu danych nie da się „naprawić” w ten sposób, bo nie jest wynikiem błędu — jest wynikiem zbyt małej próby.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 680 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram pokazujący, jak progi danych w GA4 ukrywają wiersz raportu z za małą liczbą użytkowników">
+      <defs>
+        <marker id="arrowHead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8b939a" />
+        </marker>
+      </defs>
+      <rect x="16" y="78" width="168" height="64" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="100" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#232b31">Zapytanie o raport</text>
+      <text x="100" y="121" text-anchor="middle" font-size="11" fill="#5b6570">np. płeć × kampania</text>
+      <line x1="184" y1="110" x2="224" y2="110" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowHead)" />
+      <rect x="228" y="68" width="200" height="84" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="328" y="98" text-anchor="middle" font-size="12" font-weight="600" fill="#232b31">Czy grupa ma za mało</text>
+      <text x="328" y="115" text-anchor="middle" font-size="12" font-weight="600" fill="#232b31">unikalnych użytkowników?</text>
+      <text x="328" y="134" text-anchor="middle" font-size="11" fill="#5b6570">próg k-anonimowości Google</text>
+      <line x1="432" y1="90" x2="470" y2="48" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowHead)" />
+      <text x="447" y="60" text-anchor="middle" font-size="11" font-weight="600" fill="#ca8a04">tak</text>
+      <line x1="432" y1="130" x2="470" y2="172" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowHead)" />
+      <text x="447" y="160" text-anchor="middle" font-size="11" font-weight="600" fill="#16a34a">nie</text>
+      <rect x="474" y="16" width="190" height="64" rx="10" fill="#fefce8" stroke="#ca8a04" stroke-width="1.5" />
+      <text x="569" y="42" text-anchor="middle" font-size="12" font-weight="600" fill="#92650a">Wiersz ukryty</text>
+      <text x="569" y="59" text-anchor="middle" font-size="11" fill="#92650a">pusta wartość albo „0”, bez ostrzeżenia</text>
+      <rect x="474" y="172" width="190" height="64" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="569" y="198" text-anchor="middle" font-size="12" font-weight="600" fill="#166534">Wartość widoczna</text>
+      <text x="569" y="215" text-anchor="middle" font-size="11" fill="#166534">raportowana normalnie</text>
+    </svg>
+    <figcaption>Uproszczony schemat działania progów danych: GA4 ukrywa cały wiersz, zamiast pokazać niedokładną wartość.</figcaption>
+  </figure>
+
+  <h2>Kiedy się włączają</h2>
+
+  <ul>
+    <li><b>Google Signals jest włączony.</b> To najczęstszy wyzwalacz — Google Signals odpowiada za wymiary demograficzne i zainteresowania, a to właśnie one najczęściej podlegają progom.</li>
+    <li><b>Raport łączy kilka wymiarów naraz.</b> Pojedynczy wymiar, na przykład sam wiek, rzadko jest problemem przy większym ruchu. Ryzyko rośnie, gdy zestawiasz go z drugim, zawężającym wymiarem — konkretną kampanią, miastem czy niszowym zdarzeniem konwersji.</li>
+    <li><b>Niski wolumen ruchu dla danego segmentu.</b> Małe usługi GA4 albo wąskie segmenty, na przykład jeden zagraniczny rynek czy kampania z niewielkim budżetem, trafiają na próg znacznie częściej niż ruch zagregowany na poziomie całej usługi.</li>
+    <li><b>Eksploracje z własnymi, szczegółowymi zestawieniami.</b> Im bardziej szczegółowy, autorski raport budujesz, tym łatwiej nieświadomie złożyć kombinację wymiarów, która trafi na próg.</li>
+  </ul>
+
+  <h2>Jak odróżnić próg danych od realnego braku ruchu</h2>
+
+  <ul>
+    <li><b>Sprawdź, czy GA4 pokazuje komunikat o progach.</b> W standardowych raportach i Eksploracjach GA4 zwykle informuje wprost, że część danych została ukryta z powodu progów — to pierwszy i najpewniejszy sygnał.</li>
+    <li><b>Porównaj z sumą zagregowaną.</b> Jeśli ogólna liczba sesji dla danego dnia jest wyraźnie większa od zera, a rozbicie po wymiarach demograficznych pokazuje puste wiersze, to zwykle próg, nie realny brak ruchu.</li>
+    <li><b>Sprawdź to samo zestawienie dla szerszego okresu.</b> Rozciągnięcie zakresu dat z jednego dnia na 30 dni zwykle odsłania dane, które wcześniej były ukryte — sam ten fakt potwierdza, że przyczyną był próg, a nie brak ruchu.</li>
+    <li><b>Pamiętaj, że Data API nie zawsze sygnalizuje to tak czytelnie jak interfejs.</b> Jeśli budujesz własne raporty na GA4 Data API, zapytanie o zbyt szczegółową kombinację wymiarów może zwrócić po prostu mniej wierszy niż się spodziewasz, bez równie wyraźnego ostrzeżenia jak w interfejsie GA4 — warto mieć to z tyłu głowy przy projektowaniu własnych dashboardów.</li>
+  </ul>
+
+  <h2>Jak ograniczyć wpływ progów danych</h2>
+
+  <ol>
+    <li>Wydłuż okres raportowania. Więcej dni to więcej użytkowników w każdej grupie, a to zmniejsza szansę na przekroczenie progu.</li>
+    <li>Ogranicz liczbę jednocześnie łączonych wymiarów. Zamiast od razu zestawiać trzy wymiary naraz, zacznij od jednego i dokładaj kolejne tylko tam, gdzie wolumen na to pozwala.</li>
+    <li>Zastanów się, czy Twoja usługa w ogóle potrzebuje Google Signals. Jeśli nie korzystasz z remarketingu ani raportowania między urządzeniami, wyłączenie Google Signals znacząco ogranicza liczbę sytuacji, w których progi się uruchamiają.</li>
+    <li>Dla naprawdę szczegółowej, zdarzeniowej analizy rozważ eksport do BigQuery. Surowe, nieagregowane dane zdarzeń eksportowane do BigQuery nie podlegają temu samemu mechanizmowi progowania co raporty w interfejsie i w Data API — to właściwe miejsce, gdy standardowe raportowanie GA4 systematycznie nie wystarcza.</li>
+    <li>Nie traktuj pustego wiersza jako ostatecznej informacji biznesowej. Zanim wyciągniesz wniosek z brakującej wartości, sprawdź, czy to nie efekt progu — w przeciwnym razie łatwo błędnie uznać, że dany segment nie generuje ruchu, podczas gdy po prostu jest zbyt mały, żeby GA4 chciał go pokazać.</li>
+  </ol>
+
+  <h2>Jak AlertGA4 radzi sobie z progami danych</h2>
+
+  <p>AlertGA4 nie sprawdza wymiarów demograficznych ani zainteresowań — to właśnie one najczęściej trafiają na próg. Codzienne checki opierają się na wymiarach i metrykach zdarzeniowych: źródle i medium, parametrach e-commerce, identyfikatorze transakcji, nazwach i kategoriach zdarzeń. W praktyce oznacza to, że progi danych rzadko mają wpływ na wyniki monitoringu — a jeśli któryś check pokaże nagły spadek albo zero tam, gdzie go wcześniej nie było, zwykle oznacza to realny problem pomiarowy opisany w innych artykułach tego bloga, a nie efekt progowania.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Zespoły budujące własne dashboardy na Data API</b>, które mogą nieświadomie zinterpretować brakujące wiersze jako realny spadek ruchu w danym segmencie.</li>
+    <li><b>Marketing analizujący dane demograficzne i zainteresowania</b>, gdzie segmentacja kampanii według wieku czy płci najczęściej trafia na próg przy mniejszym ruchu.</li>
+    <li><b>Firmy z wieloma rynkami albo wąskimi segmentami odbiorców</b>, dla których pojedynczy, niszowy rynek może systematycznie pokazywać niepełne dane demograficzne.</li>
+  </ul>
+
+  <p>We wszystkich trzech przypadkach błąd interpretacyjny jest ten sam: potraktowanie pustego wiersza jako informacji o rzeczywistości, zamiast jako informacji o tym, że GA4 akurat tej rzeczywistości nie chce pokazać.</p>
+`
+
+const THRESHOLDS_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy progi danych to błąd w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie. To celowy mechanizm ochrony prywatności, uruchamiany automatycznie, gdy grupa opisywana przez wiersz raportu jest zbyt mała, żeby pokazać ją bez ryzyka identyfikacji konkretnych osób.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy dotyczy tylko danych demograficznych?</summary>
+      <div class="blog-faq-answer"><p>Najczęściej tak, ponieważ wiek, płeć i zainteresowania pochodzą z Google Signals i są najbardziej wrażliwymi wymiarami. Teoretycznie może dotyczyć każdej wystarczająco wąskiej kombinacji wymiarów przy bardzo małym ruchu, ale w praktyce rzadko widać to poza demografią.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy wyłączenie Google Signals całkowicie usuwa progi?</summary>
+      <div class="blog-faq-answer"><p>Znacząco ogranicza ryzyko, bo usuwa główne źródło wrażliwych wymiarów, ale nie jest to gwarancja zerowa — przy bardzo małym wolumenie ruchu próg teoretycznie może zadziałać także bez Google Signals.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy eksport do BigQuery rozwiązuje problem?</summary>
+      <div class="blog-faq-answer"><p>W dużej mierze tak. Surowe dane eksportowane do BigQuery to zdarzenia na poziomie pojedynczego wystąpienia, bez agregacji, więc nie podlegają temu samemu progowaniu co raporty w interfejsie i w Data API.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy AlertGA4 wykrywa, kiedy zadziałał próg danych?</summary>
+      <div class="blog-faq-answer"><p>Nie wprost — AlertGA4 nie analizuje wymiarów, które najczęściej wyzwalają progi. Dzięki temu checki rzadko są w ogóle narażone na ten mechanizm, a nie dlatego, że go rozpoznają i pomijają.</p></div>
+    </details>
+  </div>
+`
+
+const REPORTING_CHECKLIST_BODY_HTML = `
+  <p>Najdroższy błąd w raporcie dla klienta to nie ten, który rzuca się w oczy. To liczba, która wygląda wiarygodnie, zostaje zaakceptowana bez pytań, a dopiero miesiąc później ktoś zauważa, że przychód w raporcie nie zgadzał się z systemem sprzedażowym. Ten artykuł to konkretna checklist — kilka punktów do przejścia, zanim raport trafi do skrzynki klienta.</p>
+
+  <h2>Dlaczego ładnie wyglądający raport to za mało</h2>
+
+  <p>Raport, który wygląda źle, zostaje sprawdzony odruchowo — nagły spadek przychodu czy zerowa liczba konwersji budzi czujność samoistnie. Problem w tym, że najbardziej kosztowne błędy pomiarowe w GA4 wyglądają dokładnie odwrotnie: podbijają liczby w górę, nie w dół. Zdublowany zakup zawyża przychód. Ruch botowy w nocy zawyża sesje i na pierwszy rzut oka poprawia współczynnik konwersji. Nic z tego nie wygląda jak błąd — dopóki ktoś nie porówna liczb z czymś niezależnym.</p>
+
+  <p>Klient, który zauważy taką rozbieżność samodzielnie, zapamiętuje przede wszystkim jedno: że musiał to wychwycić sam, mimo że płaci za to, żeby ktoś inny tego pilnował. Ta checklist to sposób, żeby nigdy nie być w tej sytuacji po raz drugi.</p>
+
+  <h2>Checklist przed wysłaniem raportu</h2>
+
+  <ol>
+    <li><b>Porównaj liczbę transakcji i przychód z systemem sprzedażowym.</b> To najszybszy test na zdublowane zdarzenia zakupu — rozbieżność rzędu kilku procent w górę to sygnał ostrzegawczy, nie zaokrąglenie.</li>
+    <li><b>Sprawdź udział „(not set)” w kluczowych wymiarach.</b> Źródło i medium, strona docelowa, kategoria produktu — nagły wzrost względem poprzednich okresów psuje wiarygodność atrybucji kanałów w całym raporcie.</li>
+    <li><b>Sprawdź udział ruchu Direct i self-referral.</b> Skokowy wzrost zwykle oznacza utratę atrybucji źródła, nie nagłą popularność marki — a to bezpośrednio wpływa na to, które kanały w raporcie wyglądają na skuteczne.</li>
+    <li><b>Sprawdź, czy kluczowe zdarzenia nie spadły do zera w żadnym dniu okresu.</b> Pojedynczy dzień bez formularza kontaktowego czy zdarzenia zakupu łatwo zgubić w sumie miesięcznej, a zwykle oznacza to, że coś przestało działać technicznie, nie że klienci przestali kupować.</li>
+    <li><b>Sprawdź pokrycie kluczowych parametrów e-commerce.</b> Transaction_id, currency, item_id — brakujące wartości w części transakcji zafałszowują rozbicie przychodu na produkty czy waluty, nawet gdy sama liczba transakcji się zgadza.</li>
+    <li><b>Sprawdź, czy nie ma anomalii geograficznych albo ruchu botowego w nocy.</b> Obie rzeczy podbijają liczbę sesji i potrafią poprawić metryki zaangażowania na pierwszy rzut oka, nie będąc realnym, wartościowym ruchem.</li>
+    <li><b>Porównaj okres z poprzednim analogicznym okresem, nie tylko rok do roku.</b> Nagły skok albo spadek bez wytłumaczenia biznesowego — kampanii, sezonu, promocji — to sygnał do sprawdzenia przyczyny, nie do wpisania wprost do podsumowania dla klienta.</li>
+    <li><b>Sprawdź, czy liczby z poprzedniego raportu nadal się zgadzają.</b> Retrospektywna zmiana w konfiguracji GA4 albo w samych danych potrafi po cichu przesunąć liczby za wcześniejszy okres — warto raz na jakiś czas zestawić archiwalny raport z tym, co GA4 pokazuje dla tego samego okresu dzisiaj.</li>
+  </ol>
+
+  <figure class="blog-figure">
+    <div class="blog-checklist">
+      <div class="blog-checklist-head">Przed wysłaniem raportu klientowi</div>
+      <ul class="blog-checklist-list">
+        <li><span class="blog-checklist-check">✓</span> Przychód i liczba transakcji zgadzają się z systemem sprzedażowym</li>
+        <li><span class="blog-checklist-check">✓</span> Udział „(not set)” w normie dla tego konta</li>
+        <li><span class="blog-checklist-check">✓</span> Ruch Direct i self-referral bez nagłego skoku</li>
+        <li><span class="blog-checklist-check">✓</span> Żaden dzień okresu bez kluczowego zdarzenia</li>
+        <li><span class="blog-checklist-check">✓</span> Parametry e-commerce (transaction_id, currency, item_id) pokryte</li>
+        <li><span class="blog-checklist-check">✓</span> Brak anomalii geograficznych i ruchu botowego w nocy</li>
+        <li><span class="blog-checklist-check">✓</span> Zmiana względem poprzedniego okresu ma wytłumaczenie biznesowe</li>
+        <li><span class="blog-checklist-check">✓</span> Liczby z poprzedniego raportu nadal się zgadzają</li>
+      </ul>
+    </div>
+    <figcaption>Ta sama checklist w skróconej formie — warto trzymać ją pod ręką przy każdym cyklicznym raporcie.</figcaption>
+  </figure>
+
+  <h2>Jak zrobić z tego powtarzalny proces, a nie jednorazową kontrolę</h2>
+
+  <ul>
+    <li><b>Sprawdzaj dane 1–2 dni przed wysyłką raportu</b>, nie w dniu wysyłki — zostawia to czas na wyjaśnienie albo naprawienie czegoś, zanim klient zobaczy liczby.</li>
+    <li><b>Zapisz checklistę w jednym, wspólnym miejscu dla całego zespołu</b>, żeby nie zależała od pamięci jednej osoby prowadzącej konto.</li>
+    <li><b>Traktuj odchylenie od normy jako pytanie, nie jako gotowy wynik.</b> Nagły skok czy spadek bez wytłumaczenia biznesowego — kampanii, sezonu, promocji — zasługuje na sprawdzenie, zanim trafi do raportu jako fakt.</li>
+    <li><b>Nie polegaj wyłącznie na pamięci przy wielu kontach naraz.</b> Przy kilkunastu klientach łatwo przejść przez checklistę dokładnie dla dwóch pierwszych kont i pobieżnie dla reszty, zwłaszcza pod koniec miesiąca.</li>
+  </ul>
+
+  <h2>Jak AlertGA4 wspiera ten proces</h2>
+
+  <p>Większość punktów tej checklisty to dokładnie to, co AlertGA4 sprawdza automatycznie, codziennie, dla każdego podłączonego konta: duplikaty zakupu, udział „(not set)”, self-referral, ruch botowy w nocy, anomalie geograficzne i pokrycie parametrów. Zamiast przechodzić przez checklistę ręcznie tuż przed wysyłką raportu, masz już trzydzieści dni historii wyników dla każdego klienta na jednym dashboardzie — sprawdzenie przed raportem sprowadza się do rzutu oka na wynik i trend, nie do ręcznego przechodzenia przez każdy punkt od zera.</p>
+
+  <p>Dla agencji obsługującej kilkanaście kont jednocześnie różnica jest szczególnie odczuwalna pod koniec miesiąca, gdy większość raportów wychodzi w krótkim odstępie czasu — zamiast powtarzać tę samą ręczną checklistę kilkanaście razy z rzędu, przegląda się kilkanaście dashboardów z gotowym wynikiem.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Agencje obsługujące wielu klientów</b>, dla których jeden przeoczony błąd w jednym raporcie kosztuje więcej zaufania niż cała reszta dobrze wykonanej pracy tego miesiąca.</li>
+    <li><b>Freelancerzy i analitycy prowadzący konta samodzielnie</b>, bez drugiej osoby, która mogłaby zweryfikować liczby przed wysyłką.</li>
+    <li><b>Wewnętrzne zespoły marketingu raportujące do zarządu</b>, gdzie błędna liczba w raporcie wewnętrznym wpływa na decyzje budżetowe tak samo, jak w raporcie dla zewnętrznego klienta.</li>
+  </ul>
+`
+
+const REPORTING_CHECKLIST_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy ta checklist zastępuje pogłębioną analizę danych?</summary>
+      <div class="blog-faq-answer"><p>Nie. To minimalny, techniczny test wiarygodności liczb przed wysyłką, nie zastępuje analizy biznesowej wyników ani interpretacji trendów.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Jak często warto przechodzić przez checklistę?</summary>
+      <div class="blog-faq-answer"><p>Przy każdym cyklicznym raporcie, najlepiej 1–2 dni przed wysyłką, żeby zostawić czas na reakcję, jeśli coś wymaga poprawy.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Co, jeśli już wysłałem raport z błędną liczbą?</summary>
+      <div class="blog-faq-answer"><p>Najlepiej od razu przesłać klientowi krótkie sprostowanie z poprawną liczbą i krótkim wyjaśnieniem przyczyny — milczenie w nadziei, że nikt nie zauważy, kosztuje więcej zaufania niż sama pomyłka.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy małą agencję z dwoma klientami też to dotyczy?</summary>
+      <div class="blog-faq-answer"><p>Tak, może nawet bardziej — przy jednym czy dwóch kontach pojedynczy błąd w raporcie stanowi większy odsetek całej relacji z klientami niż przy portfelu kilkudziesięciu kont.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy da się w pełni zautomatyzować tę checklistę?</summary>
+      <div class="blog-faq-answer"><p>Dużą część tak — narzędzie monitorujące dane codziennie, takie jak AlertGA4, pokrywa większość punktów automatycznie. Finalna decyzja, czy liczba ma sens biznesowy w kontekście konkretnego klienta, zawsze wymaga jednak krótkiego spojrzenia człowieka.</p></div>
+    </details>
+  </div>
+`
+
+const BOT_TRAFFIC_BODY_HTML = `
+  <p>GA4 filtruje ruch botowy domyślnie, więc łatwo założyć, że temat jest już załatwiony. W praktyce wbudowany filtr łapie tylko boty, które sam rozpoznaje — a to coraz mniejsza część całego ruchu zautomatyzowanego trafiającego dziś na strony internetowe. Ten artykuł pokazuje, jak rozpoznać to, co przeszło przez filtr, i jakie rozwiązania ograniczają boty jeszcze zanim w ogóle dotrą do strony — nie tylko w samym GA4.</p>
+
+  <h2>Jak GA4 filtruje ruch botowy domyślnie</h2>
+
+  <p>GA4 ma włączone domyślnie i bez możliwości wyłączenia filtrowanie ruchu znanych botów i pająków, oparte na liście IAB/ABC (International Spiders and Bots List). Mechanizm porównuje user-agent żądania z tą listą i odrzuca dopasowania, zanim trafią do raportów.</p>
+
+  <p>To filtr sygnaturowy, nie behawioralny: rozpoznaje konkretne, znane identyfikatory botów, ale nie analizuje tego, jak dana sesja się zachowuje. Bot podszywający się pod zwykłą przeglądarkę — a większość dzisiejszego ruchu zautomatyzowanego tak właśnie robi — nie trafia na tę listę i przechodzi przez filtr bez przeszkód.</p>
+
+  <p>To ważna różnica względem oczekiwań: wiele osób zakłada, że skoro GA4 ma „filtr botów”, temat jest zamknięty raz na zawsze. W rzeczywistości lista IAB/ABC jest aktualizowana przez zewnętrzną organizację i obejmuje głównie duże, znane boty — wyszukiwarkowe crawlery, narzędzia monitorujące, publicznie znane skanery. Celowo zbudowany bot, który ma ominąć akurat Twoją stronę, praktycznie nigdy się na niej nie znajdzie.</p>
+
+  <h2>Jak rozpoznać ruch botowy, który przeszedł przez filtr</h2>
+
+  <ul>
+    <li><b>Nietypowa koncentracja sesji w nocnych godzinach.</b> Skok ruchu w porach, w których Twoja realna publiczność zwykle śpi, to jeden z najbardziej wiarygodnych sygnałów.</li>
+    <li><b>Skrajne wartości czasu trwania sesji albo zaangażowania.</b> Sesje trwające ułamek sekundy albo odwrotnie, nienaturalnie długie i identyczne dla wielu użytkowników, rzadko są realnym zachowaniem człowieka.</li>
+    <li><b>Ruch z sieci hostingowych i centrów danych zamiast od dostawców internetu.</b> Prawdziwi użytkownicy łączą się z sieci domowych i mobilnych; skupienie ruchu wokół znanych zakresów adresów IP dostawców chmurowych to typowy ślad zautomatyzowanych skryptów.</li>
+    <li><b>Jedna strona wejścia bez dalszej nawigacji, powtórzona w dużej skali.</b> Sesje, które zawsze lądują na tej samej stronie i kończą się bez żadnej dalszej interakcji, zwłaszcza w dużej liczbie z podobnego okna czasowego.</li>
+    <li><b>Nagły wzrost sesji bez odpowiadającego wzrostu konwersji.</b> Realny ruch zwykle przekłada się choć trochę na dalsze działania; ruch, który rośnie, podczas gdy liczba leadów czy zakupów stoi w miejscu, zasługuje na sprawdzenie.</li>
+  </ul>
+
+  <h2>Jak to sprawdzić w GA4</h2>
+
+  <ol>
+    <li>Zbuduj raport swobodny (Explore) z wymiarem godziny i metryką liczby sesji, żeby zobaczyć realny rozkład ruchu w ciągu doby.</li>
+    <li>Porównaj ten rozkład z tym, czego się spodziewasz, znając swoją publiczność — sklep z klientami w Polsce nie powinien mieć regularnego szczytu ruchu o trzeciej w nocy czasu polskiego.</li>
+    <li>Sprawdź raport technologii (przeglądarka, system operacyjny) pod kątem nietypowej koncentracji na jednej, rzadkiej kombinacji.</li>
+    <li>Sprawdź raport geograficzny pod kątem ruchu skupionego wokół lokalizacji typowych dla centrów danych, a nie realnych rynków, na których działasz.</li>
+  </ol>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 660 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wykres sesji w ciągu doby pokazujący nietypowy wzrost ruchu w godzinach nocnych">
+      <defs>
+        <pattern id="hatchAmber" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <rect width="6" height="6" fill="#fde68a" />
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#ca8a04" stroke-width="2" />
+        </pattern>
+      </defs>
+      <text x="30" y="24" font-size="13" font-weight="600" fill="#232b31">Sesje w ciągu doby — przykładowy wzorzec</text>
+      <rect x="30" y="38" width="12" height="12" rx="2" fill="#16a34a" />
+      <text x="48" y="48" font-size="11.5" fill="#5b6570">typowy ruch w ciągu dnia</text>
+      <rect x="215" y="38" width="12" height="12" rx="2" fill="url(#hatchAmber)" stroke="#ca8a04" stroke-width="1.2" />
+      <text x="233" y="48" font-size="11.5" fill="#5b6570">podejrzany ruch nocny</text>
+      <text x="115" y="72" text-anchor="middle" font-size="11.5" font-weight="600" fill="#ca8a04">prawie tyle samo sesji</text>
+      <text x="115" y="86" text-anchor="middle" font-size="11.5" font-weight="600" fill="#ca8a04">co w samo południe</text>
+      <path d="M90,96 C90,104 140,104 140,96" fill="none" stroke="#ca8a04" stroke-width="1.5" />
+      <line x1="30" y1="220" x2="630" y2="220" stroke="#e2e6e8" stroke-width="1" />
+      <rect x="40" y="206" width="30" height="14" rx="3" fill="#16a34a" />
+      <text x="55" y="238" text-anchor="middle" font-size="11" fill="#8b939a">0</text>
+      <rect x="90" y="111" width="30" height="109" rx="3" fill="url(#hatchAmber)" stroke="#ca8a04" stroke-width="1.5" />
+      <text x="105" y="238" text-anchor="middle" font-size="11" fill="#8b939a">2</text>
+      <rect x="140" y="118" width="30" height="102" rx="3" fill="url(#hatchAmber)" stroke="#ca8a04" stroke-width="1.5" />
+      <text x="155" y="238" text-anchor="middle" font-size="11" fill="#8b939a">4</text>
+      <rect x="190" y="202" width="30" height="18" rx="3" fill="#16a34a" />
+      <text x="205" y="238" text-anchor="middle" font-size="11" fill="#8b939a">6</text>
+      <rect x="240" y="171" width="30" height="49" rx="3" fill="#16a34a" />
+      <text x="255" y="238" text-anchor="middle" font-size="11" fill="#8b939a">8</text>
+      <rect x="290" y="124" width="30" height="96" rx="3" fill="#16a34a" />
+      <text x="305" y="238" text-anchor="middle" font-size="11" fill="#8b939a">10</text>
+      <rect x="340" y="101" width="30" height="119" rx="3" fill="#16a34a" />
+      <text x="355" y="238" text-anchor="middle" font-size="11" fill="#8b939a">12</text>
+      <rect x="390" y="94" width="30" height="126" rx="3" fill="#16a34a" />
+      <text x="405" y="238" text-anchor="middle" font-size="11" fill="#8b939a">14</text>
+      <rect x="440" y="106" width="30" height="114" rx="3" fill="#16a34a" />
+      <text x="455" y="238" text-anchor="middle" font-size="11" fill="#8b939a">16</text>
+      <rect x="490" y="118" width="30" height="102" rx="3" fill="#16a34a" />
+      <text x="505" y="238" text-anchor="middle" font-size="11" fill="#8b939a">18</text>
+      <rect x="540" y="150" width="30" height="70" rx="3" fill="#16a34a" />
+      <text x="555" y="238" text-anchor="middle" font-size="11" fill="#8b939a">20</text>
+      <rect x="590" y="188" width="30" height="32" rx="3" fill="#16a34a" />
+      <text x="605" y="238" text-anchor="middle" font-size="11" fill="#8b939a">22</text>
+      <text x="330" y="258" text-anchor="middle" font-size="11" fill="#8b939a">godzina</text>
+    </svg>
+    <figcaption>Przykładowy wzorzec: sesje o 2:00 i 4:00 w nocy niemal dorównują szczytowi w południe — to typowy ślad ruchu botowego, nie organicznego.</figcaption>
+  </figure>
+
+  <h2>Jak ograniczyć ruch botowy poza GA4</h2>
+
+  <p>GA4 strukturalnie widzi tylko boty, które wykonują kod JavaScript na stronie tak jak przeglądarka — każdy bot odpytujący serwer bezpośrednio, bez renderowania strony, nigdy nie trafi do raportów GA4 w żadnej formie, ani jako „dobry”, ani jako „zły” ruch. To dobry powód, żeby nie traktować GA4 jako jedynej linii obrony.</p>
+
+  <ul>
+    <li><b>Bot management na poziomie CDN albo WAF.</b> Rozwiązania takie jak Cloudflare Bot Management, AWS WAF Bot Control czy podobne usługi innych dostawców CDN blokują albo wyzywają podejrzany ruch, zanim w ogóle dotrze do serwera, a nie dopiero po fakcie w raportach analitycznych.</li>
+    <li><b>Rate limiting na poziomie adresu IP i konkretnych ścieżek.</b> Ograniczenie liczby żądań na minutę do logowania, wyszukiwarki czy checkoutu skutecznie tępi boty skryptowe bez wpływu na normalne korzystanie ze strony.</li>
+    <li><b>Wyzwanie CAPTCHA albo JS challenge na wybranych, newralgicznych formularzach.</b> Warto stosować punktowo — na rejestracji, logowaniu, formularzu kontaktowym — a nie na każdej stronie, żeby nie pogarszać doświadczenia realnych użytkowników.</li>
+    <li><b>Analiza logów serwera albo CDN, niezależna od GA4.</b> Logi dostępu łapią też boty, które nigdy nie wykonują JavaScriptu i strukturalnie nie mogą pojawić się w żadnym raporcie GA4 — to jedyny sposób, żeby w ogóle zobaczyć tę część ruchu.</li>
+    <li><b>Honeypoty — niewidoczne dla człowieka linki albo pola formularza.</b> Realny użytkownik nigdy ich nie kliknie ani nie wypełni; bot indeksujący stronę automatycznie często tak — co pozwala identyfikować i blokować źródłowe adresy IP.</li>
+    <li><b>Lista blokowanych adresów IP i zakresów ASN</b>, budowana na podstawie powtarzających się wzorców z logów i z samego GA4 razem, a nie tylko jednego źródła danych.</li>
+    <li><b>Robots.txt — rola ograniczona do uczciwych robotów.</b> Plik robots.txt działa jak prośba, nie zabezpieczenie: respektują go wyszukiwarki i inne uczciwe crawlery, ale nie powstrzyma niczego, co celowo chce zeskrobać albo zaspamować Twoją stronę.</li>
+  </ul>
+
+  <h2>Jak AlertGA4 pomaga z ruchem botowym</h2>
+
+  <p>AlertGA4 codziennie porównuje udział sesji w nocnych godzinach z typowym poziomem dla danej usługi GA4 z poprzednich dni i wysyła alert, gdy ten udział nagle wzrośnie. To nie jest zabezpieczenie blokujące ruch — pełni rolę wczesnego ostrzeżenia, że coś się zmieniło i warto zajrzeć do logów serwera albo panelu bot managementu, zanim zawyżony ruch wpłynie na ocenę skuteczności kampanii czy raport dla klienta.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Sklepy internetowe</b>, dla których zawyżony ruch psuje współczynnik konwersji i utrudnia ocenę realnej skuteczności kampanii.</li>
+    <li><b>Produkty SaaS z rejestracją w modelu self-service</b>, gdzie boty rejestrujące konta testowe zawyżają liczbę leadów albo trialów bez żadnej realnej wartości biznesowej.</li>
+    <li><b>Agencje raportujące wzrost ruchu klientowi</b>, które ryzykują przedstawienie wzrostu napędzanego botami jako realnego sukcesu kampanii.</li>
+  </ul>
+
+  <p>Żadne pojedyncze rozwiązanie z tej listy nie jest kompletną odpowiedzią samo w sobie. Skuteczna ochrona przed ruchem botowym to zawsze kilka warstw naraz: coś, co blokuje ruch na poziomie infrastruktury, coś, co ogranicza nadużycia na newralgicznych formularzach, i coś, co codziennie pilnuje, czy dane w analityce w ogóle wyglądają normalnie.</p>
+`
+
+const BOT_TRAFFIC_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy GA4 całkowicie blokuje ruch botowy?</summary>
+      <div class="blog-faq-answer"><p>Nie. Domyślny filtr rozpoznaje tylko boty z listy IAB/ABC na podstawie user-agenta — ruch podszywający się pod zwykłą przeglądarkę przechodzi przez ten filtr bez przeszkód.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy można wyłączyć domyślne filtrowanie botów w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie, ten filtr działa zawsze i nie ma opcji jego wyłączenia — to jedyny element ochrony przed botami wbudowany w samo GA4.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy ruch z VPN to to samo co ruch botowy?</summary>
+      <div class="blog-faq-answer"><p>Nie. VPN zmienia widoczną lokalizację i czasem sieć, z której łączy się realny użytkownik, ale sama sesja wciąż może być w pełni ludzka — oceniaj to razem z innymi sygnałami, takimi jak czas trwania i zaangażowanie, nie samym faktem użycia VPN.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy CAPTCHA na stronie głównej rozwiąże problem?</summary>
+      <div class="blog-faq-answer"><p>Zwykle nie warto — CAPTCHA na każdej stronie pogarsza doświadczenie realnych użytkowników bardziej, niż to uzasadnione. Lepiej stosować ją punktowo, na formularzach i procesach najbardziej narażonych na nadużycia.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Jak AlertGA4 odróżnia prawdziwy nocny ruch, na przykład z zagranicznego rynku w innej strefie czasowej, od bota?</summary>
+      <div class="blog-faq-answer"><p>Check porównuje bieżący udział ruchu nocnego z typowym poziomem dla tej samej usługi GA4 z poprzednich dni, więc stały, realny ruch z innej strefy czasowej staje się po prostu nową normą — alert wywołuje dopiero odchylenie od tej ustalonej normy, nie sam fakt ruchu w nocy.</p></div>
+    </details>
+  </div>
+`
+
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'alerty-w-google-analytics-4',
@@ -380,10 +714,13 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: 'ruch-botowy-ga4',
-    title: 'Ruch nocny i boty w GA4: jak odróżnić prawdziwych użytkowników od szumu',
-    excerpt: 'Jak rozpoznać ruch botowy w danych GA4 i dlaczego wbudowany filtr botów nie wyłapuje wszystkiego.',
+    title: 'Ruch botowy w GA4: jak go rozpoznać i jak sobie z nim radzić także poza GA4',
+    excerpt: 'Jak rozpoznać ruch botowy, który przeszedł przez domyślny filtr GA4, i jakie rozwiązania ograniczają boty jeszcze zanim dotrą do Twojej strony.',
     targetPhrase: 'ruch botowy GA4',
-    status: 'coming-soon',
+    status: 'published',
+    publishedAt: '2026-10-24',
+    bodyHtml: BOT_TRAFFIC_BODY_HTML,
+    faqHtml: BOT_TRAFFIC_FAQ_HTML,
   },
   {
     slug: 'brakujace-eventy-ga4',
@@ -436,6 +773,26 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt: 'Dlaczego koszt błędu pomiarowego w GA4 zwykle przewyższa koszt narzędzia, które by go wykryło wcześniej.',
     targetPhrase: 'koszt błędu w GA4',
     status: 'coming-soon',
+  },
+  {
+    slug: 'progi-danych-ga4',
+    title: 'Progi danych w GA4 — dlaczego raport nagle pokazuje puste wiersze i jak to rozpoznać',
+    excerpt: 'Czym są progi danych (data thresholds) w GA4, kiedy się włączają i jak odróżnić ukryty wiersz od realnego braku ruchu.',
+    targetPhrase: 'progi danych GA4',
+    status: 'published',
+    publishedAt: '2026-10-24',
+    bodyHtml: THRESHOLDS_BODY_HTML,
+    faqHtml: THRESHOLDS_FAQ_HTML,
+  },
+  {
+    slug: 'checklist-raportowania-ga4',
+    title: 'Checklist raportowania GA4 dla agencji — co sprawdzić, zanim wyślesz raport klientowi',
+    excerpt: 'Osiem punktów kontrolnych, które warto przejść przed każdym cyklicznym raportem z GA4, żeby nie wysłać klientowi zawyżonych albo niepełnych liczb.',
+    targetPhrase: 'checklist raportowania GA4',
+    status: 'published',
+    publishedAt: '2026-10-24',
+    bodyHtml: REPORTING_CHECKLIST_BODY_HTML,
+    faqHtml: REPORTING_CHECKLIST_FAQ_HTML,
   },
 ]
 

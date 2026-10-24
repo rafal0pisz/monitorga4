@@ -84,7 +84,12 @@ export default async function BlogPostPage({ params }: Props) {
         .blog-post-hero h1 { font-size: clamp(24px, 3.6vw, 34px); letter-spacing: -0.01em; max-width: 760px; margin: 0 0 10px; }
         .blog-post-hero .meta { font-size: 12.5px; color: #8b939a; }
 
-        .blog-post-body { padding: 32px 0 80px; max-width: 720px; margin: 0 auto; }
+        /* ".lp .wrap" (landingStyles.ts) sets max-width:1120px and side
+           padding at specificity (0,2,0) — higher than a bare
+           ".blog-post-body" (0,1,0), which silently lost this whole rule and
+           rendered the article at the full 1120px width instead of a
+           readable column. ".lp .wrap.blog-post-body" (0,3,0) wins outright. */
+        .lp .wrap.blog-post-body { padding: 32px 0 80px; max-width: 720px; margin: 0 auto; }
         .blog-post-body h2 { font-size: clamp(19px, 2.2vw, 23px); margin: 36px 0 14px; letter-spacing: -0.01em; }
         .blog-post-body p { font-size: 15px; color: #3a4148; line-height: 1.75; margin: 0 0 16px; }
         .blog-post-body ul, .blog-post-body ol { font-size: 15px; color: #3a4148; line-height: 1.7; margin: 0 0 16px; padding-left: 26px; }
@@ -97,7 +102,14 @@ export default async function BlogPostPage({ params }: Props) {
 
         .blog-figure { margin: 24px 0; }
         .blog-figure img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
+        .blog-figure svg { width: 100%; height: auto; display: block; background: #fff; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
         .blog-figure figcaption { font-size: 12px; color: #8b939a; margin-top: 8px; text-align: center; }
+
+        .blog-checklist { background: #fff; border: 1px solid #e2e6e8; border-radius: 14px; padding: 20px 22px; }
+        .blog-checklist-head { font-size: 12px; font-weight: 700; color: #232b31; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
+        .blog-post-body .blog-checklist-list { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+        .blog-post-body .blog-checklist-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #3a4148; line-height: 1.5; margin: 0; padding-left: 0; }
+        .blog-checklist-check { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #f0fdf4; color: #16a34a; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
 
         .blog-table { width: 100%; border-collapse: collapse; margin: 8px 0 24px; font-size: 13.5px; }
         .blog-table th, .blog-table td { padding: 10px 14px; border: 1px solid #e2e6e8; text-align: left; vertical-align: top; }
