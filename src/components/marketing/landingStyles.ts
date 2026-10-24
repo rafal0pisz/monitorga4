@@ -13,6 +13,10 @@ export const LANDING_BASE_STYLES = `
   .lp a { color: inherit; }
   .mono-inline { font-family: var(--font-mono), monospace; font-size: 0.94em; }
 
+  .lp-howto-video { max-width: 760px; margin: 40px auto 0; }
+  .lp-howto-video video { width: 100%; display: block; border-radius: 14px; border: 1px solid #e2e6e8; box-shadow: 0 12px 32px -16px rgba(35,43,49,0.25); background: #1c2328; }
+  .lp-howto-video p { margin-top: 10px; font-size: 12.5px; color: #8b939a; text-align: center; }
+
   .lp-nav { position: sticky; top: 0; z-index: 40; background: rgba(35,43,49,0.96); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); }
   .lp-nav-row { display: flex; align-items: center; height: 68px; gap: 12px; }
   .lp-nav-logo { flex-shrink: 0; }

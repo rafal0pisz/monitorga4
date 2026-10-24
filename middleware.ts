@@ -9,6 +9,11 @@ const PUBLIC_PATHS = [
   // above; '/en' alone (via startsWith) covers /en, /en/features,
   // /en/pricing, /en/contact, /en/privacy and /en/terms in one entry.
   '/en',
+  // Static assets referenced from the public marketing pages (e.g. the
+  // "How it works" walkthrough video on / and /en) — these aren't HTML
+  // extensions, so they aren't covered by the matcher's extension carve-out
+  // below and need an explicit path entry or they get redirected to /login.
+  '/videos',
 ]
 
 // API-only paths: /api/worker/run, /api/worker/trial-reminders and

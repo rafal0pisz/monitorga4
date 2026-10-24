@@ -305,6 +305,12 @@ export default async function HomePage() {
                 </div>
               ))}
             </div>
+            <div className="lp-howto-video">
+              <video controls preload="metadata" poster="/videos/how-it-works-poster.jpg" width={1280} height={720} playsInline>
+                <source src="/videos/how-it-works.mp4" type="video/mp4" />
+              </video>
+              <p>Podgląd aplikacji na żywo (materiał z napisami po angielsku).</p>
+            </div>
             {!user && (
               <div className="trial-banner-guest" style={{ marginTop: 40 }}>
                 <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni. Bez podpinania karty.</p>
