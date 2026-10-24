@@ -27,7 +27,7 @@ export const ROWS: Row[] = [
   { label: 'Codzienny alert mailowy', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Wsparcie', lite: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
-  { label: 'Konsultacja z analitykiem GA4', lite: '—', pro: '—', agency: '1h / miesiąc' },
+  { label: 'Konsultacja z analitykiem GA4', lite: '—', pro: '—', agency: '✓' },
   // Compliance/trust claims (read-only access, EU data residency, GDPR,
   // Google verification) live in the trust strip on the marketing pages
   // instead of here — they're identical across every plan, so a table row
