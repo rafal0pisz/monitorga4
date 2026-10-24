@@ -505,7 +505,7 @@ export default function ProjectConfigForm({ project }: Props) {
                 }} />
               </div>
               <span style={{ fontSize: 13, color: autoRun ? '#16a34a' : 'var(--color-text-secondary)', fontWeight: autoRun ? 600 : 400 }}>
-                {autoRun ? 'Enabled — worker runs daily at 23:00 UTC' : 'Disabled — use Run now to check manually'}
+                {autoRun ? 'Enabled — checks run automatically every morning (6:30–8:30 Warsaw time)' : 'Disabled — use Run now to check manually'}
               </span>
             </button>
           </div>

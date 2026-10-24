@@ -104,7 +104,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
 
   const masthead = hstack([
     { html: `<span class="serif" style="font-size:22px;font-weight:600;color:${BRAND.ink};">Alert<span style="color:${BRAND.coralText};">GA4</span></span>` },
-    { html: `<span style="font-size:12.5px;color:${BRAND.soft};">${new Date(runDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · 23:00 UTC run</span>`, align: 'right' },
+    { html: `<span style="font-size:12.5px;color:${BRAND.soft};">${new Date(runDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · morning check run</span>`, align: 'right' },
   ])
 
   const body = `
@@ -133,7 +133,7 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
     <div style="padding:0 32px;">${calloutHtml}</div>
     ${ctaHtml('View full dashboard', `${APP_URL}/dashboard`)}
     ${footerHtml([
-      'Automated daily report from AlertGA4, generated after the 23:00 UTC check run.',
+      'Automated daily report from AlertGA4, generated after the morning check run.',
       'Per-project daily report emails continue to send separately to each project\'s configured address.',
     ])}
   `
