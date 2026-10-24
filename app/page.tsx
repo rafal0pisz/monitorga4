@@ -269,7 +269,7 @@ export default async function HomePage() {
               <span className="score-of">/100</span>
               <div className="score-bar">
                 <div className="score-track"><div className="score-fill" /></div>
-                <div className="score-caption">+3 względem zeszłego tygodnia</div>
+                <div className="score-caption">+3 względem poprzedniego okresu</div>
               </div>
             </div>
             <div className="readout-chips">

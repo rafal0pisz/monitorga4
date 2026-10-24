@@ -294,7 +294,7 @@ export default async function HomePageEn() {
               <span className="score-of">/100</span>
               <div className="score-bar">
                 <div className="score-track"><div className="score-fill" /></div>
-                <div className="score-caption">+3 vs. last week</div>
+                <div className="score-caption">+3 vs. previous period</div>
               </div>
             </div>
             <div className="readout-chips">
