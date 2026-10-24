@@ -118,7 +118,7 @@ export default async function CennikPage() {
         .pricing-price { display: flex; align-items: baseline; gap: 6px; }
         .pricing-price .amount { font-size: 32px; font-weight: 600; letter-spacing: -0.01em; color: #232b31; }
         .pricing-price .period { font-size: 13.5px; color: #8b939a; }
-        .pricing-permonth { font-size: 12.5px; color: #8b939a; margin: 4px 0 0; }
+        .pricing-annual-note { display: inline-block; font-size: 12px; font-weight: 500; color: #475a66; background: #eef4f6; border-radius: 999px; padding: 4px 11px; margin: 10px 0 0; }
 
         .trial-banner { max-width: 640px; margin: 0 auto 40px; padding: 18px 24px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; text-align: center; }
         .trial-banner p { font-size: 13.5px; color: #166534; margin: 0 0 12px; line-height: 1.5; }

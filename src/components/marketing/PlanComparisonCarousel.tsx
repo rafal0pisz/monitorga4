@@ -41,7 +41,7 @@ export default function PlanComparisonCarousel() {
         <div className="plan-carousel-card">
           <div className="plan-carousel-head">
             <span className="name">{PLAN_LABELS[planKey]}</span>
-            {plan && <span className="price">{plan.priceMonthlyPLN} zł/mies.</span>}
+            {plan && <span className="price">{plan.priceMonthlyPLN} zł + VAT/mies.</span>}
           </div>
           {ROWS.map(row => (
             <div key={row.label} className="plan-carousel-row">

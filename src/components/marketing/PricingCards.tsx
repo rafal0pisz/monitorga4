@@ -55,8 +55,13 @@ export default function PricingCards({
 
       <div className="pricing-grid">
         {plans.map(plan => {
-          const price = cycle === 'monthly' ? plan.priceMonthlyPLN : plan.priceYearlyPLN
-          const perMonth = cycle === 'yearly' ? Math.round(plan.priceYearlyPLN / 12) : plan.priceMonthlyPLN
+          // Yearly cycle still bills the full priceYearlyPLN up front — this
+          // only changes what's shown as the headline number. Showing the
+          // monthly-equivalent as the big price (with the real annual charge
+          // called out underneath) matches what every card actually bills on
+          // checkout, instead of making the annual total look like a much
+          // bigger number at a glance.
+          const displayPrice = cycle === 'monthly' ? plan.priceMonthlyPLN : Math.round(plan.priceYearlyPLN / 12)
           const isCurrent = plan.id === currentPlanId
           return (
             <div key={plan.id} className="pricing-card" style={isCurrent ? { borderColor: '#16a34a', boxShadow: '0 0 0 1px #16a34a' } : undefined}>
@@ -66,10 +71,10 @@ export default function PricingCards({
               </div>
               <p className="pricing-limit">do {plan.projectLimit} {plan.projectLimit === 1 ? 'usługi' : 'usług'} GA4</p>
               <div className="pricing-price">
-                <span className="amount">{price} zł</span>
-                <span className="period">/ {cycle === 'monthly' ? 'mies.' : 'rok'}</span>
+                <span className="amount">{displayPrice} zł</span>
+                <span className="period">+ VAT / mies.</span>
               </div>
-              {cycle === 'yearly' && <p className="pricing-permonth">≈ {perMonth} zł/mies.</p>}
+              {cycle === 'yearly' && <p className="pricing-annual-note">Opłata roczna: {plan.priceYearlyPLN} zł + VAT</p>}
               <button
                 type="button"
                 className="btn btn--primary"

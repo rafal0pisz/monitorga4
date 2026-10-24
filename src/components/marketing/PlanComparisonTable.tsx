@@ -15,6 +15,11 @@ export interface Row {
 // consultation (Agency only) are the other real differences.
 export const ROWS: Row[] = [
   { label: 'Monitorowane usługi GA4', lite: 'do 3', pro: 'do 15', agency: 'do 100' },
+  // Lite/Pro have no team-invite feature at all (app/api/team/invite/route.ts
+  // only allows 'agency'/'trial') — 1 seat isn't a marketing number, it's
+  // literally the only account that can ever access those plans' projects.
+  // Agency's 5 mirrors MAX_TEAM_SEATS in src/lib/team/access.ts exactly.
+  { label: 'Użytkownicy', lite: '1', pro: '1', agency: '5' },
   { label: 'Codzienny automatyczny monitoring', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Niestandardowe zdarzenia (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Zdarzenia e-commerce (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
@@ -23,6 +28,13 @@ export const ROWS: Row[] = [
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Wsparcie', lite: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
   { label: 'Konsultacja z analitykiem GA4', lite: '—', pro: '—', agency: '1h / miesiąc' },
+  // Compliance/trust rows — identical across all plans (these are
+  // properties of the product/infrastructure, not plan tiers), listed last
+  // as a dedicated trust block rather than mixed into feature rows above.
+  { label: 'Dostęp do Google tylko do odczytu', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Dane przechowywane w UE (Supabase, region EU)', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Zgodność z RODO (GDPR)', lite: '✓', pro: '✓', agency: '✓' },
+  { label: 'Zweryfikowane wg Google API Services User Data Policy', lite: '✓', pro: '✓', agency: '✓' },
 ]
 
 export const PLAN_KEYS = ['lite', 'pro', 'agency'] as const
