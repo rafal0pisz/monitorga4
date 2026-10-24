@@ -30,9 +30,9 @@ export const LANDING_BASE_STYLES = `
      text, no pill/background: compact enough to survive the mobile nav
      row alongside the logo, CTA button and hamburger. */
   .lang-switch { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-  .lang-switch-btn { font-family: var(--font-sans), sans-serif; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.5); text-decoration: none; line-height: 1; }
+  .lang-switch-btn { font-family: var(--font-sans), sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-decoration: none; line-height: 1; }
   .lang-switch-btn.active { color: #fffd73; }
-  .lang-switch-btn:not(.active):hover { color: #fff; }
+  .lang-switch-btn:not(.active):hover { color: rgba(255,255,255,0.8); }
   .lang-switch-sep { font-size: 13px; color: rgba(255,255,255,0.3); line-height: 1; }
   .lp-nav-cta .btn--primary { background: #fffd73; color: #3a3800; }
   .lp-nav-cta .btn--primary:hover { box-shadow: 0 6px 20px -6px rgba(255,253,115,0.5); }
