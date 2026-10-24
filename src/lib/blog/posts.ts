@@ -16,7 +16,9 @@ export interface BlogPost {
 }
 
 const ALERTS_BODY_HTML = `
-  <p>Firmy często zakładają, że skoro GA4 zbiera dane o ruchu i konwersjach, samo też da znać, gdy coś w tych danych zacznie się psuć. GA4 rzeczywiście ma do tego mechanizm: Insights. Ten artykuł pokazuje, czym on jest, jak go skonfigurować, gdzie kończą się jego możliwości i czym różni się od codziennego, zautomatyzowanego monitoringu takiego jak AlertGA4.</p>
+  <p>Firmy często zakładają, że skoro GA4 zbiera dane o ruchu i konwersjach, samo też da znać, gdy coś w tych danych zacznie się psuć. GA4 rzeczywiście ma do tego mechanizm: Insights.</p>
+
+  <p>Ten artykuł pokazuje, czym on jest, jak go skonfigurować, gdzie kończą się jego możliwości i czym różni się od codziennego, zautomatyzowanego monitoringu takiego jak AlertGA4.</p>
 
   <h2>Czym są alerty w Google Analytics 4</h2>
 
@@ -26,9 +28,13 @@ const ALERTS_BODY_HTML = `
 
   <p>Drugi rodzaj to insighty niestandardowe, nazywane Custom Insights. Definiuje się je samodzielnie: wybiera się metrykę do obserwacji, opcjonalny wymiar, warunek uruchomienia (na przykład spadek o więcej niż 20 procent względem poprzedniego tygodnia) oraz częstotliwość sprawdzania.</p>
 
-  <p>W obu przypadkach powiadomienie trafia do panelu Insights w interfejsie GA4, a część insightów GA4 wysyła też mailem. Różnica wobec dedykowanego monitoringu jakości danych nie leży więc w tym, czy mail w ogóle istnieje, tylko w tym, czego dotyczy: insight operuje na ogólnych metrykach, takich jak sesje, użytkownicy czy konwersje, i nie zejdzie do poziomu konkretnego zdarzenia, parametru czy transakcji.</p>
+  <p>W obu przypadkach powiadomienie trafia do panelu Insights w interfejsie GA4, a część insightów GA4 wysyła też mailem.</p>
 
-  <p>Ta różnica wynika z tego, jak Google przebudował całą analitykę przy przejściu z Universal Analytics na GA4. Universal Analytics była zbudowana wokół sesji i stron, a Custom Alerts działały na prostych, zdefiniowanych przez użytkownika progach liczbowych. GA4 jest zbudowana wokół zdarzeń i modeli uczenia maszynowego, więc Google zastąpił proste progi mechanizmem opartym na wykrywaniu anomalii statystycznych. To rozwiązanie bywa trafniejsze przy naprawdę nietypowych zmianach, ale gorzej radzi sobie z pilnowaniem konkretnych, z góry znanych reguł biznesowych, dokładnie takich, jakich oczekiwały stare Custom Alerts.</p>
+  <p>Różnica wobec dedykowanego monitoringu jakości danych nie leży więc w tym, czy mail w ogóle istnieje, tylko w tym, czego dotyczy: insight operuje na ogólnych metrykach, takich jak sesje, użytkownicy czy konwersje, i nie zejdzie do poziomu konkretnego zdarzenia, parametru czy transakcji.</p>
+
+  <p>Ta różnica wynika z tego, jak Google przebudował całą analitykę przy przejściu z Universal Analytics na GA4. Universal Analytics była zbudowana wokół sesji i stron, a Custom Alerts działały na prostych, zdefiniowanych przez użytkownika progach liczbowych.</p>
+
+  <p>GA4 jest zbudowana wokół zdarzeń i modeli uczenia maszynowego, więc Google zastąpił proste progi mechanizmem opartym na wykrywaniu anomalii statystycznych. To rozwiązanie bywa trafniejsze przy naprawdę nietypowych zmianach, ale gorzej radzi sobie z pilnowaniem konkretnych, z góry znanych reguł biznesowych, dokładnie takich, jakich oczekiwały stare Custom Alerts.</p>
 
   <h2>Jak używać alertów w GA4</h2>
 
@@ -62,7 +68,9 @@ const ALERTS_BODY_HTML = `
     <li><b>Powiadomienie widzi tylko osoba zalogowana na danym koncie Google.</b> Insights nie mają wbudowanego sposobu na rozesłanie informacji do całego zespołu czy do klienta, dla którego prowadzisz konto. Żeby ktoś inny się dowiedział, trzeba mu to ręcznie przekazać.</li>
   </ul>
 
-  <p>Żadne z tych ograniczeń nie czyni Insights bezużytecznym — to wciąż realne alerty, które potrafią trafić na maila. Problem pojawia się wtedy, gdy firma traktuje ten ogólny poziom jako kompletny system monitoringu i przestaje szukać czegoś, co zejdzie do konkretnych zdarzeń i parametrów, mimo że właśnie tam kryje się większość realnych, kosztownych błędów pomiarowych w GA4.</p>
+  <p>Żadne z tych ograniczeń nie czyni Insights bezużytecznym — to wciąż realne alerty, które potrafią trafić na maila.</p>
+
+  <p>Problem pojawia się wtedy, gdy firma traktuje ten ogólny poziom jako kompletny system monitoringu i przestaje szukać czegoś, co zejdzie do konkretnych zdarzeń i parametrów, mimo że właśnie tam kryje się większość realnych, kosztownych błędów pomiarowych w GA4.</p>
 
   <h2>AlertGA4: zaawansowane alerty zbudowane pod konkretne problemy GA4</h2>
 
@@ -100,7 +108,9 @@ const ALERTS_BODY_HTML = `
 
   <p>Jeśli nie chcesz codziennego maila, możesz włączyć opcję wysyłki tylko wtedy, gdy danego dnia faktycznie pojawi się ostrzeżenie lub błąd, zamiast dostawać wiadomość każdego dnia niezależnie od wyniku.</p>
 
-  <p>Konfiguracja nowego projektu nie wymaga ręcznego wpisywania nazw zdarzeń czy parametrów. Kreator czyta rzeczywiste dane z podłączonej usługi GA4 i podpowiada, które zdarzenia i parametry warto monitorować, razem z ich wolumenem z ostatnich 30 dni. Poza codziennym, automatycznym sprawdzaniem dostępny jest też ręczny przycisk „Uruchom teraz”, przydatny zaraz po naprawieniu jakiegoś problemu, gdy nie chcesz czekać do następnego dnia na potwierdzenie, że rzeczywiście zniknął.</p>
+  <p>Konfiguracja nowego projektu nie wymaga ręcznego wpisywania nazw zdarzeń czy parametrów. Kreator czyta rzeczywiste dane z podłączonej usługi GA4 i podpowiada, które zdarzenia i parametry warto monitorować, razem z ich wolumenem z ostatnich 30 dni.</p>
+
+  <p>Poza codziennym, automatycznym sprawdzaniem dostępny jest też ręczny przycisk „Uruchom teraz”, przydatny zaraz po naprawieniu jakiegoś problemu, gdy nie chcesz czekać do następnego dnia na potwierdzenie, że rzeczywiście zniknął.</p>
 
   <h2>Dla kogo ma to znaczenie</h2>
 
@@ -114,7 +124,9 @@ const ALERTS_BODY_HTML = `
 
   <h2>Porównanie: Insights w GA4 a AlertGA4</h2>
 
-  <p>Insights w GA4 to realne alerty, które mogą trafiać także na maila — to nie jest fikcyjna funkcja. Różnica wobec AlertGA4 nie leży więc w tym, czy powiadomienie w ogóle istnieje, tylko na jakim poziomie szczegółowości działa: GA4 informuje o ogólnych statystykach, takich jak sesje, użytkownicy czy konwersje, a AlertGA4 schodzi do konkretnych zdarzeń, parametrów i transakcji.</p>
+  <p>Insights w GA4 to realne alerty, które mogą trafiać także na maila — to nie jest fikcyjna funkcja.</p>
+
+  <p>Różnica wobec AlertGA4 nie leży więc w tym, czy powiadomienie w ogóle istnieje, tylko na jakim poziomie szczegółowości działa: GA4 informuje o ogólnych statystykach, takich jak sesje, użytkownicy czy konwersje, a AlertGA4 schodzi do konkretnych zdarzeń, parametrów i transakcji.</p>
 
   <table class="blog-table">
     <tr><th>Cecha</th><th>Insights w GA4</th><th>AlertGA4</th></tr>
@@ -172,11 +184,15 @@ const ALERTS_FAQ_HTML = `
 `
 
 const DUPLICATE_PURCHASE_BODY_HTML = `
-  <p>Przychód w GA4 to jedna z metryk, na które patrzy się najczęściej i którym ufa się najmniej krytycznie — w końcu to GA4 ma po prostu zliczyć to, co faktycznie się sprzedało. Problem w tym, że event <i>purchase</i> potrafi wystrzelić więcej niż raz dla tej samej transakcji, a GA4 domyślnie nie ma jak tego samodzielnie wykryć. Efekt: przychód, ROAS i liczba zamówień w raportach GA4 są wyższe niż w rzeczywistości, często o kilka do kilkunastu procent, bez żadnego ostrzeżenia w interfejsie.</p>
+  <p>Przychód w GA4 to jedna z metryk, na które patrzy się najczęściej i którym ufa się najmniej krytycznie — w końcu to GA4 ma po prostu zliczyć to, co faktycznie się sprzedało.</p>
+
+  <p>Problem w tym, że event <i>purchase</i> potrafi wystrzelić więcej niż raz dla tej samej transakcji, a GA4 domyślnie nie ma jak tego samodzielnie wykryć. Efekt: przychód, ROAS i liczba zamówień w raportach GA4 są wyższe niż w rzeczywistości, często o kilka do kilkunastu procent, bez żadnego ostrzeżenia w interfejsie.</p>
 
   <h2>Czym jest zduplikowany zakup w GA4</h2>
 
-  <p>Zduplikowany zakup to sytuacja, w której zdarzenie <i>purchase</i> z tymi samymi (albo bardzo podobnymi) danymi transakcji zostaje wysłane do GA4 więcej niż raz. GA4 nie ma wbudowanego mechanizmu, który automatycznie rozpozna dwa zdarzenia jako „tę samą transakcję” — chyba że parametr <i>transaction_id</i> jest ustawiony i spójny, a nawet wtedy GA4 i tak zlicza oba wystąpienia zdarzenia osobno w większości standardowych raportów, nie prowadząc pełnej deduplikacji po stronie interfejsu.</p>
+  <p>Zduplikowany zakup to sytuacja, w której zdarzenie <i>purchase</i> z tymi samymi (albo bardzo podobnymi) danymi transakcji zostaje wysłane do GA4 więcej niż raz.</p>
+
+  <p>GA4 nie ma wbudowanego mechanizmu, który automatycznie rozpozna dwa zdarzenia jako „tę samą transakcję” — chyba że parametr <i>transaction_id</i> jest ustawiony i spójny, a nawet wtedy GA4 i tak zlicza oba wystąpienia zdarzenia osobno w większości standardowych raportów, nie prowadząc pełnej deduplikacji po stronie interfejsu.</p>
 
   <p>W praktyce duplikat oznacza, że jedno realne zamówienie o wartości, powiedzmy, 250 zł, w GA4 wygląda jak dwa zamówienia po 250 zł — 500 zł pseudo-przychodu z jednej transakcji klienta.</p>
 
@@ -213,7 +229,9 @@ const DUPLICATE_PURCHASE_BODY_HTML = `
 
   <h2>Jak AlertGA4 wykrywa zduplikowane zakupy</h2>
 
-  <p>Ten rodzaj błędu jest dokładnie tym, czego Insights w GA4 nie sprawdzi — to nie jest ogólny spadek czy wzrost metryki, tylko konkretna, techniczna niespójność na poziomie pojedynczych zdarzeń i parametrów. AlertGA4 po podłączeniu usługi codziennie sprawdza udział zduplikowanych transakcji po <i>transaction_id</i> i, jeśli przekroczy ustalony próg, wysyła maila z konkretną diagnozą: ile transakcji się powtarza i jaki procent dziennego przychodu to realnie pseudo-przychód z duplikatów.</p>
+  <p>Ten rodzaj błędu jest dokładnie tym, czego Insights w GA4 nie sprawdzi — to nie jest ogólny spadek czy wzrost metryki, tylko konkretna, techniczna niespójność na poziomie pojedynczych zdarzeń i parametrów.</p>
+
+  <p>AlertGA4 po podłączeniu usługi codziennie sprawdza udział zduplikowanych transakcji po <i>transaction_id</i> i, jeśli przekroczy ustalony próg, wysyła maila z konkretną diagnozą: ile transakcji się powtarza i jaki procent dziennego przychodu to realnie pseudo-przychód z duplikatów.</p>
 
   <p>Dzięki codziennemu, automatycznemu sprawdzaniu problem wychodzi na jaw tego samego dnia, w którym się pojawił — zanim zdąży wpłynąć na decyzję o budżecie kampanii opartą o zawyżony ROAS.</p>
 
@@ -254,7 +272,9 @@ const DUPLICATE_PURCHASE_FAQ_HTML = `
 `
 
 const NOT_SET_BODY_HTML = `
-  <p>„(not set)” w GA4 potrafi pojawić się właściwie w każdym raporcie: w źródle ruchu, w kanale, w stronie docelowej, w kategorii produktu czy w niestandardowym wymiarze. Część tego zjawiska jest naturalna i nie da się jej wyeliminować do zera. Problem zaczyna się wtedy, gdy udział „(not set)” rośnie z miesiąca na miesiąc albo nagle skacze — bo wtedy prawie zawsze oznacza to realny błąd pomiarowy, a nie tylko statystyczny szum.</p>
+  <p>„(not set)” w GA4 potrafi pojawić się właściwie w każdym raporcie: w źródle ruchu, w kanale, w stronie docelowej, w kategorii produktu czy w niestandardowym wymiarze. Część tego zjawiska jest naturalna i nie da się jej wyeliminować do zera.</p>
+
+  <p>Problem zaczyna się wtedy, gdy udział „(not set)” rośnie z miesiąca na miesiąc albo nagle skacze — bo wtedy prawie zawsze oznacza to realny błąd pomiarowy, a nie tylko statystyczny szum.</p>
 
   <h2>Czym właściwie jest „(not set)” w GA4</h2>
 
@@ -305,7 +325,9 @@ const NOT_SET_BODY_HTML = `
 
   <h2>Jak AlertGA4 monitoruje „(not set)”</h2>
 
-  <p>AlertGA4 sprawdza codziennie udział „(not set)” w kluczowych wymiarach — źródle/medium, stronie docelowej i wybranych wymiarach niestandardowych — i porównuje go z poprzednimi dniami. Gdy udział przekroczy ustalony próg albo nagle skoczy względem typowego poziomu, dostajesz maila z dokładną wartością i zmianą procentową, zamiast musieć co jakiś czas ręcznie sprawdzać ten sam raport w interfejsie GA4.</p>
+  <p>AlertGA4 sprawdza codziennie udział „(not set)” w kluczowych wymiarach — źródle/medium, stronie docelowej i wybranych wymiarach niestandardowych — i porównuje go z poprzednimi dniami.</p>
+
+  <p>Gdy udział przekroczy ustalony próg albo nagle skoczy względem typowego poziomu, dostajesz maila z dokładną wartością i zmianą procentową, zamiast musieć co jakiś czas ręcznie sprawdzać ten sam raport w interfejsie GA4.</p>
 
   <h2>Dla kogo ma to znaczenie</h2>
 
@@ -344,11 +366,15 @@ const NOT_SET_FAQ_HTML = `
 `
 
 const THRESHOLDS_BODY_HTML = `
-  <p>Czasem raport w GA4 wygląda, jakby część ruchu po prostu zniknęła. Rozbijasz sesje po płci i kampanii, a dla jednej z grup widzisz puste pole, mimo że wiesz, że ten segment miał tego dnia realny ruch. To nie jest błąd pomiarowy ani kolejna odmiana „(not set)” — to progi danych (data thresholds), mechanizm prywatności, który GA4 stosuje świadomie i bez wyjątków, gdy łączysz zbyt wrażliwe wymiary przy zbyt małej grupie użytkowników.</p>
+  <p>Czasem raport w GA4 wygląda, jakby część ruchu po prostu zniknęła. Rozbijasz sesje po płci i kampanii, a dla jednej z grup widzisz puste pole, mimo że wiesz, że ten segment miał tego dnia realny ruch.</p>
+
+  <p>To nie jest błąd pomiarowy ani kolejna odmiana „(not set)” — to progi danych (data thresholds), mechanizm prywatności, który GA4 stosuje świadomie i bez wyjątków, gdy łączysz zbyt wrażliwe wymiary przy zbyt małej grupie użytkowników.</p>
 
   <h2>Czym są progi danych w GA4</h2>
 
-  <p>Progi danych to zabezpieczenie zbliżone do k-anonimowości: GA4 nie pokaże wiersza raportu, jeśli opisywana przez niego grupa użytkowników jest na tyle mała, że teoretycznie dałoby się ją zidentyfikować. Dotyczy to przede wszystkim wymiarów powiązanych z Google Signals — wieku, płci, kategorii zainteresowań — zwłaszcza gdy łączysz je z dodatkowym, zawężającym wymiarem, takim jak kampania, miasto czy konkretne zdarzenie.</p>
+  <p>Progi danych to zabezpieczenie zbliżone do k-anonimowości: GA4 nie pokaże wiersza raportu, jeśli opisywana przez niego grupa użytkowników jest na tyle mała, że teoretycznie dałoby się ją zidentyfikować.</p>
+
+  <p>Dotyczy to przede wszystkim wymiarów powiązanych z Google Signals — wieku, płci, kategorii zainteresowań — zwłaszcza gdy łączysz je z dodatkowym, zawężającym wymiarem, takim jak kampania, miasto czy konkretne zdarzenie.</p>
 
   <p>To mechanizm celowy, działający niezależnie od tego, czy korzystasz z niego świadomie. Nie da się go wyłączyć wybiórczo dla jednego raportu — można jedynie ograniczyć sytuacje, w których się uruchamia.</p>
 
@@ -415,7 +441,9 @@ const THRESHOLDS_BODY_HTML = `
 
   <h2>Jak AlertGA4 radzi sobie z progami danych</h2>
 
-  <p>AlertGA4 nie sprawdza wymiarów demograficznych ani zainteresowań — to właśnie one najczęściej trafiają na próg. Codzienne checki opierają się na wymiarach i metrykach zdarzeniowych: źródle i medium, parametrach e-commerce, identyfikatorze transakcji, nazwach i kategoriach zdarzeń. W praktyce oznacza to, że progi danych rzadko mają wpływ na wyniki monitoringu — a jeśli któryś check pokaże nagły spadek albo zero tam, gdzie go wcześniej nie było, zwykle oznacza to realny problem pomiarowy opisany w innych artykułach tego bloga, a nie efekt progowania.</p>
+  <p>AlertGA4 nie sprawdza wymiarów demograficznych ani zainteresowań — to właśnie one najczęściej trafiają na próg. Codzienne checki opierają się na wymiarach i metrykach zdarzeniowych: źródle i medium, parametrach e-commerce, identyfikatorze transakcji, nazwach i kategoriach zdarzeń.</p>
+
+  <p>W praktyce oznacza to, że progi danych rzadko mają wpływ na wyniki monitoringu — a jeśli któryś check pokaże nagły spadek albo zero tam, gdzie go wcześniej nie było, zwykle oznacza to realny problem pomiarowy opisany w innych artykułach tego bloga, a nie efekt progowania.</p>
 
   <h2>Dla kogo ma to znaczenie</h2>
 
@@ -460,7 +488,9 @@ const REPORTING_CHECKLIST_BODY_HTML = `
 
   <h2>Dlaczego ładnie wyglądający raport to za mało</h2>
 
-  <p>Raport, który wygląda źle, zostaje sprawdzony odruchowo — nagły spadek przychodu czy zerowa liczba konwersji budzi czujność samoistnie. Problem w tym, że najbardziej kosztowne błędy pomiarowe w GA4 wyglądają dokładnie odwrotnie: podbijają liczby w górę, nie w dół. Zdublowany zakup zawyża przychód. Ruch botowy w nocy zawyża sesje i na pierwszy rzut oka poprawia współczynnik konwersji. Nic z tego nie wygląda jak błąd — dopóki ktoś nie porówna liczb z czymś niezależnym.</p>
+  <p>Raport, który wygląda źle, zostaje sprawdzony odruchowo — nagły spadek przychodu czy zerowa liczba konwersji budzi czujność samoistnie. Problem w tym, że najbardziej kosztowne błędy pomiarowe w GA4 wyglądają dokładnie odwrotnie: podbijają liczby w górę, nie w dół.</p>
+
+  <p>Zdublowany zakup zawyża przychód. Ruch botowy w nocy zawyża sesje i na pierwszy rzut oka poprawia współczynnik konwersji. Nic z tego nie wygląda jak błąd — dopóki ktoś nie porówna liczb z czymś niezależnym.</p>
 
   <p>Klient, który zauważy taką rozbieżność samodzielnie, zapamiętuje przede wszystkim jedno: że musiał to wychwycić sam, mimo że płaci za to, żeby ktoś inny tego pilnował. Ta checklist to sposób, żeby nigdy nie być w tej sytuacji po raz drugi.</p>
 
@@ -505,7 +535,9 @@ const REPORTING_CHECKLIST_BODY_HTML = `
 
   <h2>Jak AlertGA4 wspiera ten proces</h2>
 
-  <p>Większość punktów tej checklisty to dokładnie to, co AlertGA4 sprawdza automatycznie, codziennie, dla każdego podłączonego konta: duplikaty zakupu, udział „(not set)”, self-referral, ruch botowy w nocy, anomalie geograficzne i pokrycie parametrów. Zamiast przechodzić przez checklistę ręcznie tuż przed wysyłką raportu, masz już trzydzieści dni historii wyników dla każdego klienta na jednym dashboardzie — sprawdzenie przed raportem sprowadza się do rzutu oka na wynik i trend, nie do ręcznego przechodzenia przez każdy punkt od zera.</p>
+  <p>Większość punktów tej checklisty to dokładnie to, co AlertGA4 sprawdza automatycznie, codziennie, dla każdego podłączonego konta: duplikaty zakupu, udział „(not set)”, self-referral, ruch botowy w nocy, anomalie geograficzne i pokrycie parametrów.</p>
+
+  <p>Zamiast przechodzić przez checklistę ręcznie tuż przed wysyłką raportu, masz już trzydzieści dni historii wyników dla każdego klienta na jednym dashboardzie — sprawdzenie przed raportem sprowadza się do rzutu oka na wynik i trend, nie do ręcznego przechodzenia przez każdy punkt od zera.</p>
 
   <p>Dla agencji obsługującej kilkanaście kont jednocześnie różnica jest szczególnie odczuwalna pod koniec miesiąca, gdy większość raportów wychodzi w krótkim odstępie czasu — zamiast powtarzać tę samą ręczną checklistę kilkanaście razy z rzędu, przegląda się kilkanaście dashboardów z gotowym wynikiem.</p>
 
@@ -546,7 +578,9 @@ const REPORTING_CHECKLIST_FAQ_HTML = `
 `
 
 const BOT_TRAFFIC_BODY_HTML = `
-  <p>GA4 filtruje ruch botowy domyślnie, więc łatwo założyć, że temat jest już załatwiony. W praktyce wbudowany filtr łapie tylko boty, które sam rozpoznaje — a to coraz mniejsza część całego ruchu zautomatyzowanego trafiającego dziś na strony internetowe. Ten artykuł pokazuje, jak rozpoznać to, co przeszło przez filtr, i jakie rozwiązania ograniczają boty jeszcze zanim w ogóle dotrą do strony — nie tylko w samym GA4.</p>
+  <p>GA4 filtruje ruch botowy domyślnie, więc łatwo założyć, że temat jest już załatwiony. W praktyce wbudowany filtr łapie tylko boty, które sam rozpoznaje — a to coraz mniejsza część całego ruchu zautomatyzowanego trafiającego dziś na strony internetowe.</p>
+
+  <p>Ten artykuł pokazuje, jak rozpoznać to, co przeszło przez filtr, i jakie rozwiązania ograniczają boty jeszcze zanim w ogóle dotrą do strony — nie tylko w samym GA4.</p>
 
   <h2>Jak GA4 filtruje ruch botowy domyślnie</h2>
 
@@ -554,7 +588,9 @@ const BOT_TRAFFIC_BODY_HTML = `
 
   <p>To filtr sygnaturowy, nie behawioralny: rozpoznaje konkretne, znane identyfikatory botów, ale nie analizuje tego, jak dana sesja się zachowuje. Bot podszywający się pod zwykłą przeglądarkę — a większość dzisiejszego ruchu zautomatyzowanego tak właśnie robi — nie trafia na tę listę i przechodzi przez filtr bez przeszkód.</p>
 
-  <p>To ważna różnica względem oczekiwań: wiele osób zakłada, że skoro GA4 ma „filtr botów”, temat jest zamknięty raz na zawsze. W rzeczywistości lista IAB/ABC jest aktualizowana przez zewnętrzną organizację i obejmuje głównie duże, znane boty — wyszukiwarkowe crawlery, narzędzia monitorujące, publicznie znane skanery. Celowo zbudowany bot, który ma ominąć akurat Twoją stronę, praktycznie nigdy się na niej nie znajdzie.</p>
+  <p>To ważna różnica względem oczekiwań: wiele osób zakłada, że skoro GA4 ma „filtr botów”, temat jest zamknięty raz na zawsze.</p>
+
+  <p>W rzeczywistości lista IAB/ABC jest aktualizowana przez zewnętrzną organizację i obejmuje głównie duże, znane boty — wyszukiwarkowe crawlery, narzędzia monitorujące, publicznie znane skanery. Celowo zbudowany bot, który ma ominąć akurat Twoją stronę, praktycznie nigdy się na niej nie znajdzie.</p>
 
   <h2>Jak rozpoznać ruch botowy, który przeszedł przez filtr</h2>
 
@@ -637,7 +673,9 @@ const BOT_TRAFFIC_BODY_HTML = `
 
   <h2>Jak AlertGA4 pomaga z ruchem botowym</h2>
 
-  <p>AlertGA4 codziennie porównuje udział sesji w nocnych godzinach z typowym poziomem dla danej usługi GA4 z poprzednich dni i wysyła alert, gdy ten udział nagle wzrośnie. To nie jest zabezpieczenie blokujące ruch — pełni rolę wczesnego ostrzeżenia, że coś się zmieniło i warto zajrzeć do logów serwera albo panelu bot managementu, zanim zawyżony ruch wpłynie na ocenę skuteczności kampanii czy raport dla klienta.</p>
+  <p>AlertGA4 codziennie porównuje udział sesji w nocnych godzinach z typowym poziomem dla danej usługi GA4 z poprzednich dni i wysyła alert, gdy ten udział nagle wzrośnie.</p>
+
+  <p>To nie jest zabezpieczenie blokujące ruch — pełni rolę wczesnego ostrzeżenia, że coś się zmieniło i warto zajrzeć do logów serwera albo panelu bot managementu, zanim zawyżony ruch wpłynie na ocenę skuteczności kampanii czy raport dla klienta.</p>
 
   <h2>Dla kogo ma to znaczenie</h2>
 
