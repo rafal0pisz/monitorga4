@@ -175,7 +175,7 @@ export default async function CennikPage() {
       <main>
         <div className="wrap cennik-hero">
           <h1>Cennik</h1>
-          <p>Wybierz plan dopasowany do liczby monitorowanych usług GA4. Bez zobowiązań — anulujesz w każdej chwili.</p>
+          <p>Wybierz plan dopasowany do swoich potrzeb.</p>
         </div>
 
         <div className="wrap cennik-body">

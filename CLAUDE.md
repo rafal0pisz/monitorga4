@@ -65,3 +65,7 @@ an untested assumption about exact Vercel cron timing).
 - `kontakt@bettersteps.pl` / `www.bettersteps.pl` refer to the parent
   company (Bettersteps Sp. z o.o.) and should stay as-is — don't confuse
   these with the app's own domain when doing domain-related work.
+- Don't use em dashes in sentences in any user-facing copy: marketing page
+  text, UI strings, emails, and video/voiceover scripts included. It reads
+  as AI-generated writing, which this product's copy avoids. Use a period,
+  comma, or a plain word instead.
