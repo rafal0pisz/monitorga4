@@ -173,18 +173,18 @@ export default async function PricingPageEn() {
       <main>
         <div className="wrap cennik-hero">
           <h1>Pricing</h1>
-          <p>Pick a plan based on how many GA4 properties you monitor. No commitment — cancel any time.</p>
+          <p>Pick a plan that fits your needs.</p>
         </div>
 
         <div className="wrap cennik-body">
           {trialActive && (
             <div className="trial-banner">
-              <p>Your free trial (on Pro-plan terms) is active — {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left.</p>
+              <p>Your free trial (on Pro-plan terms) is active. {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left.</p>
             </div>
           )}
           {canStartTrial && (
             <div className="trial-banner">
-              <p>Try AlertGA4 free for {TRIAL_DAYS} days on Pro-plan terms (up to 15 GA4 properties) — no card required. One-time offer.</p>
+              <p>Try AlertGA4 free for {TRIAL_DAYS} days on Pro-plan terms (up to 15 GA4 properties), no card required. One-time offer.</p>
               <StartTrialButton label={`Start your ${TRIAL_DAYS}-day free trial`} lang="en" />
             </div>
           )}

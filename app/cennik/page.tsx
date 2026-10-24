@@ -181,12 +181,12 @@ export default async function CennikPage() {
         <div className="wrap cennik-body">
           {trialActive && (
             <div className="trial-banner">
-              <p>Twój bezpłatny okres próbny (na zasadach planu Pro) jest aktywny — zostało {trialDaysLeft} {trialDaysLeft === 1 ? 'dzień' : 'dni'}.</p>
+              <p>Twój bezpłatny okres próbny (na zasadach planu Pro) jest aktywny. Zostało {trialDaysLeft} {trialDaysLeft === 1 ? 'dzień' : 'dni'}.</p>
             </div>
           )}
           {canStartTrial && (
             <div className="trial-banner">
-              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni na zasadach planu Pro (do 15 usług GA4) — bez podpinania karty. Można skorzystać jednorazowo.</p>
+              <p>Wypróbuj AlertGA4 za darmo przez {TRIAL_DAYS} dni na zasadach planu Pro (do 15 usług GA4), bez podpinania karty. Można skorzystać jednorazowo.</p>
               <StartTrialButton label={`Rozpocznij ${TRIAL_DAYS}-dniowy okres próbny`} lang="pl" />
             </div>
           )}

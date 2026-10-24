@@ -69,3 +69,7 @@ an untested assumption about exact Vercel cron timing).
   text, UI strings, emails, and video/voiceover scripts included. It reads
   as AI-generated writing, which this product's copy avoids. Use a period,
   comma, or a plain word instead.
+- Whenever a Polish copy change is made to a page that has an English
+  counterpart (the `/en/*` pages mirroring `/`, `/funkcje`, `/cennik`,
+  `/kontakt`, `/privacy`, `/terms`), update the English text in the same
+  pass, not as a follow-up. Don't let the two language versions drift.
