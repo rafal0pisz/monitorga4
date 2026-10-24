@@ -52,7 +52,7 @@ export default function LandingNav({
   return (
     <nav className="lp-nav" aria-label={t.ariaMain}>
       <div className="wrap lp-nav-row">
-        <Link href={homeHref} style={{ textDecoration: 'none' }} onClick={() => setOpen(false)}>
+        <Link href={homeHref} className="lp-nav-logo" style={{ textDecoration: 'none' }} onClick={() => setOpen(false)}>
           <BrandWordmark size={19} dark />
         </Link>
         <div className="lp-nav-links">
