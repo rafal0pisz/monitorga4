@@ -175,6 +175,21 @@ export default function PrivacyPage() {
           <a href="mailto:kontakt@bettersteps.pl" style={link}>kontakt@bettersteps.pl</a>. Dane rozliczeniowe przechowujemy przez
           okres wymagany przepisami prawa podatkowego i rachunkowego.
         </p>
+        <p style={p}>Dla danych o ograniczonym, z góry określonym celu stosujemy krótsze, automatyczne okresy przechowywania:</p>
+        <ul style={ul}>
+          <li style={li}>
+            <strong>Historia sprawdzeń i logi wysłanych alertów</strong> — usuwane automatycznie po 40 dniach od wykonania
+            sprawdzenia lub wysłania alertu; ten okres obejmuje najdłuższy zakres, z którego korzysta aplikacja (porównania
+            trendów i historia widoczna w panelu).
+          </li>
+          <li style={li}>
+            <strong>Zgłoszenia z formularza kontaktowego</strong> (adres IP, wyłącznie w celu ograniczenia nadużyć) — usuwane
+            automatycznie po 7 dniach.
+          </li>
+          <li style={li}>
+            <strong>Odpowiedzi z ankiety przy rezygnacji z okresu próbnego</strong> — usuwane automatycznie po 180 dniach.
+          </li>
+        </ul>
 
         <h2 style={h2}>X. Twoje prawa</h2>
         <p style={p}>Zgodnie z RODO przysługuje Ci prawo do:</p>

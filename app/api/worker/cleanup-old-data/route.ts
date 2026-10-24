@@ -29,6 +29,13 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
 }
 
 const RETENTION_DAYS = 40
+// Only ever used for the contact form's 10-minute rate-limit window
+// (app/api/contact/route.ts) — a few days of slack past that is enough to
+// spot an abuse pattern manually, with nothing left accumulating forever.
+const CONTACT_SUBMISSION_RETENTION_DAYS = 7
+// Free-text churn-reason survey (migration 030) — kept long enough for a
+// quarterly review of why trials don't convert, not indefinitely.
+const TRIAL_WINBACK_RESPONSE_RETENTION_DAYS = 180
 
 // GET — Vercel Cron, once daily. Prunes daily check history
 // (dqs_runs/dqs_results) and the two alert-send logs (alert_log/
@@ -39,10 +46,18 @@ const RETENTION_DAYS = 40
 // (app/project/[id]/history/page.tsx's HISTORY_RUNS), the worker's own
 // trend/baseline comparisons look back at most a few weeks, and the alert
 // logs are only ever read one row at a time ("when did we last alert this
-// project") via an ORDER BY ... LIMIT 1, never a historical list. Only
-// touches these four tables — profiles, projects, billing_events and
-// everything else are untouched; those aren't the source of unbounded
-// growth and billing history should never be auto-deleted.
+// project") via an ORDER BY ... LIMIT 1, never a historical list.
+//
+// Also prunes contact_submissions (IP addresses from the public contact
+// form — migration 036) and trial_winback_responses (free-text churn-reason
+// survey — migration 030): both had no retention policy at all before this,
+// growing forever with no code or documentation saying why. Retention
+// periods for all six tables are disclosed in app/privacy/page.tsx §IX —
+// keep that in sync with the constants below.
+//
+// profiles, projects, billing_events and everything else are untouched;
+// those aren't the source of unbounded growth and account/billing history
+// should never be auto-deleted.
 //
 // alert_log/critical_alert_log are pruned by their own sent_at, independent
 // of the dqs_runs deletion above — critical_alert_log.run_id is ON DELETE
@@ -98,6 +113,20 @@ export async function GET(request: NextRequest) {
       .lt('sent_at', cutoffTimestamp)
     if (criticalAlertLogError) throw criticalAlertLogError
 
+    const contactCutoff = new Date(Date.now() - CONTACT_SUBMISSION_RETENTION_DAYS * 86400000).toISOString()
+    const { error: contactError, count: contactSubmissionsDeleted } = await admin
+      .from('contact_submissions')
+      .delete({ count: 'exact' })
+      .lt('created_at', contactCutoff)
+    if (contactError) throw contactError
+
+    const winbackCutoff = new Date(Date.now() - TRIAL_WINBACK_RESPONSE_RETENTION_DAYS * 86400000).toISOString()
+    const { error: winbackError, count: trialWinbackResponsesDeleted } = await admin
+      .from('trial_winback_responses')
+      .delete({ count: 'exact' })
+      .lt('created_at', winbackCutoff)
+    if (winbackError) throw winbackError
+
     return NextResponse.json({
       ok: true,
       cutoff: cutoffDate,
@@ -105,6 +134,8 @@ export async function GET(request: NextRequest) {
       results_deleted: resultsDeleted,
       alert_log_deleted: alertLogDeleted,
       critical_alert_log_deleted: criticalAlertLogDeleted,
+      contact_submissions_deleted: contactSubmissionsDeleted,
+      trial_winback_responses_deleted: trialWinbackResponsesDeleted,
     })
   } catch (err) {
     console.error('[worker/cleanup-old-data] Failed:', err instanceof Error ? err.message : err)
