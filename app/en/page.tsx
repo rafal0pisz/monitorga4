@@ -334,7 +334,6 @@ export default async function HomePageEn() {
               <video controls preload="metadata" poster="/videos/how-it-works-poster.jpg" width={1280} height={720} playsInline>
                 <source src="/videos/how-it-works.mp4" type="video/mp4" />
               </video>
-              <p>A quick look at the live app (captioned, no audio).</p>
             </div>
             {!user && (
               <div className="trial-banner-guest" style={{ marginTop: 40 }}>
