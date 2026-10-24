@@ -28,13 +28,10 @@ export const ROWS: Row[] = [
   { label: 'Kreator konfiguracji z podpowiedziami z GA4', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Wsparcie', lite: 'e-mail', pro: 'e-mail', agency: 'dedykowany kanał' },
   { label: 'Konsultacja z analitykiem GA4', lite: '—', pro: '—', agency: '1h / miesiąc' },
-  // Compliance/trust rows — identical across all plans (these are
-  // properties of the product/infrastructure, not plan tiers), listed last
-  // as a dedicated trust block rather than mixed into feature rows above.
-  { label: 'Dostęp do Google tylko do odczytu', lite: '✓', pro: '✓', agency: '✓' },
-  { label: 'Dane przechowywane w UE (Supabase, region EU)', lite: '✓', pro: '✓', agency: '✓' },
-  { label: 'Zgodność z RODO (GDPR)', lite: '✓', pro: '✓', agency: '✓' },
-  { label: 'Zweryfikowane wg Google API Services User Data Policy', lite: '✓', pro: '✓', agency: '✓' },
+  // Compliance/trust claims (read-only access, EU data residency, GDPR,
+  // Google verification) live in the trust strip on the marketing pages
+  // instead of here — they're identical across every plan, so a table row
+  // for each just repeated the same checkmark three times.
 ]
 
 export const PLAN_KEYS = ['lite', 'pro', 'agency'] as const
