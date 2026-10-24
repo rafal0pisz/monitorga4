@@ -5,6 +5,7 @@ import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import PricingCards from '@/components/marketing/PricingCards'
 import PlanComparisonTable from '@/components/marketing/PlanComparisonTable'
+import TrustStrip from '@/components/marketing/TrustStrip'
 import StartTrialButton from '@/components/billing/StartTrialButton'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { PLANS, effectivePlanId, TRIAL_DAYS } from '@/lib/billing/plans'
@@ -203,6 +204,8 @@ export default async function CennikPage() {
           <h2>Porównanie planów</h2>
           <PlanComparisonTable />
         </div>
+
+        <TrustStrip />
 
         <LandingCtaBand primaryCta={primaryCta} secondaryCta={secondaryCta} />
       </main>

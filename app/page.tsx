@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import LandingNav from '@/components/marketing/LandingNav'
 import LandingFooter from '@/components/marketing/LandingFooter'
 import LandingCtaBand from '@/components/marketing/LandingCtaBand'
+import TrustStrip from '@/components/marketing/TrustStrip'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { TRIAL_DAYS } from '@/lib/billing/plans'
 
@@ -312,6 +313,8 @@ export default async function HomePage() {
             )}
           </div>
         </section>
+
+        <TrustStrip />
 
         {/* Co sprawdzamy */}
         <section id="co-sprawdzamy">

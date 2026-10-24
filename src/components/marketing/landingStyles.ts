@@ -118,6 +118,30 @@ export const LANDING_BASE_STYLES = `
   .lp-footer-bottom a { text-decoration: none; color: inherit; }
   .lp-footer-bottom a:hover { color: #fff; }
 
+  /* Trust strip — shared between /cennik (below the plan comparison table)
+     and the homepage (below "Jak to działa"). One scrollable row of pills on
+     desktop (the right-edge arrow/fade only show while there's more to
+     scroll to — toggled in TrustStrip.tsx, not CSS); stacked, equal-width
+     and centered below 640px, no JS involved for that half. */
+  .lp-trust-strip { padding: 36px 0; background: #f3f6f7; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
+  .lp-trust-strip-label { text-align: center; font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b939a; margin: 0 0 14px; }
+  .lp-trust-strip-inner { position: relative; }
+  .lp-trust-strip-track { display: flex; gap: 10px; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; padding: 2px 44px 6px 2px; scrollbar-width: none; }
+  .lp-trust-strip-track::-webkit-scrollbar { display: none; }
+  .lp-trust-chip { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; background: #fff; border: 1px solid #e2e6e8; border-radius: 999px; padding: 9px 16px 9px 12px; white-space: nowrap; }
+  .lp-trust-chip svg { width: 18px; height: 18px; flex-shrink: 0; color: #232b31; }
+  .lp-trust-chip .t { font-size: 12.5px; font-weight: 600; color: #232b31; line-height: 1.25; display: block; }
+  .lp-trust-chip .s { font-size: 10.5px; color: #8b939a; font-weight: 400; display: block; margin-top: 1px; }
+  .lp-trust-strip-fade { position: absolute; top: 0; right: 0; bottom: 6px; width: 56px; background: linear-gradient(to right, rgba(243,246,247,0), #f3f6f7 70%); pointer-events: none; transition: opacity 0.2s; }
+  .lp-trust-strip-arrow { position: absolute; top: 50%; right: 0; transform: translateY(-60%); width: 32px; height: 32px; border-radius: 50%; border: 1px solid #e2e6e8; background: #fff; color: #232b31; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(35,43,49,0.12); transition: opacity 0.2s; padding: 0; }
+  .lp-trust-strip-arrow svg { width: 15px; height: 15px; }
+  .lp-trust-strip-fade.is-hidden, .lp-trust-strip-arrow.is-hidden { opacity: 0; pointer-events: none; }
+  @media (max-width: 640px) {
+    .lp-trust-strip-track { flex-direction: column; align-items: center; overflow: visible; padding: 2px; }
+    .lp-trust-chip { width: 100%; max-width: 280px; justify-content: flex-start; white-space: normal; }
+    .lp-trust-strip-fade, .lp-trust-strip-arrow { display: none; }
+  }
+
   /* Standalone promo banner for blog articles — a plain typographic
      statement (no card, no background), set off by thin rules above and
      below, rather than a boxed ad block. Same offer as .trial-banner-guest. */
