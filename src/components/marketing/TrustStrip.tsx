@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 const ITEMS = [
   {
     title: 'Dostęp tylko do odczytu',
-    sub: 'Nigdy nie zmieniamy danych w Twoim GA4',
+    sub: 'Read-only access Google',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z" />
@@ -82,7 +82,6 @@ export default function TrustStrip() {
   return (
     <div className="lp-trust-strip">
       <div className="wrap">
-        <p className="lp-trust-strip-label">Bezpieczeństwo i zgodność</p>
         <div className="lp-trust-strip-inner">
           <div className="lp-trust-strip-track" ref={trackRef}>
             {ITEMS.map(item => (

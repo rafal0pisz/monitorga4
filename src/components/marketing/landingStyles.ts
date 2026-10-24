@@ -124,7 +124,6 @@ export const LANDING_BASE_STYLES = `
      scroll to — toggled in TrustStrip.tsx, not CSS); stacked, equal-width
      and centered below 640px, no JS involved for that half. */
   .lp-trust-strip { padding: 36px 0; background: #f3f6f7; border-top: 1px solid #e2e6e8; border-bottom: 1px solid #e2e6e8; }
-  .lp-trust-strip-label { text-align: center; font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b939a; margin: 0 0 14px; }
   .lp-trust-strip-inner { position: relative; }
   .lp-trust-strip-track { display: flex; gap: 10px; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; padding: 2px 44px 6px 2px; scrollbar-width: none; }
   .lp-trust-strip-track::-webkit-scrollbar { display: none; }
