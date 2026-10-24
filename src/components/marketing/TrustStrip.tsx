@@ -22,7 +22,7 @@ const ITEMS = [
   },
   {
     title: 'Dane na serwerach w UE',
-    sub: 'Baza danych (Supabase) w regionie europejskim',
+    sub: 'Baza danych w regionie europejskim',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -62,8 +62,14 @@ export default function TrustStrip() {
     if (!track) return
     function update() {
       if (!track) return
-      const hasOverflow = track.scrollWidth > track.clientWidth + 2
-      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 2
+      // The track's own right padding (reserved so the arrow/fade don't sit
+      // directly on top of the last chip's text) is part of scrollWidth too
+      // — subtract it back out, or a perfect fit still reads as overflow and
+      // shows an arrow pointing at nothing.
+      const paddingRight = parseFloat(getComputedStyle(track).paddingRight) || 0
+      const contentWidth = track.scrollWidth - paddingRight
+      const hasOverflow = contentWidth > track.clientWidth + 2
+      const atEnd = track.scrollLeft + track.clientWidth >= contentWidth - 2
       setShowArrow(hasOverflow && !atEnd)
     }
     update()
