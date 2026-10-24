@@ -88,8 +88,11 @@ export default async function BlogPostPage({ params }: Props) {
            padding at specificity (0,2,0) — higher than a bare
            ".blog-post-body" (0,1,0), which silently lost this whole rule and
            rendered the article at the full 1120px width instead of a
-           readable column. ".lp .wrap.blog-post-body" (0,3,0) wins outright. */
-        .lp .wrap.blog-post-body { padding: 32px 0 80px; max-width: 720px; margin: 0 auto; }
+           readable column. ".lp .wrap.blog-post-body" (0,3,0) wins outright.
+           Only top/bottom padding is set here — left/right come from
+           ".wrap" itself (24px), left alone on purpose so this rule's own
+           higher specificity doesn't zero them out again. */
+        .lp .wrap.blog-post-body { padding-top: 32px; padding-bottom: 80px; max-width: 720px; margin: 0 auto; }
         .blog-post-body h2 { font-size: clamp(19px, 2.2vw, 23px); margin: 36px 0 14px; letter-spacing: -0.01em; }
         .blog-post-body p { font-size: 15px; color: #3a4148; line-height: 1.75; margin: 0 0 16px; }
         .blog-post-body ul, .blog-post-body ol { font-size: 15px; color: #3a4148; line-height: 1.7; margin: 0 0 16px; padding-left: 26px; }
