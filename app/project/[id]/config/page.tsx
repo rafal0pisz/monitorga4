@@ -5,6 +5,7 @@ import Link from 'next/link'
 import ProjectConfigForm from '@/components/project/ProjectConfigForm'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { effectivePlanId, alertEmailLimit } from '@/lib/billing/plans'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -30,6 +31,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     { data: ecommerceConfigRaw },
     { data: parameterChecksRaw },
     { data: sectionsRaw },
+    { data: ownerProfile },
   ] = await Promise.all([
     supabase.from('checks_catalog').select('*').order('level').order('check_key'),
     supabase.from('checks_config').select('*').eq('project_id', id),
@@ -37,7 +39,9 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     supabase.rpc('get_ecommerce_config', { p_project_id: id }),
     supabase.rpc('get_parameter_checks', { p_project_id: id }),
     supabase.rpc('get_project_sections', { p_project_id: id }),
+    supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', project.owner_id).single(),
   ])
+  const maxAlertEmails = alertEmailLimit(effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at))
 
   // RPC returns jsonb arrays — parse if needed
   const parseRpc = (raw: any) => {
@@ -67,6 +71,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
         parameterChecks={parseRpc(parameterChecksRaw) as ParameterCheck[]}
         ecommerceCatalog={[]}
         initialSections={sectionsRaw && typeof sectionsRaw === 'object' ? sectionsRaw as any : undefined}
+        maxAlertEmails={maxAlertEmails}
       />
     </div>
   )

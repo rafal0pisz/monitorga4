@@ -98,3 +98,13 @@ export function effectivePlanId(planId: string | null | undefined, trialEndsAt: 
 export function hasActiveAccess(planId: string | null | undefined, trialEndsAt: string | null | undefined): boolean {
   return effectivePlanId(planId, trialEndsAt) !== null
 }
+
+// Max distinct addresses allowed in a project's alert_email or
+// critical_alert_email list. Enforced here for the UI and again, identically,
+// by the enforce_alert_email_limits() trigger in supabase/migrations/042 —
+// a direct REST/SQL write must not be able to bypass this by skipping the UI.
+export function alertEmailLimit(planId: string | null | undefined): number {
+  if (planId === 'internal') return Number.MAX_SAFE_INTEGER
+  if (planId === 'trial' || planId === 'pro' || planId === 'agency') return 5
+  return 2 // lite, and any other/no plan
+}

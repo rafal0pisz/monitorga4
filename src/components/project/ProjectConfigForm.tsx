@@ -52,9 +52,13 @@ interface Props {
   parameterChecks?: unknown
   ecommerceCatalog?: unknown
   initialSections?: unknown
+  // Max addresses allowed in alert_email / critical_alert_email, from the
+  // project owner's plan (src/lib/billing/plans.ts, alertEmailLimit) —
+  // defaults to the Lite cap if the page didn't resolve it for some reason.
+  maxAlertEmails?: number
 }
 
-export default function ProjectConfigForm({ project }: Props) {
+export default function ProjectConfigForm({ project, maxAlertEmails = 2 }: Props) {
   const router   = useRouter()
   const supabase = createClient()
 
@@ -185,6 +189,7 @@ export default function ProjectConfigForm({ project }: Props) {
     if (!e) return
     if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
+    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
     setAlertEmails(prev => [...prev, e])
     setNewAlertEmail('')
     setAlertEmailError(null)
@@ -195,6 +200,7 @@ export default function ProjectConfigForm({ project }: Props) {
     if (!e) return
     if (!EMAIL_RE.test(e)) { setCriticalAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (criticalAlertEmails.includes(e)) { setNewCriticalAlertEmail(''); setCriticalAlertEmailError(null); return }
+    if (criticalAlertEmails.length >= maxAlertEmails) { setCriticalAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
     setCriticalAlertEmails(prev => [...prev, e])
     setNewCriticalAlertEmail('')
     setCriticalAlertEmailError(null)
@@ -348,7 +354,7 @@ export default function ProjectConfigForm({ project }: Props) {
         auto_run: autoRun,
         expected_events: customEvents.filter(e => e.is_enabled).map(e => e.event_name),
       }).eq('id', pid)
-      if (projErr) throw new Error(`Project: ${projErr.message}`)
+      if (projErr) throw new Error(projErr.message.includes('ALERT_EMAIL_LIMIT_REACHED') ? `Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.` : `Project: ${projErr.message}`)
 
       const { error: ceErr } = await supabase.rpc('save_custom_event_checks', {
         p_project_id: pid,
@@ -759,7 +765,7 @@ export default function ProjectConfigForm({ project }: Props) {
         {openSection === 'alerts' && (
           <div style={{ padding: 18 }}>
             <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Alert email(s)</label>
+              <label style={lbl}>Alert email(s) {maxAlertEmails < 1000 && <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>({alertEmails.length} of {maxAlertEmails})</span>}</label>
               {alertEmails.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                   {alertEmails.map((e, i) => (
@@ -804,7 +810,7 @@ export default function ProjectConfigForm({ project }: Props) {
               This is in addition to the Email Alert above, which fires on the overall score. Pick specific metrics below — this alert goes out to its own address whenever any of them shows Warn or Fail, regardless of the overall score.
             </p>
             <div style={{ marginBottom: 16 }}>
-              <label style={lbl}>Custom alert email(s)</label>
+              <label style={lbl}>Custom alert email(s) {maxAlertEmails < 1000 && <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>({criticalAlertEmails.length} of {maxAlertEmails})</span>}</label>
               {criticalAlertEmails.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                   {criticalAlertEmails.map((e, i) => (

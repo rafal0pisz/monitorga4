@@ -32,7 +32,7 @@ const inp: React.CSSProperties = {
   outline: 'none', boxSizing: 'border-box',
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: React.ReactNode; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 4 }}>{label}</label>
@@ -96,7 +96,7 @@ function EventTag({ isStandard }: { isStandard: boolean }) {
   )
 }
 
-export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
+export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerId?: string; maxAlertEmails?: number } = {}) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -126,6 +126,7 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
     if (!e) return
     if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
+    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
     setAlertEmails(prev => [...prev, e])
     setNewAlertEmail('')
     setAlertEmailError(null)
@@ -356,6 +357,9 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
       if (projErr) {
         if (projErr.message.includes('PLAN_LIMIT_REACHED')) {
           throw new Error("You've reached your plan's project limit. Upgrade to add more projects.")
+        }
+        if (projErr.message.includes('ALERT_EMAIL_LIMIT_REACHED')) {
+          throw new Error(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`)
         }
         throw new Error(projErr.message)
       }
@@ -705,7 +709,7 @@ export default function NewProjectForm({ ownerId }: { ownerId?: string } = {}) {
           <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
             A daily report email is sent every day by default — you can switch it to only send on Warn/Fail later, in project Settings.
           </p>
-          <Field label="Alert email(s)">
+          <Field label={<>Alert email(s) {maxAlertEmails < 1000 && <span style={{ fontWeight: 400, color: 'var(--color-text-secondary)' }}>({alertEmails.length} of {maxAlertEmails})</span>}</>}>
             {alertEmails.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
                 {alertEmails.map((e, i) => (
