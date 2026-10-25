@@ -1,4 +1,4 @@
-import { BRAND, APP_URL, emailShell, footerHtml, ctaHtml, hstack, fmtDate, escapeHtml } from './shared'
+import { BRAND, emailShell, footerHtml, hstack, fmtDate, escapeHtml } from './shared'
 import { checkLabel } from '@/lib/ga4/checkLabels'
 
 export interface DigestEntry {
@@ -12,6 +12,18 @@ export interface DigestEntry {
   topSignal: string
   belowThreshold: boolean
   alertThreshold: number
+}
+
+// Counts of actual send attempts recorded in alert_log/critical_alert_log
+// for the day (see enforcement in app/api/worker/run/route.ts) — this is
+// this internal report's whole reason to exist: "did the resulting client
+// emails actually go out", which a completed run alone doesn't guarantee
+// (Resend errors, invalid addresses, etc. are swallowed by sendEmail()).
+export interface EmailDeliveryStats {
+  alertAttempted: number
+  alertSent: number
+  criticalAttempted: number
+  criticalSent: number
 }
 
 function scoreColor(score: number): string {
@@ -60,9 +72,7 @@ function scoreRow(e: DigestEntry): string {
   const num = e.scoreTotal != null ? Math.round(e.scoreTotal) : '—'
   const color = e.scoreTotal != null ? scoreColor(e.scoreTotal) : BRAND.soft
 
-  const body = `
-    <div><span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${escapeHtml(e.name)}</span>${badge ? ' ' + badge : ''}</div>
-    <div style="font-size:12.5px;color:${BRAND.soft};margin-top:2px;">${e.topSignal}</div>`
+  const body = `<div><span style="font-weight:600;font-size:14.5px;color:${BRAND.ink};">${escapeHtml(e.name)}</span>${badge ? ' ' + badge : ''}</div>`
 
   const row = hstack([
     { html: `<span class="serif" style="font-size:26px;color:${color};">${num}</span>`, width: 56, align: 'right' },
@@ -79,33 +89,32 @@ function scoreRow(e: DigestEntry): string {
 // processing) — distinct from runDate (the day this digest was generated).
 // totalActiveProjects: every active project account-wide, not just the
 // ones with auto_run enabled (entries.length covers only those).
-export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, checkedDate: string, totalActiveProjects: number): { subject: string; html: string } {
-  const attention = entries.filter(e => e.runStatus === 'failed' || e.belowThreshold)
-  const healthy = entries.length - attention.length
+// emailStats: counts of actual alert-email send attempts/successes logged
+// today, platform-wide — see EmailDeliveryStats above.
+export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, checkedDate: string, totalActiveProjects: number, emailStats: EmailDeliveryStats): { subject: string; html: string } {
+  const completedRuns = entries.filter(e => e.runStatus === 'completed').length
+  const failedRuns = entries.length - completedRuns
   const dateLabel = fmtDate(runDate)
   const checkedDateLabel = fmtDate(checkedDate)
 
-  const subject = attention.length === 0
-    ? `AlertGA4 Summary Project Daily Report: ${dateLabel} · all projects healthy`
-    : `AlertGA4 Summary Project Daily Report: ${dateLabel} · ${attention.length} project${attention.length > 1 ? 's' : ''} need${attention.length > 1 ? '' : 's'} attention`
-
-  const calloutHtml = attention.length === 0 ? '' : `
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;">
-    <tr><td style="background:${BRAND.alert};border-left:3px solid ${BRAND.ink};border-radius:8px;padding:14px 16px;">
-      <h3 style="margin:0 0 6px;font-size:13.5px;color:${BRAND.ink};">Worth checking</h3>
-      ${attention.map(e => `
-        <p style="margin:0 0 8px;font-size:13px;color:#3a4046;line-height:1.5;">
-          <b>${escapeHtml(e.name)}</b>${e.scoreTotal != null ? ` scored ${Math.round(e.scoreTotal)}, below its alert threshold of ${e.alertThreshold}.` : ` failed to complete its run — ${escapeHtml(e.errorMessage ?? 'unknown error')}.`}
-          ${e.topSignal ? `${e.topSignal} — ` : ''}
-          <a href="${APP_URL}/project/${e.projectId}" style="font-weight:600;color:${BRAND.coralLink};text-decoration:none;">Open in dashboard →</a>
-        </p>`).join('')}
-    </td></tr>
-  </table>`
+  const subject = failedRuns === 0
+    ? `APP AlertGA4 - Report Daily: ${dateLabel} · all runs completed`
+    : `APP AlertGA4 - Report Daily: ${dateLabel} · ${failedRuns} run${failedRuns > 1 ? 's' : ''} failed`
 
   const masthead = hstack([
     { html: `<span class="serif" style="font-size:22px;font-weight:600;color:${BRAND.ink};">Alert<span style="color:${BRAND.coralText};">GA4</span></span>` },
     { html: `<span style="font-size:12.5px;color:${BRAND.soft};">${new Date(runDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · morning check run</span>`, align: 'right' },
   ])
+
+  const alertFailed = emailStats.alertAttempted - emailStats.alertSent
+  const criticalFailed = emailStats.criticalAttempted - emailStats.criticalSent
+  const emailStatColor = (failed: number) => failed > 0 ? BRAND.coralText : '#4a5157'
+  const emailDeliveryHtml = `
+    <div style="padding:8px 32px 4px;">
+      <h2 style="font-size:11px;text-transform:uppercase;letter-spacing:0.09em;color:${BRAND.soft};margin:0 0 10px;font-weight:700;">Client email delivery</h2>
+      <div style="font-size:13px;color:${emailStatColor(alertFailed)};">Daily alert emails: ${emailStats.alertSent} / ${emailStats.alertAttempted} sent${alertFailed > 0 ? ` (${alertFailed} failed)` : ''}</div>
+      ${emailStats.criticalAttempted > 0 ? `<div style="font-size:13px;color:${emailStatColor(criticalFailed)};margin-top:4px;">Custom metric alerts: ${emailStats.criticalSent} / ${emailStats.criticalAttempted} sent${criticalFailed > 0 ? ` (${criticalFailed} failed)` : ''}</div>` : ''}
+    </div>`
 
   const body = `
     <div style="padding:28px 32px 22px;border-bottom:1px solid ${BRAND.line};">
@@ -114,9 +123,9 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
     </div>
 
     <div style="padding:18px 32px;background:#fafafa;border-bottom:1px solid ${BRAND.line};font-size:14px;color:#3a4046;">
-      <span class="serif" style="font-size:16px;color:${BRAND.ink};font-weight:600;">${entries.length} project${entries.length === 1 ? '' : 's'} checked</span>
-      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:8px;">${healthy} healthy</span>
-      ${attention.length > 0 ? `<span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:${BRAND.alert};color:${BRAND.ink};margin-left:6px;">${attention.length} needs attention</span>` : ''}
+      <span class="serif" style="font-size:16px;color:${BRAND.ink};font-weight:600;">${entries.length} run${entries.length === 1 ? '' : 's'}</span>
+      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:8px;">${completedRuns} completed</span>
+      <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:${failedRuns > 0 ? BRAND.alert : '#eceeef'};color:${failedRuns > 0 ? BRAND.ink : '#4a5157'};margin-left:6px;">${failedRuns} failed</span>
       <span style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:100px;background:#eceeef;color:#4a5157;margin-left:6px;">${totalActiveProjects} active total</span>
     </div>
 
@@ -130,12 +139,12 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
       ${entries.map(scoreRow).join('')}
     </div>
 
-    <div style="padding:0 32px;">${calloutHtml}</div>
-    ${ctaHtml('View full dashboard', `${APP_URL}/dashboard`)}
+    ${emailDeliveryHtml}
+
     ${footerHtml([
-      'Automated daily report from AlertGA4, generated after the morning check run.',
-      'Per-project daily report emails continue to send separately to each project\'s configured address.',
-    ])}
+      'Internal technical report from AlertGA4, generated after the morning check run.',
+      'Shows every project on the platform, not just your own — this is an operator view, not a client-facing report.',
+    ], undefined, true)}
   `
 
   return { subject, html: emailShell({ preheader: subject, body }) }

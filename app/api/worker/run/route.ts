@@ -4,7 +4,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS, ITEM_SCOPED_DIMENSIONS, ITEM_METRIC_BY_EVENT, ITEM_SCOPED_METRICS, TRANSACTION_SCOPED_EVENTS } from '@/lib/ga4/standardParams'
 import { sendEmail } from '@/lib/email/resend'
-import { renderOwnerDigestEmail, type DigestEntry } from '@/lib/email/ownerDigest'
+import { renderOwnerDigestEmail, type DigestEntry, type EmailDeliveryStats } from '@/lib/email/ownerDigest'
 import { renderClientAlertEmail } from '@/lib/email/clientAlert'
 import { renderCriticalAlertEmail } from '@/lib/email/criticalAlert'
 import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
@@ -1091,8 +1091,6 @@ async function processProject(
         .order('sent_at', { ascending: false }).limit(1).single()
       const lastDate = lastAlert?.sent_at ? new Date(lastAlert.sent_at).toISOString().split('T')[0] : null
       if (lastDate !== runDate) {
-        await supabase.from('alert_log').insert({ project_id: project.id, run_id: run.id, score: scoreTotal })
-
         const { data: trendRaw } = await supabase
           .from('dqs_runs')
           .select('run_date, score_total')
@@ -1114,7 +1112,7 @@ async function processProject(
         const failing = failingResults.map(r => ({ checkKey: r.check_key, message: r.message, streakDays: streakByCheck.get(r.check_key) }))
         const warning = warningResults.map(r => ({ checkKey: r.check_key, message: r.message, streakDays: streakByCheck.get(r.check_key) }))
 
-        await sendEmail({
+        const emailSent = await sendEmail({
           to: alertEmails,
           ...renderClientAlertEmail({
             projectId: project.id,
@@ -1132,6 +1130,12 @@ async function processProject(
             allChecks: allResults.map(r => ({ checkKey: r.check_key, status: r.status as 'pass' | 'warn' | 'fail' })),
           }),
         })
+        // Logged (and the daily dedup gate above keyed off) only once the
+        // send actually resolves — a crash while building the email body
+        // above now just means no row yet, so the next firing retries it,
+        // instead of permanently marking today as "sent" for an email that
+        // never went out.
+        await supabase.from('alert_log').insert({ project_id: project.id, run_id: run.id, score: scoreTotal, email_sent: emailSent })
       }
     }
 
@@ -1154,8 +1158,7 @@ async function processProject(
           .order('sent_at', { ascending: false }).limit(1).single()
         const lastCriticalDate = lastCriticalAlert?.sent_at ? new Date(lastCriticalAlert.sent_at).toISOString().split('T')[0] : null
         if (lastCriticalDate !== runDate) {
-          await supabase.from('critical_alert_log').insert({ project_id: project.id, run_id: run.id })
-          await sendEmail({
+          const criticalEmailSent = await sendEmail({
             to: criticalAlertEmails,
             ...renderCriticalAlertEmail({
               projectId: project.id,
@@ -1165,6 +1168,7 @@ async function processProject(
               issues: criticalIssues,
             }),
           })
+          await supabase.from('critical_alert_log').insert({ project_id: project.id, run_id: run.id, email_sent: criticalEmailSent })
         }
       }
     }
@@ -1408,6 +1412,28 @@ async function buildDigestEntriesForDate(admin: ReturnType<typeof createAdminCli
   return entries
 }
 
+// Separate from buildDigestEntriesForDate's own dqs_runs query (small and
+// cheap) so that function's return shape doesn't need to carry delivery
+// stats too — they're consumed together but aren't otherwise related.
+async function buildEmailDeliveryStats(admin: ReturnType<typeof createAdminClient>, runDate: string): Promise<EmailDeliveryStats> {
+  const { data: runsRaw } = await admin.from('dqs_runs').select('id').eq('run_date', runDate)
+  const runIds = ((runsRaw ?? []) as { id: string }[]).map(r => r.id)
+  if (runIds.length === 0) return { alertAttempted: 0, alertSent: 0, criticalAttempted: 0, criticalSent: 0 }
+
+  const [{ data: alertRaw }, { data: criticalRaw }] = await Promise.all([
+    admin.from('alert_log').select('email_sent').in('run_id', runIds),
+    admin.from('critical_alert_log').select('email_sent').in('run_id', runIds),
+  ])
+  const alertRows = (alertRaw ?? []) as { email_sent: boolean | null }[]
+  const criticalRows = (criticalRaw ?? []) as { email_sent: boolean | null }[]
+  return {
+    alertAttempted: alertRows.length,
+    alertSent: alertRows.filter(r => r.email_sent === true).length,
+    criticalAttempted: criticalRows.length,
+    criticalSent: criticalRows.filter(r => r.email_sent === true).length,
+  }
+}
+
 // Sends the owner digest exactly once per day, independently of
 // AUTO_RUN_MARKER_KEY — the two used to be the same gate, and that's
 // precisely how the digest silently stopped going out once the automatic
@@ -1425,8 +1451,11 @@ async function sendDailyDigestIfDue(admin: ReturnType<typeof createAdminClient>,
   if (digestEntries.length === 0) return
 
   const checkedDate = getDailyRanges().current.startDate
-  const { count: totalActiveProjects } = await admin.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active')
-  const sent = await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0) })
+  const [{ count: totalActiveProjects }, emailStats] = await Promise.all([
+    admin.from('projects').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    buildEmailDeliveryStats(admin, runDate),
+  ])
+  const sent = await sendEmail({ to: process.env.DIGEST_EMAIL, ...renderOwnerDigestEmail(digestEntries, runDate, checkedDate, totalActiveProjects ?? 0, emailStats) })
   if (sent) await writeMarker(admin, DIGEST_SENT_MARKER_KEY, todayWarsaw)
   // sendEmail failing is logged there already and left non-fatal here too —
   // the marker is deliberately NOT written on failure, so the next firing
