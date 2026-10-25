@@ -87,8 +87,8 @@ export default async function PrivacyPageEn() {
           </li>
           <li style={li}><strong>Data of the GA4 property you choose to monitor</strong> — property identifiers and aggregated check results (event counts, the quality score, pass/warn/fail status).</li>
           <li style={li}><strong>Configuration you enter yourself</strong> — Project names, the event and parameter checks you define, alert thresholds, and the email addresses of alert recipients.</li>
-          <li style={li}><strong>Billing data</strong> — when you purchase a Subscription Plan, the data needed to process payment and issue an invoice, processed in that scope by Stripe as an independent controller (card data never reaches our servers).</li>
-          <li style={li}><strong>Technical data</strong> — IP addresses and request timestamps, processed by our hosting provider (Vercel) for security, diagnostics and abuse prevention, under their own retention policies.</li>
+          <li style={li}><strong>Billing data</strong> — when you purchase a Subscription Plan, the data needed to process payment and issue an invoice, processed in that scope by our payment service provider acting as an independent data controller (card data never reaches our servers).</li>
+          <li style={li}><strong>Technical data</strong> — IP addresses and request timestamps, processed by our infrastructure providers for security, diagnostics and abuse prevention, under their own retention policies.</li>
         </ul>
         <p style={p}>We do not request any other scope of access to Google APIs, and we never ask for your Google account password.</p>
         <p style={p}>
@@ -127,16 +127,15 @@ export default async function PrivacyPageEn() {
           view the report it contains without signing in. You are responsible for who you give that link to.
         </p>
 
-        <h2 style={h2}>VI. Entities processing data on our behalf (subprocessors)</h2>
-        <p style={p}>To run the Service we use the following subprocessors, each solely for the purpose stated:</p>
+        <h2 style={h2}>VI. Entities processing data on our behalf</h2>
+        <p style={p}>To run the Service we rely on trusted providers, to whom we entrust data processing only to the extent necessary to deliver the Service. These are, in particular:</p>
         <ul style={ul}>
-          <li style={li}><strong>Google</strong> — sign-in ("Sign in with Google") and the GA4 API (Data/Admin), which we read your property's data from.</li>
-          <li style={li}><strong>Supabase</strong> — our database and authentication provider; stores your Account, Project configuration, and OAuth tokens.</li>
-          <li style={li}><strong>Vercel</strong> — hosting for the AlertGA4 Service.</li>
-          <li style={li}><strong>Resend</strong> — delivery of emails (alerts, summaries) sent by the Service.</li>
-          <li style={li}><strong>Stripe</strong> — payment and billing processing for paid Subscription Plans.</li>
+          <li style={li}>providers of authentication services and Google API integrations (sign-in, reading your analytics property's data),</li>
+          <li style={li}>cloud infrastructure providers, including databases and hosting,</li>
+          <li style={li}>email delivery providers,</li>
+          <li style={li}>payment service providers.</li>
         </ul>
-        <p style={p}>None of these providers is authorized to use your data for its own purposes. We will update this Policy if this list changes materially.</p>
+        <p style={p}>Each of these providers processes data solely on our documented instructions and is not authorized to use it for its own purposes. Details of the specific providers we use are available on request at <a href="mailto:kontakt@bettersteps.pl" style={link}>kontakt@bettersteps.pl</a>. We will update this Policy if our use of such providers changes materially.</p>
         <p style={p}>
           Our use and transfer of information received from Google APIs adheres to the{' '}
           <a href="https://developers.google.com/terms/api-services-user-data-policy" style={link}>Google API Services User Data Policy</a>,
@@ -147,7 +146,7 @@ export default async function PrivacyPageEn() {
 
         <h2 style={h2}>VII. Transfers outside the European Economic Area</h2>
         <p style={p}>
-          Some of the subprocessors listed above (including Vercel, Resend and Stripe) may process data on servers located
+          Some of the providers referred to in Section VI may process data on servers located
           outside the European Economic Area, including in the United States. Such transfers rely on GDPR-compliant
           mechanisms — in particular the standard contractual clauses approved by the European Commission (GDPR Art. 46(2)(c))
           or European Commission adequacy decisions (GDPR Art. 45). Information about the safeguards applied, and a copy of
@@ -158,7 +157,7 @@ export default async function PrivacyPageEn() {
         <h2 style={h2}>VIII. Cookies</h2>
         <p style={p}>The Service uses cookies in the following categories:</p>
         <ul style={ul}>
-          <li style={li}><strong>Necessary</strong> — required for the Service to work, in particular the cookie that keeps a signed-in User's session (authentication via Supabase). Without these, signing in and using the Service is not possible.</li>
+          <li style={li}><strong>Necessary</strong> — required for the Service to work, in particular the cookie that keeps a signed-in User's session. Without these, signing in and using the Service is not possible.</li>
           <li style={li}><strong>Analytics</strong> — used to measure traffic and how the Service is used, set via Google Tag Manager.</li>
           <li style={li}><strong>Marketing</strong> — used to measure the effectiveness of advertising and to show content matched to the User's interests.</li>
           <li style={li}><strong>Functional</strong> — remember the User's choices and preferences, including their cookie-consent decision.</li>

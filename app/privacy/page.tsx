@@ -91,8 +91,8 @@ export default async function PrivacyPage() {
           </li>
           <li style={li}><strong>Dane usługi GA4, którą wybierzesz do monitorowania</strong> — identyfikatory usługi oraz zagregowane wyniki sprawdzeń (liczby zdarzeń, wynik jakości, status pass/warn/fail).</li>
           <li style={li}><strong>Konfigurację, którą sam wprowadzasz</strong> — nazwy Projektów, zdefiniowane sprawdzenia zdarzeń i parametrów, progi alertów oraz adresy e-mail odbiorców alertów.</li>
-          <li style={li}><strong>Dane rozliczeniowe</strong> — w przypadku zakupu Planu Abonamentowego, dane niezbędne do obsługi płatności i wystawienia faktury, przetwarzane w tym zakresie przez Stripe jako niezależnego administratora (dane karty płatniczej nigdy nie trafiają na nasze serwery).</li>
-          <li style={li}><strong>Dane techniczne</strong> — adres IP i znaczniki czasu żądań, przetwarzane przez naszych dostawców hostingu (Vercel) w celach bezpieczeństwa, diagnostyki i zapobiegania nadużyciom, zgodnie z ich własnymi politykami retencji.</li>
+          <li style={li}><strong>Dane rozliczeniowe</strong> — w przypadku zakupu Planu Abonamentowego, dane niezbędne do obsługi płatności i wystawienia faktury, przetwarzane w tym zakresie przez naszego dostawcę usług płatniczych działającego jako niezależny administrator danych (dane karty płatniczej nigdy nie trafiają na nasze serwery).</li>
+          <li style={li}><strong>Dane techniczne</strong> — adres IP i znaczniki czasu żądań, przetwarzane przez naszych dostawców infrastruktury w celach bezpieczeństwa, diagnostyki i zapobiegania nadużyciom, zgodnie z ich własnymi politykami retencji.</li>
         </ul>
         <p style={p}>Nie prosimy o żaden inny zakres dostępu do API Google i nigdy nie pytamy o hasło do Twojego konta Google.</p>
         <p style={p}>
@@ -131,16 +131,15 @@ export default async function PrivacyPage() {
           link może zobaczyć zawarty w nim raport, bez konieczności logowania. Odpowiadasz za to, komu przekazujesz taki link.
         </p>
 
-        <h2 style={h2}>VI. Podmioty przetwarzające dane w naszym imieniu (podprocesorzy)</h2>
-        <p style={p}>Do działania Serwisu korzystamy z następujących podprocesorów, każdy wyłącznie w podanym celu:</p>
+        <h2 style={h2}>VI. Podmioty przetwarzające dane w naszym imieniu</h2>
+        <p style={p}>Do działania Serwisu korzystamy z usług zaufanych dostawców, którym powierzamy przetwarzanie danych wyłącznie w zakresie niezbędnym do świadczenia usługi. Są to w szczególności:</p>
         <ul style={ul}>
-          <li style={li}><strong>Google</strong> — logowanie (Zaloguj się przez Google) oraz API GA4 (Data/Admin), z których czytamy dane Twojej usługi.</li>
-          <li style={li}><strong>Supabase</strong> — dostawca bazy danych i uwierzytelniania; przechowuje Konto, konfigurację Projektów i tokeny OAuth.</li>
-          <li style={li}><strong>Vercel</strong> — hosting Serwisu AlertGA4.</li>
-          <li style={li}><strong>Resend</strong> — dostarczanie wiadomości e-mail (alerty, podsumowania) wysyłanych przez Serwis.</li>
-          <li style={li}><strong>Stripe</strong> — obsługa płatności i rozliczeń dla płatnych Planów Abonamentowych.</li>
+          <li style={li}>dostawcy usług uwierzytelniania i integracji z interfejsami API Google (logowanie, odczyt danych Twojej usługi analitycznej),</li>
+          <li style={li}>dostawcy infrastruktury chmurowej, w tym baz danych i hostingu,</li>
+          <li style={li}>dostawcy usług wysyłki wiadomości e-mail,</li>
+          <li style={li}>dostawcy usług płatniczych.</li>
         </ul>
-        <p style={p}>Żaden z tych dostawców nie jest uprawniony do wykorzystywania Twoich danych na własne potrzeby. O istotnych zmianach tej listy poinformujemy, aktualizując niniejszą Politykę.</p>
+        <p style={p}>Każdy z tych dostawców przetwarza dane wyłącznie na nasze udokumentowane polecenie i nie jest uprawniony do wykorzystywania ich na własne potrzeby. Szczegółowe informacje o konkretnych podmiotach, z których korzystamy, udostępnimy na żądanie pod adresem <a href="mailto:kontakt@bettersteps.pl" style={link}>kontakt@bettersteps.pl</a>. O istotnych zmianach w zakresie korzystania z takich dostawców poinformujemy, aktualizując niniejszą Politykę.</p>
         <p style={p}>
           Nasze wykorzystanie i przekazywanie informacji uzyskanych za pośrednictwem Google API jest zgodne z{' '}
           <a href="https://developers.google.com/terms/api-services-user-data-policy" style={link}>Google API Services User Data Policy</a>,
@@ -157,7 +156,7 @@ export default async function PrivacyPage() {
 
         <h2 style={h2}>VII. Przekazywanie danych poza Europejski Obszar Gospodarczy</h2>
         <p style={p}>
-          Część wymienionych wyżej podprocesorów (w tym Vercel, Resend i Stripe) może przetwarzać dane na serwerach zlokalizowanych
+          Część współpracujących z nami dostawców, o których mowa w rozdziale VI, może przetwarzać dane na serwerach zlokalizowanych
           poza Europejskim Obszarem Gospodarczym, w tym w Stanach Zjednoczonych. Podstawą takich transferów są mechanizmy zgodne z
           RODO — w szczególności standardowe klauzule umowne zatwierdzone przez Komisję Europejską (art. 46 ust. 2 lit. c RODO) lub
           decyzje Komisji Europejskiej stwierdzające odpowiedni stopień ochrony danych (art. 45 RODO). Informacje o zastosowanych
@@ -168,7 +167,7 @@ export default async function PrivacyPage() {
         <h2 style={h2}>VIII. Pliki cookies</h2>
         <p style={p}>Serwis wykorzystuje pliki cookies należące do następujących kategorii:</p>
         <ul style={ul}>
-          <li style={li}><strong>Niezbędne</strong> — konieczne do działania Serwisu, w szczególności plik cookie utrzymujący sesję zalogowanego Użytkownika (uwierzytelnianie przez Supabase). Bez nich zalogowanie się i korzystanie z Serwisu nie jest możliwe.</li>
+          <li style={li}><strong>Niezbędne</strong> — konieczne do działania Serwisu, w szczególności plik cookie utrzymujący sesję zalogowanego Użytkownika. Bez nich zalogowanie się i korzystanie z Serwisu nie jest możliwe.</li>
           <li style={li}><strong>Analityczne</strong> — służą do mierzenia ruchu i sposobu korzystania z Serwisu, instalowane za pośrednictwem Google Tag Manager.</li>
           <li style={li}><strong>Marketingowe</strong> — wykorzystywane do pomiaru skuteczności działań reklamowych oraz wyświetlania treści dopasowanych do zainteresowań Użytkownika.</li>
           <li style={li}><strong>Funkcjonalne</strong> — zapamiętują wybory i preferencje Użytkownika, w tym jego decyzję w kwestii zgody na pliki cookies.</li>
