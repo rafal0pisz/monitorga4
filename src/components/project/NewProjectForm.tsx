@@ -7,6 +7,7 @@ import { GA4_STANDARD_PARAMS, GA4_STANDARD_METRICS } from '@/lib/ga4/standardPar
 import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
+import { alertEmailLimitMessage } from '@/lib/billing/plans'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -126,7 +127,7 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
     if (!e) return
     if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
-    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
+    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(alertEmailLimitMessage(maxAlertEmails)); return }
     setAlertEmails(prev => [...prev, e])
     setNewAlertEmail('')
     setAlertEmailError(null)
@@ -359,7 +360,7 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
           throw new Error("You've reached your plan's project limit. Upgrade to add more projects.")
         }
         if (projErr.message.includes('ALERT_EMAIL_LIMIT_REACHED')) {
-          throw new Error(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`)
+          throw new Error(alertEmailLimitMessage(maxAlertEmails))
         }
         throw new Error(projErr.message)
       }

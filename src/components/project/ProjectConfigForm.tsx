@@ -8,6 +8,7 @@ import { ECOMMERCE_CATALOG } from '@/lib/ga4/ecommerceCatalog'
 import { PARAMETER_CATALOG } from '@/lib/ga4/parameterCatalog'
 import { ga4Fetch } from '@/lib/ga4/clientQueue'
 import { parseEmailList } from '@/lib/email/shared'
+import { alertEmailLimitMessage } from '@/lib/billing/plans'
 import { checkLabel } from '@/lib/ga4/checkLabels'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
 
@@ -189,7 +190,7 @@ export default function ProjectConfigForm({ project, maxAlertEmails = 2 }: Props
     if (!e) return
     if (!EMAIL_RE.test(e)) { setAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (alertEmails.includes(e)) { setNewAlertEmail(''); setAlertEmailError(null); return }
-    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
+    if (alertEmails.length >= maxAlertEmails) { setAlertEmailError(alertEmailLimitMessage(maxAlertEmails)); return }
     setAlertEmails(prev => [...prev, e])
     setNewAlertEmail('')
     setAlertEmailError(null)
@@ -200,7 +201,7 @@ export default function ProjectConfigForm({ project, maxAlertEmails = 2 }: Props
     if (!e) return
     if (!EMAIL_RE.test(e)) { setCriticalAlertEmailError(`"${e}" doesn't look like a valid email address`); return }
     if (criticalAlertEmails.includes(e)) { setNewCriticalAlertEmail(''); setCriticalAlertEmailError(null); return }
-    if (criticalAlertEmails.length >= maxAlertEmails) { setCriticalAlertEmailError(`Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.`); return }
+    if (criticalAlertEmails.length >= maxAlertEmails) { setCriticalAlertEmailError(alertEmailLimitMessage(maxAlertEmails)); return }
     setCriticalAlertEmails(prev => [...prev, e])
     setNewCriticalAlertEmail('')
     setCriticalAlertEmailError(null)
@@ -354,7 +355,7 @@ export default function ProjectConfigForm({ project, maxAlertEmails = 2 }: Props
         auto_run: autoRun,
         expected_events: customEvents.filter(e => e.is_enabled).map(e => e.event_name),
       }).eq('id', pid)
-      if (projErr) throw new Error(projErr.message.includes('ALERT_EMAIL_LIMIT_REACHED') ? `Your plan allows up to ${maxAlertEmails} alert email${maxAlertEmails === 1 ? '' : 's'} per project. Upgrade to add more.` : `Project: ${projErr.message}`)
+      if (projErr) throw new Error(projErr.message.includes('ALERT_EMAIL_LIMIT_REACHED') ? alertEmailLimitMessage(maxAlertEmails) : `Project: ${projErr.message}`)
 
       const { error: ceErr } = await supabase.rpc('save_custom_event_checks', {
         p_project_id: pid,

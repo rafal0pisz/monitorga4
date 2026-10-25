@@ -101,10 +101,22 @@ export function hasActiveAccess(planId: string | null | undefined, trialEndsAt: 
 
 // Max distinct addresses allowed in a project's alert_email or
 // critical_alert_email list. Enforced here for the UI and again, identically,
-// by the enforce_alert_email_limits() trigger in supabase/migrations/042 —
+// by the enforce_alert_email_limits() trigger in supabase/migrations/040 —
 // a direct REST/SQL write must not be able to bypass this by skipping the UI.
 export function alertEmailLimit(planId: string | null | undefined): number {
   if (planId === 'internal') return Number.MAX_SAFE_INTEGER
   if (planId === 'trial' || planId === 'pro' || planId === 'agency') return 5
   return 2 // lite, and any other/no plan
+}
+
+// Highest limit any purchasable plan actually has (Pro/Agency/Trial, see
+// alertEmailLimit above) — once an account is already there, "upgrade" is
+// meaningless since no plan offers more; point them at support instead.
+const TOP_ALERT_EMAIL_LIMIT = 5
+
+export function alertEmailLimitMessage(limit: number): string {
+  const addrWord = `alert email${limit === 1 ? '' : 's'}`
+  return limit >= TOP_ALERT_EMAIL_LIMIT
+    ? `Your plan allows up to ${limit} ${addrWord} per project. Need more? Contact support.`
+    : `Your plan allows up to ${limit} ${addrWord} per project. Upgrade to add more.`
 }
