@@ -86,8 +86,8 @@ export function renderOwnerDigestEmail(entries: DigestEntry[], runDate: string, 
   const checkedDateLabel = fmtDate(checkedDate)
 
   const subject = attention.length === 0
-    ? `AlertGA4 Daily Report — ${dateLabel} · all projects healthy`
-    : `AlertGA4 Daily Report — ${dateLabel} · ${attention.length} project${attention.length > 1 ? 's' : ''} need${attention.length > 1 ? '' : 's'} attention`
+    ? `AlertGA4 Summary Project Daily Report: ${dateLabel} · all projects healthy`
+    : `AlertGA4 Summary Project Daily Report: ${dateLabel} · ${attention.length} project${attention.length > 1 ? 's' : ''} need${attention.length > 1 ? '' : 's'} attention`
 
   const calloutHtml = attention.length === 0 ? '' : `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:18px 0 0;">

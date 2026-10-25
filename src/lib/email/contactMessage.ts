@@ -28,7 +28,7 @@ export function renderContactMessageEmail(d: ContactMessageData): { subject: str
       </table>
       <div style="padding:14px 16px;border-radius:8px;background:#f9fafb;border:1px solid ${BRAND.line};font-size:13.5px;color:${BRAND.ink};line-height:1.6;">${message}</div>
     </div>
-    ${footerHtml(['Odpowiedz bezpośrednio na tego maila — trafi na adres nadawcy.'])}
+    ${footerHtml(['Odpowiedz bezpośrednio na tego maila — trafi na adres nadawcy.'], undefined, true)}
   `
 
   return { subject, html: emailShell({ preheader: subject, body }) }

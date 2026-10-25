@@ -59,11 +59,16 @@ export function hstack(cells: { html: string; width?: number; align?: 'left' | '
 // with a single link instead — used by client-facing report emails, which
 // should point recipients at the contact form rather than a direct inbox
 // at the parent company's domain.
-export function footerHtml(lines: string[], contact?: { label: string; href: string }): string {
+// skipOptOut: omit the "pause the project or delete your account" line —
+// only for emails sent to someone who isn't necessarily the account holder
+// (a team invite recipient, a contact-form submitter), where that line
+// wouldn't make sense.
+export function footerHtml(lines: string[], contact?: { label: string; href: string }, skipOptOut?: boolean): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.ink};">
     <tr><td style="padding:22px 32px 26px;color:#aab0b5;font-size:11.5px;line-height:1.7;">
       ${lines.map((l, i) => `<div style="${i === 0 ? `color:#d7dadc;margin-bottom:8px;` : ''}">${l}</div>`).join('')}
+      ${skipOptOut ? '' : `<div style="margin-top:8px;">Don't want to receive these emails? Pause the project or delete your account from the <a href="${APP_URL}/dashboard" style="color:#ffb3ac;text-decoration:none;">dashboard</a>.</div>`}
       <div style="margin-top:10px;">
         ${contact
           ? `<a href="${contact.href}" style="color:#ffb3ac;text-decoration:none;">${contact.label}</a>`

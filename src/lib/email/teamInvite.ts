@@ -22,7 +22,7 @@ export function renderTeamInviteEmail(ownerEmail: string, inviteToken: string): 
     ${footerHtml([
       'This invite was sent because someone entered your email address when inviting a team member on AlertGA4.',
       'Didn\'t expect this?',
-    ])}
+    ], undefined, true)}
   `
 
   return { subject, html: emailShell({ preheader: subject, body }) }
