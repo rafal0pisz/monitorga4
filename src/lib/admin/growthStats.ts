@@ -27,10 +27,17 @@ function dayKey(d: Date): string {
   return d.toISOString().split('T')[0]
 }
 
+// Keyed by the END of the week (Sunday), not the start — a bucket's count
+// is a running total through that whole week, so labeling it by the
+// Monday made the chart's last point look over a week stale (e.g. "19
+// Oct" as the latest label when the account the viewer is checking for
+// just signed up on the 25th, even though that signup was already folded
+// into that same bucket's total). Labeling by the week's last day instead
+// makes the "as of" date match what the number actually reflects.
 function weekKey(d: Date): string {
   const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
   const dayOfWeek = (monday.getUTCDay() + 6) % 7 // 0 = Monday
-  monday.setUTCDate(monday.getUTCDate() - dayOfWeek)
+  monday.setUTCDate(monday.getUTCDate() - dayOfWeek + 6) // + 6 = that week's Sunday
   return dayKey(monday)
 }
 

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient()
 
   const { data: profile, error: profileErr } = await admin.from('profiles')
-    .select('subscription_status').eq('id', user.id).single()
+    .select('subscription_status, plan_id').eq('id', user.id).single()
   if (profileErr) {
     return NextResponse.json({ error: 'Could not check your subscription status — please try again.' }, { status: 500 })
   }
@@ -58,6 +58,17 @@ export async function POST(request: NextRequest) {
   }
 
   await admin.from('profiles').delete().eq('id', user.id)
+
+  // Logged here, after profiles/projects are gone but before the auth
+  // record — by this point deletion is substantively done regardless of
+  // whether the auth.users delete below succeeds. No PII: see migration 042.
+  const accountAgeDays = Math.max(0, Math.floor((Date.now() - new Date(user.created_at).getTime()) / (24 * 60 * 60 * 1000)))
+  await admin.from('account_deletions').insert({
+    plan_id: profile?.plan_id ?? null,
+    was_paying: !!profile?.plan_id && !['trial', 'internal'].includes(profile.plan_id),
+    account_age_days: accountAgeDays,
+    project_count: projectIds.length,
+  })
 
   const { error: authDeleteErr } = await admin.auth.admin.deleteUser(user.id)
   if (authDeleteErr) {

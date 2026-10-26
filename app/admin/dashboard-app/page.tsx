@@ -132,6 +132,17 @@ export default async function AdminDashboardPage() {
           <StatTile label="Needs Google reconnect" value={stats.disconnectedOwners} accent={stats.disconnectedOwners > 0 ? '#ea580c' : undefined} />
         </div>
 
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+          <StatTile label="MRR (estimate)" value={`${stats.mrrPLN.toLocaleString('en-GB')} PLN`} />
+          <StatTile label="Canceling (end of period)" value={stats.cancelingAtPeriodEnd} accent={stats.cancelingAtPeriodEnd > 0 ? '#ea580c' : undefined} />
+          <StatTile label="Deleted accounts (30d)" value={stats.deletedAccounts30d} accent={stats.deletedAccounts30d > 0 ? '#dc2626' : undefined} />
+          <StatTile label="Deleted accounts (total)" value={stats.deletedAccountsTotal} />
+          <StatTile label="Of which were paying" value={stats.deletedPayingAccountsTotal} accent={stats.deletedPayingAccountsTotal > 0 ? '#dc2626' : undefined} />
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '-12px 0 20px' }}>
+          Deletion counts aren&apos;t retroactive — account deletion erases all traces by design, so tracking only covers deletions from the day migration 042 was run onward.
+        </p>
+
         <div style={{ backgroundColor: 'var(--color-background-primary)', border: '1px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Growth</div>
           <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 8 }}>Cumulative users and projects over time</div>

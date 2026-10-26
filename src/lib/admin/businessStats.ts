@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { PLANS } from '@/lib/billing/plans'
 
 export interface AdminStats {
   workerRunsCompleted30d: number
@@ -14,6 +15,11 @@ export interface AdminStats {
   totalActiveProjects: number
   usersWithProject: number
   alertsSent30d: number
+  mrrPLN: number
+  cancelingAtPeriodEnd: number
+  deletedAccountsTotal: number
+  deletedAccounts30d: number
+  deletedPayingAccountsTotal: number
 }
 
 function dayKey(d: Date): string {
@@ -30,6 +36,8 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
     { data: ecomRows },
     { data: paramRows },
     { data: alertsRaw },
+    { data: billingRowsRaw },
+    { data: deletionsRaw },
   ] = await Promise.all([
     admin.from('dqs_runs').select('status').gte('run_date', thirtyDaysAgo),
     admin.from('projects').select('id, owner_id, status, auto_run'),
@@ -37,6 +45,8 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
     admin.from('ecommerce_config').select('project_id'),
     admin.from('parameter_checks').select('project_id'),
     admin.from('alert_log').select('id').gte('sent_at', thirtyDaysAgo),
+    admin.from('profiles').select('plan_id, billing_cycle, cancel_at_period_end'),
+    admin.from('account_deletions').select('deleted_at, was_paying'),
   ])
 
   const runs = (recentRuns ?? []) as { status: string }[]
@@ -90,6 +100,27 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
   const ecommerceAdoption = new Set((ecomRows ?? []).map((r: any) => r.project_id)).size
   const parametersAdoption = new Set((paramRows ?? []).map((r: any) => r.project_id)).size
 
+  // Estimate only — mirrors whatever's actually in plans.ts, so it drifts
+  // automatically if prices change, but ignores coupons/discounts applied
+  // in Stripe directly (those aren't reflected in profiles at all).
+  const billingRows = (billingRowsRaw ?? []) as { plan_id: string | null; billing_cycle: string | null; cancel_at_period_end: boolean | null }[]
+  let mrrPLN = 0
+  let cancelingAtPeriodEnd = 0
+  for (const b of billingRows) {
+    const plan = PLANS.find(p => p.id === b.plan_id)
+    if (plan) mrrPLN += b.billing_cycle === 'yearly' ? plan.priceYearlyPLN / 12 : plan.priceMonthlyPLN
+    if (b.cancel_at_period_end) cancelingAtPeriodEnd++
+  }
+  mrrPLN = Math.round(mrrPLN)
+
+  // Tracking only starts once migration 042 + this app code shipped —
+  // deletion was a true hard-delete with no trace before that, so these
+  // counts are never retroactive.
+  const deletions = (deletionsRaw ?? []) as { deleted_at: string; was_paying: boolean | null }[]
+  const deletedAccountsTotal = deletions.length
+  const deletedAccounts30d = deletions.filter(d => d.deleted_at >= thirtyDaysAgo).length
+  const deletedPayingAccountsTotal = deletions.filter(d => d.was_paying).length
+
   return {
     workerRunsCompleted30d,
     workerRunsFailed30d,
@@ -104,5 +135,10 @@ export async function fetchAdminStats(admin: ReturnType<typeof createAdminClient
     totalActiveProjects: activeProjects.length,
     usersWithProject: ownerIds.length,
     alertsSent30d: alertsRaw?.length ?? 0,
+    mrrPLN,
+    cancelingAtPeriodEnd,
+    deletedAccountsTotal,
+    deletedAccounts30d,
+    deletedPayingAccountsTotal,
   }
 }
