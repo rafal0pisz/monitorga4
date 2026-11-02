@@ -43,6 +43,7 @@ function licenseTypeStyle(type: LicenseInfo['type']): { bg: string; color: strin
     case 'Trial (expired)': return { bg: '#fee2e2', color: '#991b1b' }
     case 'Internal': return { bg: '#e5e7eb', color: '#374151' }
     case 'No plan': return { bg: '#f3f4f6', color: '#6b7280' }
+    case 'Member': return { bg: '#ede9fe', color: '#5b21b6' }
     default: return { bg: '#dbeafe', color: '#1e3a8a' }
   }
 }

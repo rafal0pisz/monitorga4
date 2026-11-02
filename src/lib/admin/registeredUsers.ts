@@ -15,11 +15,16 @@ export interface BillingProfile {
 
 export interface LicenseInfo {
   plan: string
-  type: 'No plan' | 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal'
+  type: 'No plan' | 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal' | 'Member'
   startedAt: string | null
   untilAt: string | null
   canceling: boolean
   active: boolean
+}
+
+export interface TeamMembership {
+  ownerId: string
+  acceptedAt: string | null
 }
 
 export interface RegisteredUserRow {
@@ -53,8 +58,23 @@ export interface RegisteredUsersData {
 // isn't stored anywhere in our own schema (only the rolling
 // current_period_end is) — it's read live from Stripe's subscription
 // object instead of adding a column just for this admin-only display.
-function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo {
+//
+// An invited team member never gets their own plan_id (they ride on the
+// Agency owner's subscription), so without `membership` they'd fall through
+// to "No plan" here — indistinguishable from someone who just signed up and
+// never started a trial. `membership` disambiguates that case.
+function licenseInfo(
+  profile: BillingProfile | undefined,
+  subscriptionStartedAt: Map<string, string>,
+  membership: TeamMembership | undefined,
+  billingByUserId: Map<string, BillingProfile>,
+): LicenseInfo {
   if (!profile || !profile.plan_id) {
+    if (membership) {
+      const ownerProfile = billingByUserId.get(membership.ownerId)
+      const active = !!effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
+      return { plan: 'Member', type: 'Member', startedAt: membership.acceptedAt, untilAt: null, canceling: false, active }
+    }
     return { plan: 'No plan', type: 'No plan', startedAt: null, untilAt: null, canceling: false, active: false }
   }
 
@@ -74,14 +94,23 @@ function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt:
 // dashboard page and the CSV export route, so the two can never drift into
 // showing different numbers for the same account.
 export async function fetchRegisteredUsersData(admin: ReturnType<typeof createAdminClient>): Promise<RegisteredUsersData> {
-  const [users, { data: projectsRaw }, { data: billingProfilesRaw }] = await Promise.all([
+  const [users, { data: projectsRaw }, { data: billingProfilesRaw }, { data: teamMembersRaw }] = await Promise.all([
     fetchAllUsers(admin),
     admin.from('projects').select('created_at, status, owner_id'),
     admin.from('profiles').select('id, plan_id, trial_ends_at, trial_used_at, stripe_subscription_id, current_period_end, cancel_at_period_end'),
+    admin.from('team_members').select('member_id, owner_id, accepted_at').not('accepted_at', 'is', null),
   ])
 
   const billingProfiles = (billingProfilesRaw ?? []) as BillingProfile[]
   const billingByUserId = new Map(billingProfiles.map(p => [p.id, p]))
+
+  // v1 constraint (see src/lib/team/access.ts): a person belongs to at most
+  // one team — safe to key by member_id without worrying about overwrites.
+  const membershipByMemberId = new Map<string, TeamMembership>(
+    ((teamMembersRaw ?? []) as { member_id: string | null; owner_id: string; accepted_at: string | null }[])
+      .filter((tm): tm is { member_id: string; owner_id: string; accepted_at: string | null } => !!tm.member_id)
+      .map(tm => [tm.member_id, { ownerId: tm.owner_id, acceptedAt: tm.accepted_at }])
+  )
 
   // Subscription start isn't persisted anywhere in our schema — fetched
   // live from Stripe per distinct subscription id. Promise.allSettled so
@@ -137,7 +166,7 @@ export async function fetchRegisteredUsersData(admin: ReturnType<typeof createAd
       createdAt: u.created_at,
       activeProjects: activeProjectCountByOwner.get(u.id) ?? 0,
       blockedProjects: blockedProjectCountByOwner.get(u.id) ?? 0,
-      license: licenseInfo(billingByUserId.get(u.id), subscriptionStartedAt),
+      license: licenseInfo(billingByUserId.get(u.id), subscriptionStartedAt, membershipByMemberId.get(u.id), billingByUserId),
     }))
 
   return { rows, projects, activeCount, pausedCount, blockedByBillingCount }
