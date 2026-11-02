@@ -31,8 +31,8 @@ export async function GET() {
     lines.push([
       csvField(r.email ?? ''),
       r.createdAt,
-      csvField(r.license.plan),
-      csvField(r.license.type),
+      csvField(r.license.plan ?? ''),
+      csvField(r.license.type ?? ''),
       csvField(r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : ''),
       r.license.startedAt ?? '',
       r.license.untilAt ?? '',

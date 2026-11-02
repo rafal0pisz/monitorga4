@@ -42,8 +42,6 @@ function licenseTypeStyle(type: LicenseInfo['type']): { bg: string; color: strin
     case 'Trial': return { bg: '#fef9c3', color: '#92400e' }
     case 'Trial (expired)': return { bg: '#fee2e2', color: '#991b1b' }
     case 'Internal': return { bg: '#e5e7eb', color: '#374151' }
-    case 'No plan': return { bg: '#f3f4f6', color: '#6b7280' }
-    case 'Member': return { bg: '#ede9fe', color: '#5b21b6' }
     default: return { bg: '#dbeafe', color: '#1e3a8a' }
   }
 }
@@ -201,17 +199,19 @@ export default async function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {rows.slice(0, MAX_USERS_SHOWN).map(r => {
-                    const typeStyle = licenseTypeStyle(r.license.type)
+                    const typeStyle = r.license.type ? licenseTypeStyle(r.license.type) : null
                     return (
                       <tr key={r.id}>
                         <td className="ru-email" title={r.email ?? undefined}>{r.email ?? '—'}</td>
                         <td className="ru-muted">{fmtDate(r.createdAt)}</td>
                         <td>
-                          <span className="ru-badge" style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}>
-                            {r.license.plan}
-                          </span>
+                          {r.license.plan && typeStyle && (
+                            <span className="ru-badge" style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}>
+                              {r.license.plan}
+                            </span>
+                          )}
                         </td>
-                        <td className="ru-muted">{r.license.type}</td>
+                        <td className="ru-muted">{r.license.type ?? ''}</td>
                         <td className="ru-muted" title={r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : undefined}>
                           {r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : '—'}
                         </td>

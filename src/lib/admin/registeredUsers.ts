@@ -14,8 +14,12 @@ export interface BillingProfile {
 }
 
 export interface LicenseInfo {
-  plan: string
-  type: 'No plan' | 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal' | 'Member'
+  // null means "no plan of their own" — rendered as a blank cell, not a
+  // "No plan" label. Team membership (riding on someone else's plan) is a
+  // separate fact, surfaced only via RegisteredUserRow.teamOwnerEmail, never
+  // folded into `type` — "Member" is not a plan type.
+  plan: string | null
+  type: 'Trial' | 'Trial (expired)' | 'Subscription' | 'Internal' | null
   startedAt: string | null
   untilAt: string | null
   canceling: boolean
@@ -57,32 +61,18 @@ export interface RegisteredUsersData {
   blockedByBillingCount: number
 }
 
-// Always returns something to show — including "No plan" (signed up, never
-// started a trial or bought a plan) and "Trial (expired)" (used their trial,
-// never converted) — these are exactly the accounts worth seeing at a
-// glance, not ones to hide. `active` says whether the license is live right
-// now (effectivePlanId's own notion of "usable today"). Subscription start
-// isn't stored anywhere in our own schema (only the rolling
-// current_period_end is) — it's read live from Stripe's subscription
-// object instead of adding a column just for this admin-only display.
-//
-// An invited team member never gets their own plan_id (they ride on the
-// Agency owner's subscription), so without `membership` they'd fall through
-// to "No plan" here — indistinguishable from someone who just signed up and
-// never started a trial. `membership` disambiguates that case.
-function licenseInfo(
-  profile: BillingProfile | undefined,
-  subscriptionStartedAt: Map<string, string>,
-  membership: TeamMembership | undefined,
-  billingByUserId: Map<string, BillingProfile>,
-): LicenseInfo {
+// Reflects ONLY this person's own billing — a blank plan/type (null) means
+// they have no plan of their own, full stop. Whether they're also an
+// accepted member of someone else's team is a separate fact (see
+// RegisteredUserRow.teamOwnerEmail) and never shows up here. `active` says
+// whether the license is live right now (effectivePlanId's own notion of
+// "usable today"). Subscription start isn't stored anywhere in our own
+// schema (only the rolling current_period_end is) — it's read live from
+// Stripe's subscription object instead of adding a column just for this
+// admin-only display.
+function licenseInfo(profile: BillingProfile | undefined, subscriptionStartedAt: Map<string, string>): LicenseInfo {
   if (!profile || !profile.plan_id) {
-    if (membership) {
-      const ownerProfile = billingByUserId.get(membership.ownerId)
-      const active = !!effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
-      return { plan: 'Member', type: 'Member', startedAt: membership.acceptedAt, untilAt: null, canceling: false, active }
-    }
-    return { plan: 'No plan', type: 'No plan', startedAt: null, untilAt: null, canceling: false, active: false }
+    return { plan: null, type: null, startedAt: null, untilAt: null, canceling: false, active: false }
   }
 
   const isTrial = profile.plan_id === 'trial'
@@ -179,7 +169,7 @@ export async function fetchRegisteredUsersData(admin: ReturnType<typeof createAd
       })(),
       activeProjects: activeProjectCountByOwner.get(u.id) ?? 0,
       blockedProjects: blockedProjectCountByOwner.get(u.id) ?? 0,
-      license: licenseInfo(billingByUserId.get(u.id), subscriptionStartedAt, membershipByMemberId.get(u.id), billingByUserId),
+      license: licenseInfo(billingByUserId.get(u.id), subscriptionStartedAt),
     }))
 
   return { rows, projects, activeCount, pausedCount, blockedByBillingCount }
