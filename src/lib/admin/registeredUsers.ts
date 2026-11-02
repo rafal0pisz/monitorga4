@@ -34,6 +34,13 @@ export interface RegisteredUserRow {
   activeProjects: number
   blockedProjects: number
   license: LicenseInfo
+  // Populated whenever this user is an accepted member of ANOTHER owner's
+  // team — independent of `license`, which reflects only their OWN billing.
+  // Someone can have their own paid plan and still be an accepted member
+  // elsewhere (e.g. a freelancer with their own account who also helps run
+  // an agency client's Agency-plan team); this surfaces that second
+  // relationship instead of hiding it behind whichever plan `license` shows.
+  teamOwnerEmail: string | null
 }
 
 export interface ProjectRow {
@@ -158,12 +165,18 @@ export async function fetchRegisteredUsersData(admin: ReturnType<typeof createAd
     target.set(p.owner_id, (target.get(p.owner_id) ?? 0) + 1)
   }
 
+  const emailByUserId = new Map(users.map(u => [u.id, u.email]))
+
   const rows: RegisteredUserRow[] = [...users]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .map(u => ({
       id: u.id,
       email: u.email,
       createdAt: u.created_at,
+      teamOwnerEmail: (() => {
+        const m = membershipByMemberId.get(u.id)
+        return m ? emailByUserId.get(m.ownerId) ?? null : null
+      })(),
       activeProjects: activeProjectCountByOwner.get(u.id) ?? 0,
       blockedProjects: blockedProjectCountByOwner.get(u.id) ?? 0,
       license: licenseInfo(billingByUserId.get(u.id), subscriptionStartedAt, membershipByMemberId.get(u.id), billingByUserId),

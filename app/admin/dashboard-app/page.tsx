@@ -183,6 +183,7 @@ export default async function AdminDashboardPage() {
                     <th>Registered</th>
                     <th>Plan</th>
                     <th>Type</th>
+                    <th>Team</th>
                     <th>Started</th>
                     <th>Valid until</th>
                     <th>Projects</th>
@@ -201,6 +202,7 @@ export default async function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="ru-muted">{r.license.type}</td>
+                        <td className="ru-muted">{r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : '—'}</td>
                         <td className="ru-muted">{r.license.startedAt ? fmtDate(r.license.startedAt) : '—'}</td>
                         <td className="ru-muted">
                           {r.license.untilAt

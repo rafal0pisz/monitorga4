@@ -25,7 +25,7 @@ export async function GET() {
   const admin = createAdminClient()
   const { rows } = await fetchRegisteredUsersData(admin)
 
-  const header = ['Email', 'Registered', 'Plan', 'Type', 'Started', 'Valid until', 'Canceling', 'Active projects', 'Blocked projects']
+  const header = ['Email', 'Registered', 'Plan', 'Type', 'Team', 'Started', 'Valid until', 'Canceling', 'Active projects', 'Blocked projects']
   const lines = [header.join(',')]
   for (const r of rows) {
     lines.push([
@@ -33,6 +33,7 @@ export async function GET() {
       r.createdAt,
       csvField(r.license.plan),
       csvField(r.license.type),
+      csvField(r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : ''),
       r.license.startedAt ?? '',
       r.license.untilAt ?? '',
       r.license.canceling ? 'yes' : 'no',
