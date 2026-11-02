@@ -56,16 +56,16 @@ function licenseTypeStyle(type: LicenseInfo['type']): { bg: string; color: strin
 const TableStyle = () => (
   <style>{`
     .ru-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .ru-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 12.5px; }
+    .ru-table { width: 100%; min-width: 1000px; table-layout: fixed; border-collapse: collapse; font-size: 12.5px; }
     .ru-table th { text-align: left; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-secondary); padding: 0 10px 8px; white-space: nowrap; }
     .ru-table td { padding: 9px 10px; border-top: 1px solid var(--color-border-tertiary); vertical-align: middle; }
     .ru-table tr:first-child td { border-top: none; }
     .ru-table td:first-child, .ru-table th:first-child {
       position: sticky; left: 0; background: var(--color-background-primary); padding-left: 0;
     }
-    .ru-email { color: var(--color-text-primary); word-break: break-all; }
+    .ru-email { color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
     .ru-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 8px; border-radius: 20px; white-space: nowrap; }
-    .ru-muted { color: var(--color-text-secondary); white-space: nowrap; }
+    .ru-muted { color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
   `}</style>
 )
 
@@ -177,6 +177,16 @@ export default async function AdminDashboardPage() {
           ) : (
             <div className="ru-scroll">
               <table className="ru-table">
+                <colgroup>
+                  <col style={{ width: 230 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 110 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 150 }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Email</th>
@@ -194,7 +204,7 @@ export default async function AdminDashboardPage() {
                     const typeStyle = licenseTypeStyle(r.license.type)
                     return (
                       <tr key={r.id}>
-                        <td className="ru-email">{r.email ?? '—'}</td>
+                        <td className="ru-email" title={r.email ?? undefined}>{r.email ?? '—'}</td>
                         <td className="ru-muted">{fmtDate(r.createdAt)}</td>
                         <td>
                           <span className="ru-badge" style={{ backgroundColor: typeStyle.bg, color: typeStyle.color }}>
@@ -202,7 +212,9 @@ export default async function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="ru-muted">{r.license.type}</td>
-                        <td className="ru-muted">{r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : '—'}</td>
+                        <td className="ru-muted" title={r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : undefined}>
+                          {r.teamOwnerEmail ? `Member of ${r.teamOwnerEmail}` : '—'}
+                        </td>
                         <td className="ru-muted">{r.license.startedAt ? fmtDate(r.license.startedAt) : '—'}</td>
                         <td className="ru-muted">
                           {r.license.untilAt
