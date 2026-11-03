@@ -324,19 +324,32 @@ function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[
   const totP  = rowsP.reduce((s, r) => s + r.sessions, 0)
 
   const isNotSet     = (r: SMRow) => r.source === '(not set)' || r.medium === '(not set)'
-  const isDirectNone = (r: SMRow) => r.source === '(direct)' && r.medium === '(none)'
   const isOrganic    = (r: SMRow) => r.medium === 'organic'
   const isGoogleAds  = (r: SMRow) => r.source === 'google' && GOOGLE_ADS_MEDIUMS.has(r.medium.toLowerCase())
+  // Any paid medium, any source — broader than isGoogleAds above (which
+  // also requires source=google). Used only to weigh against organic below,
+  // not as its own share check.
+  const isPaid       = (r: SMRow) => GOOGLE_ADS_MEDIUMS.has(r.medium.toLowerCase())
 
   const notSetC = shareOf(rowsC, totC, isNotSet);     const notSetP = shareOf(rowsP, totP, isNotSet)
-  const dirC    = shareOf(rowsC, totC, isDirectNone); const dirP    = shareOf(rowsP, totP, isDirectNone)
   const orgC    = shareOf(rowsC, totC, isOrganic);    const orgP    = shareOf(rowsP, totP, isOrganic)
   const adsC    = shareOf(rowsC, totC, isGoogleAds);  const adsP    = shareOf(rowsP, totP, isGoogleAds)
 
+  const sessionsOf = (rows: SMRow[], predicate: (r: SMRow) => boolean) =>
+    rows.filter(predicate).reduce((s, r) => s + r.sessions, 0)
+  // Paid's share of paid+organic combined, not of total sessions — isolates
+  // a real mix shift between the two acquisition channels from a change in
+  // their combined share of overall traffic (already covered by the
+  // Organic Search / Google Ads share checks above).
+  const paidSessC = sessionsOf(rowsC, isPaid), orgSessC = sessionsOf(rowsC, isOrganic)
+  const paidSessP = sessionsOf(rowsP, isPaid), orgSessP = sessionsOf(rowsP, isOrganic)
+  const mixC = (paidSessC + orgSessC) > 0 ? paidSessC / (paidSessC + orgSessC) * 100 : 0
+  const mixP = (paidSessP + orgSessP) > 0 ? paidSessP / (paidSessP + orgSessP) * 100 : 0
+
   const notSetΔ = ppΔ(notSetC, notSetP)
-  const dirΔ    = ppΔ(dirC, dirP)
   const orgΔ    = ppΔ(orgC, orgP)
   const adsΔ    = ppΔ(adsC, adsP)
+  const mixΔ    = ppΔ(mixC, mixP)
   const totΔ    = pctΔ(totC, totP)
 
   return [
@@ -357,12 +370,12 @@ function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[
       deltaLabel: `${sign(notSetΔ)}${notSetΔ}pp`,
     },
     {
-      id: 'direct_none_share', section: 'traffic',
-      label: 'Direct/None share',
-      description: `Change in (direct)/(none) traffic share ${label} — spikes often signal missing UTMs, email/app dark traffic, or HTTPS stripping.`,
-      status: stDelta(dirΔ, 15, 30),
-      valueLabel: `${r1(dirC)}%`, prevLabel: `${r1(dirP)}%`,
-      deltaLabel: `${sign(dirΔ)}${dirΔ}pp`,
+      id: 'paid_organic_mix', section: 'traffic',
+      label: 'Paid vs Organic ratio shift',
+      description: `Change in paid's share of paid+organic traffic ${label} — a rising share can mean an SEO/organic drop or increased ad spend; a falling share can mean a paid budget cut.`,
+      status: stDelta(mixΔ, 20, 35),
+      valueLabel: `${r1(mixC)}%`, prevLabel: `${r1(mixP)}%`,
+      deltaLabel: `${sign(mixΔ)}${mixΔ}pp`,
     },
     {
       id: 'organic_search_share', section: 'traffic',
@@ -384,13 +397,12 @@ function trafficShareChecks(smC: any[], smP: any[], label: string): CheckResult[
 }
 
 // Mirrors the worker's stored direct_traffic_spike check exactly — same
-// filter (medium=(none), regardless of source — broader than
-// direct_none_share's stricter source=(direct)+medium=(none) combo above),
-// same relative-% delta, same 15/30 thresholds, same one-directional check
-// (only a rise counts, a drop is always 'pass'). A different, real
-// discrepancy between this and direct_none_share previously let the live
-// panel show 100% pass while the worker's own (different) formula still
-// failed and dragged the stored score down.
+// filter (medium=(none), regardless of source), same relative-% delta,
+// same 15/30 thresholds, same one-directional check (only a rise counts,
+// a drop is always 'pass'). Kept deliberately separate from this file's
+// own traffic-share checks above (percentage-point deltas, bidirectional)
+// so the live panel always agrees with the worker's own stored score for
+// this specific check, rather than silently drifting from it.
 function directTrafficSpikeCheck(smC: any[], smP: any[], label: string): CheckResult {
   const rowsC = toSMRows(smC)
   const rowsP = toSMRows(smP)
