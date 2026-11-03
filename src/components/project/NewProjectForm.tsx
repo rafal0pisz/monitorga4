@@ -109,8 +109,8 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
   const [propertiesError, setPropertiesError] = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState(false)
   const [selectedProperty, setSelectedProperty] = useState<GA4Property | null>(null)
-  const [manualMode, setManualMode] = useState(false)
   const [manualPropertyId, setManualPropertyId] = useState('')
+  const [propertySearch, setPropertySearch] = useState('')
 
   const [form, setForm] = useState({
     name: '',
@@ -182,11 +182,9 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
           }
         }
         setProperties(flat)
-        if (flat.length === 0) setManualMode(true)
       } catch (e: any) {
         console.error('[ga4/properties] fetch failed:', e.message)
         setPropertiesError(e.message)
-        setManualMode(true) // automatic fallback to manual entry
       } finally {
         setPropertiesLoading(false)
       }
@@ -194,11 +192,19 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
     loadProperties()
   }, [])
 
-  const effectivePropertyId = manualMode
-    ? manualPropertyId.replace('properties/', '')
-    : selectedProperty?.propertyId ?? ''
+  const effectivePropertyId = manualPropertyId.trim().replace('properties/', '')
 
-  const canSubmitProperty = manualMode ? !!manualPropertyId : !!selectedProperty
+  const canSubmitProperty = !!effectivePropertyId
+
+  const filteredProperties = useMemo(() => {
+    const q = propertySearch.trim().toLowerCase()
+    if (!q) return properties
+    return properties.filter(p =>
+      p.displayName.toLowerCase().includes(q) ||
+      p.accountDisplayName.toLowerCase().includes(q) ||
+      p.propertyId.includes(q)
+    )
+  }, [properties, propertySearch])
 
   // Pull real event volume + registered custom dimensions from GA4 whenever
   // the chosen property changes, so steps 2–4 can suggest instead of asking
@@ -340,7 +346,7 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('You must be signed in to create a project.')
-      const propertyName = manualMode ? (form.name || `Property ${effectivePropertyId}`) : (form.name || selectedProperty!.displayName)
+      const propertyName = form.name || selectedProperty?.displayName || `Property ${effectivePropertyId}`
 
       // Goes through the create_project RPC (not a raw insert) so the
       // caller's plan project-limit is enforced server-side, not just in
@@ -401,18 +407,54 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
       {/* ── STEP 1 — GA4 PROPERTY ────────────────────────────────────────── */}
       {step === 1 && (
         <Section title="Choose a GA4 property">
+          <Field label="GA4 Property ID" hint="Know it already? Type it directly — found in GA4 Admin → Property Settings → Property ID">
+            <input
+              value={manualPropertyId}
+              onChange={e => {
+                const v = e.target.value
+                setManualPropertyId(v)
+                if (selectedProperty && v.replace('properties/', '') !== selectedProperty.propertyId) setSelectedProperty(null)
+              }}
+              placeholder="123456789 or properties/123456789"
+              style={inp}
+            />
+          </Field>
+
           {propertiesLoading ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 14, height: 14, border: '2px solid var(--color-border-secondary)', borderTopColor: '#16a34a', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>Loading available GA4 accounts…</span>
             </div>
-          ) : !manualMode && properties.length > 0 ? (
+          ) : needsReconnect ? (
+            <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '0.5px solid #fecaca', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span>⚠️ Your Google account connection is missing or has expired, so we can't load your GA4 properties automatically.</span>
+              <a href="/login" style={{ color: '#dc2626', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Reconnect your Google account →
+              </a>
+            </div>
+          ) : propertiesError ? (
+            <div style={{ fontSize: 12, color: '#ca8a04', background: '#fefce8', border: '0.5px solid #fef08a', borderRadius: 8, padding: '8px 12px' }}>
+              ⚠️ Couldn't load the property list automatically ({propertiesError}). Enter the Property ID above instead.
+            </div>
+          ) : properties.length === 0 ? (
+            <div style={{ fontSize: 12, color: '#6b7280', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 12px' }}>
+              No GA4 accounts found on your connected Google account. Make sure you signed in with the Google account that has access to your GA4 property, or enter the Property ID above.
+            </div>
+          ) : (
             <>
+              <Field label="Or choose from your connected properties">
+                <input
+                  value={propertySearch}
+                  onChange={e => setPropertySearch(e.target.value)}
+                  placeholder="Filter by name or property ID"
+                  style={inp}
+                />
+              </Field>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {properties.map(prop => {
+                {filteredProperties.map(prop => {
                   const isSelected = selectedProperty?.propertyId === prop.propertyId
                   return (
-                    <div key={prop.propertyId} onClick={() => { setSelectedProperty(prop); if (!form.name) set('name', prop.displayName) }} style={{
+                    <div key={prop.propertyId} onClick={() => { setSelectedProperty(prop); setManualPropertyId(prop.propertyId); if (!form.name) set('name', prop.displayName) }} style={{
                       padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
                       border: `0.5px solid ${isSelected ? '#bbf7d0' : 'var(--color-border-tertiary)'}`,
                       background: isSelected ? '#f0fdf4' : 'var(--color-background-secondary)',
@@ -430,42 +472,12 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
                     </div>
                   )
                 })}
+                {filteredProperties.length === 0 && (
+                  <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>
+                    No connected property matches "{propertySearch}" — you can still enter its ID directly above.
+                  </p>
+                )}
               </div>
-              <button type="button" onClick={() => setManualMode(true)} style={{ fontSize: 12, color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                Don't see your property — enter the ID manually
-              </button>
-            </>
-          ) : (
-            <>
-              {needsReconnect ? (
-                <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', border: '0.5px solid #fecaca', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span>⚠️ Your Google account connection is missing or has expired, so we can't load your GA4 properties automatically.</span>
-                  <a href="/login" style={{ color: '#dc2626', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                    Reconnect your Google account →
-                  </a>
-                </div>
-              ) : propertiesError ? (
-                <div style={{ fontSize: 12, color: '#ca8a04', background: '#fefce8', border: '0.5px solid #fef08a', borderRadius: 8, padding: '8px 12px' }}>
-                  ⚠️ Couldn't load the property list automatically ({propertiesError}). Enter the Property ID manually below.
-                </div>
-              ) : properties.length === 0 && (
-                <div style={{ fontSize: 12, color: '#6b7280', background: 'var(--color-background-secondary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 8, padding: '8px 12px' }}>
-                  No GA4 accounts found on your connected Google account. Make sure you signed in with the Google account that has access to your GA4 property, or enter the Property ID manually below.
-                </div>
-              )}
-              <Field label="GA4 Property ID" hint="Found in GA4 Admin → Property Settings → Property ID">
-                <input
-                  value={manualPropertyId}
-                  onChange={e => setManualPropertyId(e.target.value)}
-                  placeholder="123456789 or properties/123456789"
-                  style={inp}
-                />
-              </Field>
-              {properties.length > 0 && (
-                <button type="button" onClick={() => setManualMode(false)} style={{ fontSize: 12, color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                  ← Back to the property list
-                </button>
-              )}
             </>
           )}
         </Section>

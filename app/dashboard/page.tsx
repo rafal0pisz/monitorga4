@@ -1,5 +1,4 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import type { CSSProperties } from 'react'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
@@ -7,38 +6,9 @@ import { getTeamContext } from '@/lib/team/access'
 import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import StartTrialButton from '@/components/billing/StartTrialButton'
+import DailyToggleBadge from '@/components/dashboard/DailyToggleBadge'
+import { statusChipStyle, chipDotStyle, countChipStyle, countValueStyle } from '@/components/dashboard/chipStyles'
 import Link from 'next/link'
-
-// Small on/off status chip used in the "All projects" list (e.g. Email,
-// Daily) — green when on, muted when off.
-function statusChipStyle(on: boolean): CSSProperties {
-  return {
-    display: 'inline-flex', alignItems: 'center', gap: 4,
-    fontSize: 10.5, fontWeight: 500, borderRadius: 20, padding: '2.5px 9px 2.5px 7px', whiteSpace: 'nowrap',
-    border: `0.5px solid ${on ? '#86efac' : 'var(--color-border-tertiary)'}`,
-    background: on ? '#f0fdf4' : 'var(--color-background-tertiary)',
-    color: on ? '#166534' : 'var(--color-text-secondary)',
-  }
-}
-function chipDotStyle(on: boolean): CSSProperties {
-  return { width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: on ? '#16a34a' : 'var(--color-text-tertiary)' }
-}
-// Small count chip (E-com / Events / Params) — green once configured (count >
-// 0), same as the Email/Daily status chips. This only reflects whether
-// something was configured, not whether it's healthy at scale — hence the
-// "Conf." label placed to the left of this chip group.
-function countChipStyle(on: boolean): CSSProperties {
-  return {
-    display: 'inline-flex', alignItems: 'center', gap: 4,
-    fontSize: 10.5, fontWeight: 500, borderRadius: 20, padding: '2.5px 9px', whiteSpace: 'nowrap',
-    border: `0.5px solid ${on ? '#86efac' : 'var(--color-border-tertiary)'}`,
-    background: on ? '#f0fdf4' : 'var(--color-background-tertiary)',
-    color: on ? '#166534' : 'var(--color-text-secondary)',
-  }
-}
-function countValueStyle(on: boolean): CSSProperties {
-  return { fontFamily: 'var(--font-mono)', fontWeight: 700, color: on ? '#166534' : 'var(--color-text-primary)' }
-}
 
 function StatGrid({ stats, marginBottom }: { stats: { label: string; value: string | number; sub: string }[]; marginBottom: number }) {
   return (
@@ -58,7 +28,6 @@ function ProjectRow({ p, locked, isLast }: { p: DashboardProject; locked: boolea
   const grade = getScoreGrade(p.last_score)
   const diff = p.last_score != null && p.prev_week_score != null ? Math.round(p.last_score - p.prev_week_score) : null
   const emailOn = !!p.alert_email
-  const dailyOn = p.status === 'active' && !!p.auto_run
   return (
     <Link href={`/project/${p.id}`} style={{ textDecoration: 'none', display: 'block', borderBottom: isLast ? 'none' : '0.5px solid var(--color-border-tertiary)', opacity: locked ? 0.6 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px 4px' }}>
@@ -84,7 +53,7 @@ function ProjectRow({ p, locked, isLast }: { p: DashboardProject; locked: boolea
       {!locked && (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, padding: '0 20px 12px 42px' }}>
           <span style={statusChipStyle(emailOn)}><span style={chipDotStyle(emailOn)} />Email</span>
-          <span style={statusChipStyle(dailyOn)}><span style={chipDotStyle(dailyOn)} />Daily</span>
+          <DailyToggleBadge projectId={p.id} projectName={p.name} initialAutoRun={!!p.auto_run} projectStatus={p.status} />
           <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>Conf.</span>
           <span style={countChipStyle(p.ecommerce_events_count > 0)}>E-com <b style={countValueStyle(p.ecommerce_events_count > 0)}>{p.ecommerce_events_count}</b></span>
           <span style={countChipStyle(p.custom_events_count > 0)}>Events <b style={countValueStyle(p.custom_events_count > 0)}>{p.custom_events_count}</b></span>
