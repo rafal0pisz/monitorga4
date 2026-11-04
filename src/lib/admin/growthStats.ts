@@ -54,12 +54,27 @@ export function buildGrowthSeries(userDates: Date[], projectDates: Date[]): Grow
   const useWeekly = rangeDays > 60
   const bucketFn = useWeekly ? weekKey : dayKey
 
+  // Walk by key, not by raw date-vs-today comparison: stepping the cursor
+  // exactly 7 days at a time from `earliest` only lands back on today's own
+  // (still-open) week if `earliest`'s weekday happens to align with it —
+  // for most weekdays it doesn't, so `cursor <= today` goes false one
+  // iteration too early and the current week's bucket key is never pushed.
+  // Anything created since — correctly counted in `projectCounts`/
+  // `userCounts` below — then has nowhere to land in `orderedBuckets` and
+  // silently drops out of the running total the chart renders, even though
+  // the plain totals elsewhere are unaffected. Comparing ISO-format keys
+  // directly (lexicographic order = chronological order) and explicitly
+  // appending today's key sidesteps the alignment entirely.
+  const todayKey = bucketFn(today)
   const bucketKeys: string[] = []
   const cursor = new Date(earliest)
-  while (cursor <= today) {
-    bucketKeys.push(bucketFn(cursor))
+  let key = bucketFn(cursor)
+  while (key < todayKey) {
+    bucketKeys.push(key)
     cursor.setUTCDate(cursor.getUTCDate() + (useWeekly ? 7 : 1))
+    key = bucketFn(cursor)
   }
+  bucketKeys.push(todayKey)
   // Dedup while preserving order (weekly stepping can repeat a key if the
   // start-of-range isn't a Monday).
   const orderedBuckets = [...new Set(bucketKeys)]
