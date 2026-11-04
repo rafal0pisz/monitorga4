@@ -122,7 +122,7 @@ export const LANDING_BASE_STYLES = `
   @media (prefers-reduced-motion: reduce) { .lp-cta-marker-dot::after { animation: none; } }
 
   .lp-footer { background: #232b31; color: rgba(255,255,255,0.72); }
-  .lp-footer-body { padding: 48px 0 30px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
+  .lp-footer-body { padding: 48px 0 0; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 32px; }
   @media (max-width: 780px) { .lp-footer-body { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px) { .lp-footer-body { grid-template-columns: 1fr; } }
   .lp-footer-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 30ch; margin-top: 12px; }
@@ -130,6 +130,29 @@ export const LANDING_BASE_STYLES = `
   .lp-footer-col h3 { font-family: var(--font-mono), monospace; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.45); margin: 0 0 14px; }
   .lp-footer-col a { display: block; font-size: 13.5px; color: rgba(255,255,255,0.75); text-decoration: none; margin-bottom: 10px; }
   .lp-footer-col a:hover { color: #fff; }
+
+  /* Payment trust row — sits between the link columns and the copyright
+     bar. Logos sit flat on the footer background (no chip containers). */
+  .lp-footer-payment { padding: 28px 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .lp-footer-ssl { display: flex; align-items: center; gap: 9px; }
+  .lp-footer-ssl svg { width: 17px; height: 17px; color: rgba(255,255,255,0.55); flex-shrink: 0; }
+  .lp-footer-ssl span { font-size: 12.5px; color: rgba(255,255,255,0.6); }
+  .lp-footer-ssl b { color: rgba(255,255,255,0.85); font-weight: 600; }
+  .lp-footer-methods { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .lp-pay-visa {
+    font-family: Arial, 'Helvetica Neue', sans-serif; font-style: italic; font-weight: 800; font-size: 20px; letter-spacing: -0.5px;
+    background: linear-gradient(115deg, #131766 15%, #2566af 85%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lp-pay-mc { display: flex; align-items: center; }
+  .lp-pay-mc span:first-child { width: 17px; height: 17px; border-radius: 50%; background: #eb001b; }
+  .lp-pay-mc span:last-child { width: 17px; height: 17px; border-radius: 50%; background: #f79e1b; margin-left: -7px; mix-blend-mode: screen; }
+  .lp-pay-apple { display: flex; align-items: center; gap: 5px; font-size: 18px; font-weight: 500; color: #fff; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
+  .lp-pay-apple svg { width: 15px; height: 15px; margin-top: -1px; }
+  .lp-pay-klarna { font-weight: 800; font-size: 13px; color: #0b051d; background: #ffb3c7; padding: 4px 10px; border-radius: 7px; letter-spacing: -0.2px; }
+  .lp-pay-revolut { font-size: 15px; font-weight: 700; color: #fff; }
+  @media (max-width: 560px) { .lp-footer-payment { flex-direction: column; align-items: flex-start; } }
+
   .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
   .lp-footer-bottom a { text-decoration: none; color: inherit; }
   .lp-footer-bottom a:hover { color: #fff; }
