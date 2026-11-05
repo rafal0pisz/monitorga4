@@ -2,20 +2,19 @@ import Link from 'next/link'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import type { Locale } from '@/lib/i18n/routes'
 
-// Accepted payment methods, drawn flat on the dark footer background (no
-// white chip containers) — each mark kept as close to its real brand
-// treatment as a hand-drawn approximation allows. For production-grade
-// pixel accuracy, swap these for the official SVGs from each brand's own
-// partner/press kit (Visa, Mastercard, Apple, Klarna and Revolut all
-// provide them free for merchants).
+// Accepted payment methods. Apple Pay and Klarna use the brands' own
+// official badge images (public/payments/) exactly as provided, unedited
+// — do not re-draw these as CSS/SVG approximations. Visa, Mastercard and
+// Revolut Pay are still hand-drawn flat marks; for production-grade pixel
+// accuracy those could also be swapped for official assets from each
+// brand's own partner/press kit.
 function PaymentLogos() {
   return (
     <div className="lp-footer-methods">
-      <span className="lp-pay-apple">
-        <svg viewBox="0 0 90 110" fill="#fff"><path d="M62.6 22.2c-3.8 4.5-9.9 8-15.9 7.5-.7-6.1 2.2-12.5 5.7-16.5C56.2 8.7 62.8 5.4 68.3 5.1c.6 6.3-1.8 12.5-5.7 17.1zm5.6 8.9c-8.8-.5-16.3 5-20.5 5-4.3 0-10.9-4.7-18-4.6-9.3.1-17.8 5.4-22.6 13.7-9.6 16.7-2.5 41.3 6.9 54.8 4.6 6.6 10.1 14 17.3 13.7 6.9-.3 9.6-4.5 17.9-4.5s10.8 4.5 18.1 4.4c7.5-.1 12.2-6.7 16.8-13.3 5.2-7.5 7.3-14.7 7.4-15.1-.2-.1-14.2-5.5-14.3-21.6-.1-13.5 11-19.9 11.5-20.3-6.3-9.3-16-10.3-19.5-10.6z"/></svg>
-        Pay
-      </span>
-      <span className="lp-pay-klarna">Klarna.</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/payments/apple-pay.webp" alt="Apple Pay" className="lp-pay-img lp-pay-img--apple" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/payments/klarna.webp" alt="Klarna" className="lp-pay-img lp-pay-img--klarna" />
       <span className="lp-pay-visa">VISA</span>
       <span className="lp-pay-mc"><span /><span /></span>
       <span className="lp-pay-revolut">Revolut Pay</span>

@@ -147,9 +147,9 @@ export const LANDING_BASE_STYLES = `
   .lp-pay-mc { display: flex; align-items: center; }
   .lp-pay-mc span:first-child { width: 17px; height: 17px; border-radius: 50%; background: #eb001b; }
   .lp-pay-mc span:last-child { width: 17px; height: 17px; border-radius: 50%; background: #f79e1b; margin-left: -7px; mix-blend-mode: screen; }
-  .lp-pay-apple { display: flex; align-items: center; gap: 5px; font-size: 18px; font-weight: 500; color: #fff; font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif; }
-  .lp-pay-apple svg { width: 15px; height: 15px; margin-top: -1px; }
-  .lp-pay-klarna { font-weight: 800; font-size: 13px; color: #0b051d; background: #ffb3c7; padding: 4px 10px; border-radius: 7px; letter-spacing: -0.2px; }
+  .lp-pay-img { display: block; width: auto; }
+  .lp-pay-img--apple { height: 32px; }
+  .lp-pay-img--klarna { height: 24px; }
   .lp-pay-revolut { font-size: 15px; font-weight: 700; color: #fff; }
   @media (max-width: 560px) { .lp-footer-payment { flex-direction: column; align-items: flex-start; } }
 

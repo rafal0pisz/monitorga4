@@ -14,6 +14,9 @@ const PUBLIC_PATHS = [
   // extensions, so they aren't covered by the matcher's extension carve-out
   // below and need an explicit path entry or they get redirected to /login.
   '/videos',
+  // Payment method badge images (Apple Pay, Klarna) in the site footer —
+  // .webp, same issue as /videos above.
+  '/payments',
 ]
 
 // API-only paths: /api/worker/run, /api/worker/trial-reminders and
