@@ -2,11 +2,11 @@ import Link from 'next/link'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import type { Locale } from '@/lib/i18n/routes'
 
-// Accepted payment methods. Apple Pay and Klarna use the brands' own
-// official badge images (public/payments/) exactly as provided, unedited
-// — do not re-draw these as CSS/SVG approximations. Visa, Mastercard and
-// Revolut Pay are still hand-drawn flat marks; for production-grade pixel
-// accuracy those could also be swapped for official assets from each
+// Accepted payment methods. Apple Pay, Klarna and Revolut Pay use the
+// brands' own official badge images (public/payments/) exactly as
+// provided, unedited — do not re-draw these as CSS/SVG approximations.
+// Visa and Mastercard are still hand-drawn flat marks; for production-grade
+// pixel accuracy those could also be swapped for official assets from each
 // brand's own partner/press kit.
 function PaymentLogos() {
   return (
@@ -17,7 +17,8 @@ function PaymentLogos() {
       <img src="/payments/klarna.webp" alt="Klarna" className="lp-pay-img lp-pay-img--klarna" />
       <span className="lp-pay-visa">VISA</span>
       <span className="lp-pay-mc"><span /><span /></span>
-      <span className="lp-pay-revolut">Revolut Pay</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/payments/revolut-pay.png" alt="Revolut Pay" className="lp-pay-img lp-pay-img--revolut" />
     </div>
   )
 }

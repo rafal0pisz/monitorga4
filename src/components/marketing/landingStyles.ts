@@ -150,7 +150,7 @@ export const LANDING_BASE_STYLES = `
   .lp-pay-img { display: block; width: auto; }
   .lp-pay-img--apple { height: 32px; }
   .lp-pay-img--klarna { height: 24px; }
-  .lp-pay-revolut { font-size: 15px; font-weight: 700; color: #fff; }
+  .lp-pay-img--revolut { height: 26px; border-radius: 5px; }
   @media (max-width: 560px) { .lp-footer-payment { flex-direction: column; align-items: flex-start; } }
 
   .lp-footer-bottom { border-top: 1px solid rgba(255,255,255,0.08); padding: 16px 0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,0.45); }
