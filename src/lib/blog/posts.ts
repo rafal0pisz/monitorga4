@@ -715,6 +715,480 @@ const BOT_TRAFFIC_FAQ_HTML = `
   </div>
 `
 
+const MONITORING_EVENTS_BODY_HTML = `
+  <p>Zdarzenia to fundament GA4. Konwersje, segmenty odbiorców, raporty e-commerce, lejki, wszystko to powstaje na bazie zdarzeń, które strona albo aplikacja wysyła do GA4. Jeśli jedno z nich przestanie działać, nie dowiesz się o tym z samego interfejsu GA4, bo GA4 nie ostrzega, że czegoś zabrakło. Po prostu nie pokaże tego, czego nie dostał.</p>
+
+  <p>Monitoring zdarzeń to proces regularnego sprawdzania, czy zdarzenia, na których opiera się Twoja analityka, faktycznie docierają do GA4 w oczekiwanej liczbie i z poprawnymi parametrami. Ten artykuł pokazuje, na czym to polega w praktyce, jakie metody są dostępne i dlaczego robienie tego raz, przy wdrożeniu, nie wystarcza.</p>
+
+  <h2>Czym jest monitoring zdarzeń w GA4</h2>
+
+  <p>Każda interakcja, którą GA4 rejestruje, to zdarzenie: wyświetlenie strony, kliknięcie przycisku, dodanie produktu do koszyka, złożenie zamówienia, wysłanie formularza. GA4 nie rozróżnia zdarzeń ważnych i nieważnych automatycznie, to Ty decydujesz, które z nich oznaczyć jako kluczowe (key events) i które monitorować najuważniej.</p>
+
+  <p>Monitoring zdarzeń to w praktyce odpowiedź na trzy pytania, zadawane regularnie, nie tylko raz: czy dane zdarzenie w ogóle się pojawia, czy pojawia się w oczekiwanej liczbie, i czy przychodzi z kompletem parametrów, których potrzebujesz do dalszej analizy. Brak odpowiedzi na którekolwiek z tych pytań oznacza, że część raportów, które przeglądasz, opiera się na niepełnych albo nieaktualnych danych, bez żadnego ostrzeżenia w interfejsie.</p>
+
+  <h2>Dlaczego zdarzenia przestają działać bez żadnego komunikatu błędu</h2>
+
+  <p>GA4 nie wysyła powiadomienia, gdy zdarzenie przestaje być wysyłane. Z punktu widzenia GA4 nic się nie dzieje, bo GA4 widzi tylko to, co faktycznie dotarło. Zdarzenie, które przestało istnieć, po prostu znika z raportów, zwykle niezauważone przez tygodnie.</p>
+
+  <ul>
+    <li><b>Zmiana na stronie bez aktualizacji GTM.</b> Zespół produktowy zmienia strukturę strony, nazwę klasy CSS albo identyfikator elementu, na którym opiera się trigger w GTM, a tag przestaje się odpalać bez żadnego komunikatu po stronie frontendu.</li>
+    <li><b>Zmiana nazwy parametru albo zdarzenia po stronie dataLayer.</b> Deweloper zmienia nazwę zdarzenia z <i>add_to_cart</i> na <i>addToCart</i> przy refaktoryzacji kodu, nie wiedząc, że GTM nasłuchuje dokładnie poprzedniej nazwy.</li>
+    <li><b>Limit zdarzeń niestandardowych albo parametrów na usługę.</b> GA4 ma limity liczby unikalnych nazw zdarzeń i parametrów rejestrowanych na jedną usługę; po ich przekroczeniu nowe, nadmiarowe nazwy przestają być w pełni raportowane.</li>
+    <li><b>Wygasły albo usunięty tag w kontenerze GTM.</b> Porządkowanie kontenera GTM, częste przy przekazywaniu konta między agencjami, czasem usuwa tag, który wciąż był aktywnie używany.</li>
+    <li><b>Zmiana w trybie zgodności (Consent Mode).</b> Aktualizacja banera zgody na pliki cookie potrafi zmienić domyślny stan zgody na pomiar, ograniczając albo modelując część zdarzeń bez wyraźnej informacji o skali tego ograniczenia.</li>
+    <li><b>Migracja platformy e-commerce albo CMS.</b> Przeniesienie sklepu na nową platformę często oznacza nową implementację warstwy danych, a stare triggery GTM, dopasowane do starej struktury, przestają mieć czego nasłuchiwać.</li>
+  </ul>
+
+  <h2>Metody monitorowania zdarzeń: ręczne i automatyczne</h2>
+
+  <p>Masz do wyboru kilka warstw monitoringu, od w pełni ręcznych po w pełni zautomatyzowane. W praktyce najskuteczniejsze zespoły łączą je ze sobą, zamiast polegać tylko na jednej.</p>
+
+  <ul>
+    <li><b>Raport czasu rzeczywistego (Realtime).</b> Pokazuje zdarzenia z ostatnich minut. Dobry do szybkiego potwierdzenia, czy coś w ogóle przychodzi teraz, słaby do wykrywania powolnego, stopniowego spadku wolumenu rozłożonego na dni.</li>
+    <li><b>DebugView.</b> Pokazuje szczegółowy strumień zdarzeń z jednego, oznaczonego urządzenia testowego, razem z pełną listą parametrów każdego zdarzenia. Świetny do weryfikacji konkretnej implementacji, ale wymaga ręcznego uruchomienia i nie nadaje się do ciągłego nadzoru.</li>
+    <li><b>Standardowe raporty GA4.</b> Pokazują dane zagregowane, zwykle z opóźnieniem przetwarzania rzędu kilkunastu do dwudziestu czterech godzin. Dobre do sprawdzania trendu wolumenu w czasie, ale wymagają, żeby ktoś faktycznie regularnie do nich zaglądał i pamiętał, jak wygląda normalny poziom.</li>
+    <li><b>Eksploracje (Explore).</b> Pozwalają zbudować własne, swobodne zestawienie, na przykład liczbę zdarzeń dzień po dniu rozbitą po nazwie zdarzenia, co ułatwia ręczne wychwycenie dnia, w którym wolumen nagle spadł.</li>
+    <li><b>Zautomatyzowane narzędzia monitorujące.</b> Sprawdzają zdefiniowany zestaw zdarzeń cyklicznie, bez udziału człowieka, i wysyłają powiadomienie tylko wtedy, gdy coś faktycznie odbiega od normy. Różnica względem poprzednich metod jest fundamentalna: nikt nie musi pamiętać, żeby sprawdzić.</li>
+  </ul>
+
+  <h2>Co powinien obejmować dobry monitoring zdarzeń</h2>
+
+  <ul>
+    <li><b>Obecność oczekiwanych zdarzeń każdego dnia.</b> Kluczowe zdarzenie, które nie pojawiło się ani razu w ciągu całego dnia, to jeden z najbardziej wiarygodnych sygnałów technicznej awarii, łatwy do przeoczenia w sumie miesięcznej.</li>
+    <li><b>Wolumen względem typowej normy, nie względem sztywnej liczby.</b> Spadek o 40 procent względem tego samego dnia tydzień wcześniej znaczy więcej niż porównanie do arbitralnie wybranej liczby.</li>
+    <li><b>Pokrycie parametrów, nie tylko samo zdarzenie.</b> Zdarzenie <i>purchase</i> bez parametru <i>currency</i> albo <i>transaction_id</i> technicznie istnieje w GA4, ale praktycznie nie nadaje się do rzetelnej analizy przychodu.</li>
+    <li><b>Kolejność zdarzeń w lejku e-commerce.</b> Liczba zdarzeń <i>begin_checkout</i> wyraźnie wyższa niż <i>view_item</i> zwykle oznacza błąd pomiarowy, nie realne zachowanie użytkowników.</li>
+    <li><b>Zdarzenia niestandardowe, specyficzne dla danego biznesu.</b> Formularz kontaktowy, zapis do newslettera, pobranie cennika, każde z nich wymaga osobnego pilnowania, bo żadne z nich nie jest domyślnie monitorowane przez GA4.</li>
+  </ul>
+
+  <h2>Jak skonfigurować monitoring zdarzeń krok po kroku</h2>
+
+  <ol>
+    <li>Sporządź listę zdarzeń, które są dla Twojego biznesu kluczowe: zakupy, leady, zapisy, kluczowe kroki lejka.</li>
+    <li>Dla każdego z nich ustal, jaki wolumen jest normalny w typowym dniu albo tygodniu, na podstawie danych historycznych z GA4.</li>
+    <li>Zdecyduj, które parametry przy każdym zdarzeniu są niezbędne do dalszej analizy, i zapisz je razem z nazwą zdarzenia.</li>
+    <li>Ustal harmonogram ręcznego sprawdzania, jeśli nie korzystasz jeszcze z narzędzia automatycznego, najlepiej codziennie albo co kilka dni, nie raz w miesiącu.</li>
+    <li>Jeśli zarządzasz więcej niż jedną usługą GA4, rozważ narzędzie automatyczne już na starcie, bo ręczne sprawdzanie kilku kont naraz szybko przestaje się skalować.</li>
+    <li>Udokumentuj, kto odpowiada za reakcję, gdy monitoring coś wykryje, żeby alert nie trafiał w próżnię.</li>
+  </ol>
+
+  <h2>Jak AlertGA4 automatyzuje monitoring zdarzeń</h2>
+
+  <p>AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność i wolumen skonfigurowanych zdarzeń, porównując je z poprzednimi dniami tej samej usługi. Kreator konfiguracji czyta rzeczywiste dane z Twojego konta i podpowiada, które zdarzenia warto monitorować, razem z ich wolumenem z ostatnich 30 dni, zamiast wymagać ręcznego wpisywania nazw z pamięci.</p>
+
+  <figure class="blog-figure">
+    <img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" />
+    <figcaption>Każde monitorowane zdarzenie ma własny status, bieżący wolumen i zmianę względem poprzedniego okresu.</figcaption>
+  </figure>
+
+  <p>Oprócz samej obecności zdarzenia, AlertGA4 sprawdza też pokrycie jego parametrów oraz, dla zdarzeń e-commerce, kompletność całego lejku. Gdy coś odbiega od normy, dostajesz maila z konkretną diagnozą tego samego dnia, zamiast dowiadywać się o problemie przy okazji miesięcznego podsumowania.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Zespoły produktowe wdrażające częste zmiany na stronie</b>, dla których każda nowa funkcja to ryzyko, że istniejący trigger GTM przestanie pasować do nowej struktury strony.</li>
+    <li><b>Sklepy internetowe</b>, dla których brakujące zdarzenie w lejku e-commerce bezpośrednio zniekształca ocenę, na którym etapie faktycznie tracą klientów.</li>
+    <li><b>Agencje obsługujące wiele kont GA4</b>, które nie mają czasu na codzienne, ręczne sprawdzanie tych samych kilkunastu zdarzeń w każdej z osobna prowadzonych usług.</li>
+  </ul>
+
+  <p>Monitoring zdarzeń nie jest jednorazowym zadaniem do odhaczenia przy wdrożeniu GA4. To proces, który ma sens dopiero wtedy, gdy trwa cały czas, bo zdarzenia potrafią przestać działać miesiące po wdrożeniu, przy zupełnie niezwiązanej zmianie gdzie indziej na stronie.</p>
+`
+
+const MONITORING_EVENTS_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czym różni się monitoring zdarzeń od weryfikacji zdarzeń?</summary>
+      <div class="blog-faq-answer"><p>Weryfikacja to jednorazowe albo doraźne sprawdzenie, czy konkretne zdarzenie działa poprawnie, zwykle tuż po wdrożeniu. Monitoring to ciągły, powtarzalny proces pilnowania, czy te same zdarzenia nadal działają poprawnie tydzień i miesiąc później. Więcej o samej weryfikacji piszemy w <a href="/blog/weryfikacja-zdarzen-ga4">osobnym przewodniku</a>.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy GA4 ostrzega, gdy zdarzenie przestaje być wysyłane?</summary>
+      <div class="blog-faq-answer"><p>Nie. GA4 nie ma mechanizmu informującego o braku zdarzenia, które wcześniej się pojawiało. Zdarzenie, które przestało być wysyłane, po prostu znika z raportów bez żadnego komunikatu.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Jak często powinno się sprawdzać zdarzenia ręcznie?</summary>
+      <div class="blog-faq-answer"><p>Przy ręcznym sprawdzaniu najlepiej codziennie albo co kilka dni dla kluczowych zdarzeń. Raz w miesiącu to zwykle za rzadko, bo awaria trwająca kilka tygodni potrafi znacząco zniekształcić cały okres raportowy, zanim ktokolwiek ją zauważy.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy warto monitorować wszystkie zdarzenia, czy tylko wybrane?</summary>
+      <div class="blog-faq-answer"><p>Zwykle lepiej skupić się na kilku do kilkunastu zdarzeń faktycznie kluczowych dla biznesu niż próbować pilnować każdego zdarzenia rejestrowanego przez GA4. Zbyt szeroki zakres monitoringu rozmywa uwagę i utrudnia szybkie rozpoznanie, który alert jest naprawdę istotny.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy monitoring zdarzeń wymaga dostępu programistycznego do GA4 Data API?</summary>
+      <div class="blog-faq-answer"><p>Nie musi. Ręczne sprawdzanie w interfejsie GA4 nie wymaga żadnej wiedzy programistycznej, a gotowe narzędzia takie jak AlertGA4 automatyzują to bez konieczności samodzielnego pisania zapytań do Data API.</p></div>
+    </details>
+  </div>
+`
+
+const EVENT_VERIFICATION_BODY_HTML = `
+  <p>Zanim zaczniesz monitorować zdarzenie przez tygodnie i miesiące, musisz najpierw mieć pewność, że faktycznie działa poprawnie od samego początku. To właśnie jest weryfikacja: jednorazowe, dokładne sprawdzenie konkretnej implementacji, zwykle zaraz po wdrożeniu nowego zdarzenia albo zmianie na stronie.</p>
+
+  <p>Ten przewodnik pokazuje, jakich narzędzi użyć do weryfikacji, jak przejść przez nią krok po kroku i na jakie szczegóły zwrócić uwagę, które łatwo przeoczyć przy pobieżnym spojrzeniu.</p>
+
+  <h2>Weryfikacja a monitoring: dwa różne zadania</h2>
+
+  <p>Weryfikacja odpowiada na pytanie: czy to konkretne zdarzenie, które właśnie wdrożyłem, działa poprawnie, tu i teraz, na moim urządzeniu testowym. Monitoring odpowiada na inne pytanie: czy to samo zdarzenie nadal działa poprawnie tydzień, miesiąc, pół roku później, dla wszystkich użytkowników, nie tylko dla Ciebie.</p>
+
+  <p>Obie czynności są potrzebne, ale żadna nie zastępuje drugiej. Dokładna weryfikacja przy wdrożeniu nic nie da, jeśli nikt później nie sprawdzi, czy zdarzenie wciąż działa po kolejnej aktualizacji strony. Dlatego ten artykuł skupia się wyłącznie na weryfikacji, a ciągłemu <a href="/blog/monitoring-zdarzen-ga4">monitoringowi zdarzeń</a> poświęciliśmy osobny tekst.</p>
+
+  <h2>Narzędzia do weryfikacji zdarzeń w GA4</h2>
+
+  <ul>
+    <li><b>DebugView w GA4.</b> Pokazuje szczegółowy, chronologiczny strumień zdarzeń z jednego, oznaczonego urządzenia testowego razem z pełną listą parametrów każdego zdarzenia. To podstawowe narzędzie do weryfikacji, bo pokazuje dokładnie to, co GA4 faktycznie otrzymał.</li>
+    <li><b>Podgląd GTM (Preview).</b> Pokazuje, które tagi, triggery i zmienne odpaliły się przy konkretnej interakcji na stronie, jeszcze zanim dane w ogóle trafią do GA4. Pozwala złapać błąd konfiguracji triggera, zanim stanie się on błędem w danych.</li>
+    <li><b>Rozszerzenie Tag Assistant.</b> Dodatkowa warstwa weryfikacji na poziomie całej strony, pokazująca wszystkie tagi Google wykryte na danej stronie, nie tylko te związane z konkretnym zdarzeniem.</li>
+    <li><b>Raport czasu rzeczywistego (Realtime).</b> Mniej szczegółowy niż DebugView, ale przydatny do szybkiego potwierdzenia, że zdarzenie w ogóle dotarło, bez konieczności oznaczania urządzenia jako debugowego.</li>
+    <li><b>Karta sieci (Network) w narzędziach deweloperskich przeglądarki.</b> Pokazuje surowe żądanie wysyłane do serwerów Google, razem z dokładną listą parametrów w adresie URL żądania. Przydatne, gdy DebugView z jakiegoś powodu nie pokazuje zdarzenia, a trzeba ustalić, czy problem jest po stronie wysyłki, czy po stronie odbioru.</li>
+  </ul>
+
+  <h2>Jak zweryfikować zdarzenie krok po kroku</h2>
+
+  <ol>
+    <li>Włącz tryb debugowania: zainstaluj rozszerzenie Google Analytics Debugger albo dodaj parametr <i>debug_mode</i> w konfiguracji tagu, albo użyj trybu podglądu bezpośrednio w GTM.</li>
+    <li>Otwórz DebugView w GA4 i potwierdź, że Twoje urządzenie testowe jest widoczne na liście aktywnych debugerów.</li>
+    <li>Wykonaj na stronie dokładnie tę akcję, którą zdarzenie ma rejestrować: dodaj produkt do koszyka, wyślij formularz, dokończ testowe zamówienie.</li>
+    <li>Sprawdź w DebugView, czy zdarzenie w ogóle się pojawiło, w rozsądnym czasie po wykonaniu akcji.</li>
+    <li>Rozwiń szczegóły zdarzenia i porównaj listę parametrów z tym, co faktycznie powinno zostać wysłane.</li>
+    <li>Powtórz tę samą akcję jeszcze raz, żeby sprawdzić, czy zdarzenie nie odpala się więcej niż jeden raz za każdym razem.</li>
+    <li>Jeśli coś nie zgadza się w DebugView, cofnij się do podglądu GTM i sprawdź, który trigger i która zmienna odpowiadają za sporny element.</li>
+  </ol>
+
+  <h2>Na co zwracać uwagę przy weryfikacji</h2>
+
+  <ul>
+    <li><b>Dokładna nazwa zdarzenia.</b> GA4 rozróżnia wielkość liter i traktuje <i>add_to_cart</i> oraz <i>addToCart</i> jako dwa zupełnie różne zdarzenia, nie jako warianty tej samej nazwy.</li>
+    <li><b>Typ danych w parametrach.</b> Parametr liczbowy wysłany jako tekst w cudzysłowie bywa poprawnie zarejestrowany, ale błędnie zsumowany w raportach opartych o metryki liczbowe.</li>
+    <li><b>Wartości, które nie powinny być puste.</b> Parametr <i>currency</i> przy zdarzeniu zakupu albo <i>item_id</i> przy zdarzeniach e-commerce, obecne w strukturze zdarzenia, ale bez realnej wartości, to częsta, łatwa do przeoczenia usterka.</li>
+    <li><b>Kolejność zdarzeń w dłuższym procesie.</b> Przy weryfikacji całego lejku zakupowego sprawdź, czy zdarzenia pojawiają się we właściwej kolejności: najpierw <i>view_item</i>, potem <i>add_to_cart</i>, potem <i>begin_checkout</i>, na końcu <i>purchase</i>.</li>
+    <li><b>Brak duplikatów przy jednej akcji użytkownika.</b> Jedno kliknięcie przycisku powinno wygenerować dokładnie jedno zdarzenie, nie dwa czy trzy wystrzelone przez nadmiarowe triggery w tym samym kontenerze GTM.</li>
+    <li><b>Poprawność user property, jeśli ich używasz.</b> Właściwości użytkownika ustawiane przy logowaniu albo rejestracji łatwo przeoczyć podczas weryfikacji skupionej wyłącznie na samym zdarzeniu.</li>
+  </ul>
+
+  <h2>Najczęstsze błędy wykrywane podczas weryfikacji</h2>
+
+  <ol>
+    <li><b>Literówka w nazwie zdarzenia albo parametru.</b> Jedna błędna litera w nazwie sprawia, że GA4 rejestruje zupełnie nowe, niezwiązane zdarzenie, zamiast tego zaplanowanego.</li>
+    <li><b>Niespójność konwencji nazewnictwa.</b> Część zdarzeń w formacie <i>snake_case</i>, część w <i>camelCase</i>, wdrożona przez różne osoby w różnym czasie, utrudnia później budowanie spójnych raportów.</li>
+    <li><b>Parametr wysyłany jako pusty ciąg znaków zamiast rzeczywistej wartości.</b> Zdarza się, gdy zmienna w GTM próbuje odczytać wartość ze strony, zanim ta wartość zdążyła się załadować.</li>
+    <li><b>Zdarzenie odpalające się wielokrotnie przy jednej interakcji.</b> Typowy efekt dwóch nakładających się triggerów albo błędnej obsługi zdarzeń w aplikacji jednostronicowej.</li>
+    <li><b>Brakujący <i>item_id</i> albo <i>item_name</i> przy zdarzeniach e-commerce.</b> Zdarzenie rejestruje się poprawnie na poziomie ogólnym, ale bez możliwości rozbicia wyniku na konkretne produkty.</li>
+  </ol>
+
+  <h2>Jak AlertGA4 uzupełnia ręczną weryfikację</h2>
+
+  <p>Ręczna weryfikacja w DebugView sprawdza jedno urządzenie testowe w jednym momencie. Nie pokaże, czy to samo zdarzenie nadal działa poprawnie dla wszystkich użytkowników tydzień później, po kolejnej aktualizacji strony, której akurat nie testowałeś ręcznie.</p>
+
+  <p>AlertGA4 przejmuje tę część procesu po zakończonej weryfikacji: codziennie sprawdza obecność, wolumen i pokrycie parametrów skonfigurowanych zdarzeń na realnym ruchu produkcyjnym, nie na pojedynczym urządzeniu testowym. Jeśli coś, co przeszło ręczną weryfikację przy wdrożeniu, przestanie działać miesiąc później, dostajesz o tym maila tego samego dnia.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Deweloperzy i wdrożeniowcy GTM</b>, dla których dokładna weryfikacja przed przekazaniem projektu klientowi decyduje o tym, czy pierwsze tygodnie danych będą wiarygodne.</li>
+    <li><b>Analitycy odbierający wdrożenie od zewnętrznej firmy</b>, którzy potrzebują niezależnie potwierdzić, że zdarzenia działają zgodnie ze specyfikacją, zanim zaczną na nich budować raporty.</li>
+    <li><b>Zespoły wdrażające nowe funkcje na stronie</b>, dla których każda nowa interakcja do zmierzenia wymaga tej samej dyscypliny weryfikacji, nie tylko zdarzenia wdrożone przy starcie projektu.</li>
+  </ul>
+`
+
+const EVENT_VERIFICATION_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy DebugView pokazuje dane w czasie rzeczywistym?</summary>
+      <div class="blog-faq-answer"><p>Tak, zdarzenia z urządzenia oznaczonego jako debugowe pojawiają się w DebugView niemal natychmiast, zwykle w ciągu kilku do kilkunastu sekund od wysłania.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy muszę być programistą, żeby zweryfikować zdarzenie w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie. DebugView, podgląd GTM i rozszerzenie Tag Assistant są zaprojektowane do użycia bez pisania kodu. Pomocna jest podstawowa znajomość struktury zdarzeń i parametrów, ale nie jest wymagana wiedza programistyczna.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy weryfikacja na jednym urządzeniu wystarczy?</summary>
+      <div class="blog-faq-answer"><p>Wystarcza do potwierdzenia, że implementacja działa poprawnie w zamierzonym scenariuszu. Nie wystarcza do upewnienia się, że działa tak samo dla wszystkich przeglądarek, urządzeń i warunków sieciowych, dlatego warto uzupełnić ją ciągłym monitoringiem na realnym ruchu.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Co jeśli zdarzenie w ogóle nie pojawia się w DebugView?</summary>
+      <div class="blog-faq-answer"><p>Sprawdź najpierw podgląd GTM, żeby ustalić, czy trigger w ogóle się odpalił. Jeśli tak, a zdarzenie wciąż nie pojawia się w DebugView, sprawdź kartę sieci w narzędziach deweloperskich przeglądarki, żeby zobaczyć, czy żądanie w ogóle zostało wysłane do serwerów Google.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy weryfikację trzeba powtarzać po każdej zmianie na stronie?</summary>
+      <div class="blog-faq-answer"><p>Przy każdej zmianie dotykającej elementu, z którym powiązany jest trigger w GTM, zdecydowanie warto. To najczęstszy moment, w którym wcześniej poprawnie działające zdarzenie po cichu przestaje się odpalać.</p></div>
+    </details>
+  </div>
+`
+
+const DATA_DISCREPANCIES_BODY_HTML = `
+  <p>Dlaczego GA4 pokazuje inną liczbę niż nasz system sprzedażowy to jedno z najczęściej zadawanych pytań każdemu, kto prowadzi raportowanie z GA4. Odpowiedź rzadko jest tak prosta, jak „bo coś jest zepsute”. Większość rozbieżności ma konkretną, techniczną przyczynę, wynikającą z tego, jak różne narzędzia w ogóle definiują i zliczają dane.</p>
+
+  <p>Ten artykuł porządkuje najczęstsze źródła rozbieżności i pokazuje, jak systematycznie ustalić, czy dana różnica jest normalna, czy wymaga naprawy.</p>
+
+  <h2>Dlaczego żadne dwa narzędzia nigdy nie pokażą identycznych liczb</h2>
+
+  <p>GA4, Google Ads, Meta Ads, system sprzedażowy i CRM mierzą tę samą rzeczywistość zupełnie różnymi metodami. Jedno liczy sesje oparte na identyfikatorze przeglądarki, drugie liczy kliknięcia w reklamę, trzecie liczy faktycznie opłacone zamówienia z bazy danych. Oczekiwanie stuprocentowej zgodności między nimi to oczekiwanie wobec czegoś, co strukturalnie nie jest możliwe, niezależnie od jakości wdrożenia.</p>
+
+  <p>Celem nie jest więc dążenie do identycznych liczb, tylko do stabilnego, wytłumaczalnego marginesu różnicy, który nie zmienia się nagle bez powodu.</p>
+
+  <h2>Najczęstsze techniczne przyczyny rozbieżności</h2>
+
+  <ul>
+    <li><b>Sampling w starszych raportach i w Eksploracjach.</b> Przy bardzo dużych wolumenach danych i szczegółowych zestawieniach GA4 może opierać wynik na próbce danych zamiast na pełnym zbiorze, co z definicji daje inną liczbę niż policzenie wszystkiego od podstaw.</li>
+    <li><b>Różne strefy czasowe i granice dnia.</b> Jeśli usługa GA4 ma ustawioną inną strefę czasową niż system sprzedażowy, transakcja tuż po północy trafia do innego dnia w każdym z tych systemów, co przy raportach dziennych tworzy pozorną rozbieżność.</li>
+    <li><b>Różne okna atrybucji między platformami.</b> GA4 domyślnie korzysta z atrybucji opartej na danych (data-driven), z oknem konwersji liczonym w dniach, podczas gdy Google Ads czy Meta Ads mogą stosować własne, odmienne okna i modele, przypisując tę samą konwersję innemu kanałowi albo innemu dniu.</li>
+    <li><b>Blokery reklam i ograniczenia przeglądarek.</b> Część użytkowników ma zainstalowane rozszerzenia blokujące skrypty analityczne, co obniża liczbę zarejestrowanych w GA4 sesji bez wpływu na rzeczywistą liczbę odwiedzin na stronie.</li>
+    <li><b>Tryb zgodności i modelowanie danych.</b> Gdy użytkownik nie wyrazi zgody na pliki cookie analityczne, część danych w GA4 jest modelowana statystycznie, a nie mierzona bezpośrednio, co z natury różni się od twardych liczb z systemu transakcyjnego.</li>
+    <li><b>Opóźnienie przetwarzania danych w GA4.</b> Dane w standardowych raportach GA4 potrafią dojrzewać jeszcze przez kilkanaście do dwudziestu czterech godzin po zdarzeniu, więc porównanie na gorąco, tego samego dnia, niemal zawsze pokaże niższą liczbę niż ostateczna.</li>
+    <li><b>Różnice w definicji konwersji.</b> System sprzedażowy liczy zamówienie jako sprzedaż w momencie złożenia, a GA4 rejestruje zdarzenie zakupu w momencie wysłania zdarzenia z frontendu albo z integracji server-side, co przy zamówieniach telefonicznych czy opóźnionych płatnościach daje inny wynik.</li>
+  </ul>
+
+  <h2>Rozbieżności między GA4 a systemem sprzedażowym</h2>
+
+  <p>Ten typ rozbieżności zasługuje na osobną uwagę, bo to właśnie on najczęściej rodzi pytania ze strony klientów i zarządu.</p>
+
+  <ul>
+    <li><b>Zamówienia złożone telefonicznie albo offline.</b> Jeśli klient dzwoni i składa zamówienie bez odwiedzenia strony potwierdzenia, system sprzedażowy je zarejestruje, a GA4 nigdy o nim się nie dowie, chyba że istnieje osobna integracja wysyłająca takie zdarzenie do GA4 ręcznie.</li>
+    <li><b>Zduplikowane zdarzenie zakupu.</b> Odwrotny kierunek błędu: GA4 pokazuje więcej transakcji niż faktycznie miało miejsce, bo to samo zamówienie zostało zarejestrowane więcej niż raz. Szczegółowo opisaliśmy to w <a href="/blog/zduplikowane-zakupy-ga4">osobnym artykule o zduplikowanych zakupach</a>.</li>
+    <li><b>Zwroty i anulowane zamówienia.</b> System sprzedażowy zwykle aktualizuje status zamówienia po zwrocie, a GA4 w standardowej konfiguracji nie cofa już zarejestrowanego zdarzenia zakupu, więc historyczny przychód w GA4 bywa wyższy niż finalny, uwzględniający zwroty.</li>
+    <li><b>Opóźnienie między złożeniem zamówienia a potwierdzeniem płatności.</b> Przy płatnościach odroczonych albo przelewach tradycyjnych zdarzenie zakupu w GA4 może zostać wysłane w innym momencie niż faktyczne księgowanie przychodu w systemie finansowym.</li>
+  </ul>
+
+  <h2>Jak systematycznie zdiagnozować rozbieżność</h2>
+
+  <ol>
+    <li>Ustal precyzyjnie, które dokładnie liczby porównujesz: ten sam zakres dat, ta sama strefa czasowa, ta sama definicja transakcji w obu systemach.</li>
+    <li>Sprawdź, czy porównywany raport GA4 w ogóle mógł zostać poddany samplingowi, zwłaszcza jeśli korzystasz z Eksploracji na dużym zbiorze danych.</li>
+    <li>Odczekaj co najmniej dwadzieścia cztery godziny od zdarzenia przed porównaniem liczb, żeby wykluczyć efekt niedojrzałych, wciąż przetwarzanych danych.</li>
+    <li>Sprawdź, czy liczba transakcji w GA4 nie jest zawyżona przez duplikaty, porównując liczbę zdarzeń purchase z liczbą unikalnych wartości transaction_id.</li>
+    <li>Sprawdź model atrybucji używany w porównywanym raporcie reklamowym i porównaj go z modelem w GA4, zamiast zakładać, że oba liczą tak samo.</li>
+    <li>Policz margines rozbieżności z ostatnich kilku okresów i sprawdź, czy jest stabilny. Stabilna różnica rzędu kilku procent to zwykle metodologia, nie błąd. Różnica, która nagle rośnie, to sygnał do dalszego sprawdzenia.</li>
+  </ol>
+
+  <h2>Jaki poziom rozbieżności jest normalny, a jaki wymaga alarmu</h2>
+
+  <p>Nie ma jednej uniwersalnej liczby, bo poziom naturalnej rozbieżności zależy od branży, platformy i konfiguracji zgody na pliki cookie. W praktyce najważniejsza nie jest sama wielkość różnicy, tylko jej stabilność w czasie.</p>
+
+  <p>Rozbieżność rzędu kilku do kilkunastu procent, powtarzająca się konsekwentnie z miesiąca na miesiąc, zwykle wynika z metodologii i nie wymaga interwencji. Rozbieżność, która nagle się podwaja albo pojawia się tam, gdzie wcześniej jej nie było, niemal zawsze ma konkretną, techniczną przyczynę, wartą zdiagnozowania zanim trafi do raportu dla klienta czy zarządu.</p>
+
+  <h2>Jak AlertGA4 pomaga wychwycić rozbieżności, zanim staną się problemem</h2>
+
+  <p>AlertGA4 nie porównuje bezpośrednio GA4 z zewnętrznymi systemami sprzedażowymi, bo to zależy od integracji specyficznej dla każdego biznesu. Zamiast tego codziennie pilnuje tych źródeł rozbieżności, które leżą po stronie samego GA4 i które najczęściej odpowiadają za nagłe, niewytłumaczone zmiany: duplikatów zdarzenia zakupu, udziału „(not set)” w kluczowych wymiarach, nietypowego ruchu botowego oraz anomalii geograficznych.</p>
+
+  <p>Dzięki temu, zanim zaczniesz szukać przyczyny rozbieżności w zewnętrznym systemie, masz już potwierdzenie albo wykluczenie najczęstszych, technicznych przyczyn leżących po stronie GA4.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Zespoły e-commerce raportujące przychód do zarządu</b>, dla których niewytłumaczona rozbieżność między GA4 a systemem sprzedażowym podważa wiarygodność całego raportu, nie tylko jednej liczby.</li>
+    <li><b>Agencje performance marketingowe rozliczane na podstawie danych z GA4</b>, które muszą umieć wytłumaczyć klientowi, dlaczego Google Ads i GA4 pokazują inną liczbę konwersji za ten sam okres.</li>
+    <li><b>Analitycy budujący własne dashboardy łączące kilka źródeł danych</b>, dla których zrozumienie przyczyn rozbieżności jest warunkiem koniecznym, żeby w ogóle móc sensownie zestawić te dane razem.</li>
+  </ul>
+`
+
+const DATA_DISCREPANCIES_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy rozbieżność między GA4 a innym narzędziem zawsze oznacza błąd?</summary>
+      <div class="blog-faq-answer"><p>Nie. Różne narzędzia mierzą dane różnymi metodami, więc pewien poziom rozbieżności jest naturalny i oczekiwany. Sygnałem problemu jest nie sama różnica, tylko jej nagła zmiana względem dotychczasowej normy.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Ile czasu trzeba odczekać przed porównaniem danych z GA4?</summary>
+      <div class="blog-faq-answer"><p>Zwykle co najmniej dwadzieścia cztery godziny od zdarzenia, żeby dane zdążyły się w pełni przetworzyć. Porównanie danych z tego samego dnia, na gorąco, niemal zawsze pokaże niższą liczbę niż ostateczna.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Dlaczego Google Ads i GA4 pokazują inną liczbę konwersji?</summary>
+      <div class="blog-faq-answer"><p>Obie platformy mogą stosować różne modele i okna atrybucji, przypisując tę samą konwersję innemu dniu albo innemu kanałowi. To różnica metodologiczna, nie błąd pomiarowy sam w sobie.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Jak sprawdzić, czy raport w GA4 był oparty na próbce danych?</summary>
+      <div class="blog-faq-answer"><p>GA4 informuje o tym bezpośrednio w interfejsie Eksploracji, zwykle w formie ikony albo komunikatu przy wyniku zapytania. Standardowe raporty rzadziej podlegają samplingowi niż swobodne Eksploracje na bardzo dużych zbiorach danych.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy da się całkowicie wyeliminować rozbieżności danych?</summary>
+      <div class="blog-faq-answer"><p>Nie, dopóki porównujesz ze sobą narzędzia oparte na różnych metodologiach pomiaru. Realnym celem jest ograniczenie rozbieżności wynikających z błędów technicznych, nie doprowadzenie liczb do stuprocentowej zgodności.</p></div>
+    </details>
+  </div>
+`
+
+const AUDIT_CHECKLIST_BODY_HTML = `
+  <p>Audyt GA4 to nie to samo co codzienna kontrola jakości danych. To jednorazowy, dogłębny przegląd całej konfiguracji usługi, zwykle wykonywany przy przejęciu konta, po dużej zmianie na stronie albo cyklicznie, raz na kwartał czy pół roku, żeby upewnić się, że fundamenty, na których opiera się codzienny monitoring, wciąż są poprawne.</p>
+
+  <p>Ta checklista to dziesięć konkretnych miejsc do sprawdzenia, ułożonych w kolejności od ogólnej konfiguracji usługi po szczegóły pojedynczych zdarzeń.</p>
+
+  <h2>Dlaczego warto zrobić audyt, nawet jeśli dane wyglądają dobrze</h2>
+
+  <p>Dane, które wyglądają wiarygodnie, nie są tym samym co dane, które faktycznie są poprawne. Większość najkosztowniejszych błędów w GA4 nie wygląda jak błąd: zawyżony przychód z duplikatów zakupu, utracona atrybucja kanałów przez self-referral, zaniżona liczba konwersji przez niezarejestrowane zdarzenie kluczowe. Każdy z tych problemów mieści się w zakresie liczb, które na pierwszy rzut oka nie budzą podejrzeń.</p>
+
+  <p>Audyt to sposób, żeby przestać polegać na wrażeniu, że wszystko wygląda dobrze, i systematycznie sprawdzić konkretne, znane miejsca, w których GA4 najczęściej się myli.</p>
+
+  <h2>Checklist: 10 rzeczy do sprawdzenia w audycie GA4</h2>
+
+  <ol>
+    <li><b>Konfiguracja usługi i strumienia danych.</b> Sprawdź, czy identyfikator pomiaru (Measurement ID) widoczny w ustawieniach strumienia danych faktycznie odpowiada temu wdrożonemu na stronie, czy strefa czasowa i waluta usługi są ustawione poprawnie, i czy nie istnieją zduplikowane, nieużywane strumienie danych z poprzednich wdrożeń.</li>
+    <li><b>Uprawnienia dostępu do konta.</b> Przejrzyj listę użytkowników z dostępem na poziomie konta i usługi. Byli pracownicy, zewnętrzne agencje z zakończoną współpracą i konta testowe z uprawnieniami administratora to częste, niepotrzebne ryzyko bezpieczeństwa.</li>
+    <li><b>Oznaczenie zdarzeń kluczowych (key events).</b> Sprawdź, czy zdarzenia faktycznie istotne dla biznesu, takie jak zakup, wysłanie formularza czy rejestracja, są oznaczone jako kluczowe, i czy żadne nieistotne zdarzenie testowe nie zostało oznaczone przez pomyłkę.</li>
+    <li><b>Filtrowanie self-referral i własnej domeny.</b> Sprawdź listę wykluczonych referrerów w ustawieniach strumienia danych i potwierdź, że własna domena oraz domeny zewnętrznych bramek płatności, przez które przechodzi proces zakupowy, są na niej obecne.</li>
+    <li><b>Udział „(not set)” i ruchu Direct.</b> Porównaj bieżący udział tych dwóch kategorii z poprzednimi okresami. Nagły wzrost w jednej albo drugiej niemal zawsze wskazuje konkretny, możliwy do naprawienia problem pomiarowy.</li>
+    <li><b>Kompletność zdarzeń e-commerce.</b> Sprawdź, czy wszystkie zdarzenia standardowego lejka, od <i>view_item</i> po <i>purchase</i>, są obecne i czy liczby w kolejnych krokach lejka mają logiczną, malejącą kolejność.</li>
+    <li><b>Pokrycie parametrów standardowych i niestandardowych.</b> Sprawdź, czy kluczowe parametry, takie jak <i>currency</i>, <i>transaction_id</i> czy <i>item_id</i>, towarzyszą zdarzeniom e-commerce w zdecydowanej większości przypadków, a nie tylko części z nich.</li>
+    <li><b>Duplikaty zdarzenia zakupu.</b> Porównaj liczbę unikalnych wartości transaction_id z liczbą zdarzeń purchase w tym samym okresie. Rozbieżność oznacza, że część transakcji jest liczona więcej niż raz.</li>
+    <li><b>Wdrożenie trybu zgodności (Consent Mode).</b> Sprawdź, czy baner zgody na pliki cookie faktycznie komunikuje się z GTM i GA4 zgodnie z wymaganiami trybu zgodności, i czy domyślny stan zgody jest ustawiony świadomie, a nie pozostawiony na przypadkowej wartości domyślnej.</li>
+    <li><b>Istnienie cyklicznego monitoringu po audycie.</b> Sprawdź, czy ktoś, albo coś, faktycznie będzie regularnie pilnować tych samych dziewięciu punktów po zakończeniu audytu. Audyt, po którym nikt nie monitoruje wyników, rozwiąże problemy tylko na chwilę.</li>
+  </ol>
+
+  <h2>Jak często robić pełny audyt GA4</h2>
+
+  <ul>
+    <li><b>Przy przejęciu konta od innej agencji albo osoby.</b> Zanim zaczniesz raportować liczby klientowi, warto wiedzieć, na jakich fundamentach faktycznie stoją.</li>
+    <li><b>Po dużej zmianie na stronie albo migracji platformy.</b> Zmiana CMS-u, platformy e-commerce albo przebudowa strony to moment, w którym najwięcej elementów konfiguracji GA4 może się po cichu rozsynchronizować z nową implementacją.</li>
+    <li><b>Cyklicznie, raz na kwartał albo pół roku, niezależnie od zmian.</b> Nawet bez widocznej przyczyny warto raz na jakiś czas przejść przez pełną listę, bo część problemów narasta stopniowo, bez jednego, wyraźnego momentu wystąpienia.</li>
+  </ul>
+
+  <h2>Audyt jednorazowy a stały monitoring</h2>
+
+  <p>Audyt daje zdjęcie stanu konta w jednym momencie. Odpowiada na pytanie, czy teraz wszystko jest w porządku, nie na pytanie, czy za dwa miesiące wciąż będzie. Dokładnie dlatego punkt dziesiąty tej checklisty, dotyczący cyklicznego monitoringu, jest równie ważny jak pozostałe dziewięć, mimo że sam w sobie nie opisuje konkretnego błędu technicznego.</p>
+
+  <p>Bez stałego monitoringu te same problemy, które właśnie naprawiłeś podczas audytu, mogą po cichu wrócić przy kolejnej zmianie na stronie, kolejnej aktualizacji GTM albo kolejnej integracji marketingowej, zanim ktokolwiek zdąży to zauważyć.</p>
+
+  <h2>Jak AlertGA4 wspiera audyt i utrzymanie jego wyników</h2>
+
+  <p>Większość technicznych punktów tej checklisty, od piątego do dziewiątego, to dokładnie to, co AlertGA4 sprawdza automatycznie, codziennie, po podłączeniu usługi GA4: self-referral, udział „(not set)”, kompletność zdarzeń e-commerce, pokrycie parametrów i duplikaty zakupu.</p>
+
+  <p>W praktyce oznacza to, że sam audyt staje się szybszy, bo część punktów można zweryfikować jednym spojrzeniem na dashboard zamiast ręcznego przechodzenia przez każdy raport osobno. Co ważniejsze, wyniki audytu nie są już jednorazowym zdjęciem stanu konta: po jego zakończeniu te same punkty są dalej pilnowane każdego dnia, bez konieczności planowania kolejnego ręcznego przeglądu za pół roku.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Agencje przejmujące nowe konta klientów</b>, dla których szybki, systematyczny audyt to sposób na uniknięcie odpowiedzialności za błędy odziedziczone po poprzednim wykonawcy.</li>
+    <li><b>Firmy po migracji platformy e-commerce albo CMS</b>, u których ryzyko rozsynchronizowania konfiguracji GA4 z nową implementacją jest największe.</li>
+    <li><b>Wewnętrzne zespoły analityczne przygotowujące konto do ważnego raportu albo decyzji budżetowej</b>, dla których pewność co do jakości danych wejściowych decyduje o wiarygodności całej dalszej analizy.</li>
+  </ul>
+`
+
+const AUDIT_CHECKLIST_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Ile czasu zajmuje pełny audyt GA4?</summary>
+      <div class="blog-faq-answer"><p>Przy ręcznym przechodzeniu przez wszystkie dziesięć punktów, dla jednej usługi, zwykle od jednej do kilku godzin, zależnie od złożoności konfiguracji i liczby monitorowanych zdarzeń.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy audyt trzeba robić ręcznie, czy da się go zautomatyzować?</summary>
+      <div class="blog-faq-answer"><p>Część punktów, dotyczących uprawnień dostępu czy konfiguracji strumienia danych, wymaga ręcznego przeglądu w panelu GA4. Punkty dotyczące jakości samych danych, takie jak self-referral, „(not set)” czy duplikaty zakupu, można zautomatyzować narzędziem monitorującym.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy audyt GA4 różni się dla sklepu internetowego i strony bez e-commerce?</summary>
+      <div class="blog-faq-answer"><p>Tak, punkty dotyczące lejka e-commerce i parametrów transakcji nie mają zastosowania bez modułu e-commerce. Pozostałe punkty, dotyczące konfiguracji usługi, uprawnień, self-referral i „(not set)”, mają zastosowanie niezależnie od rodzaju strony.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Co jeśli audyt wykryje kilka problemów naraz?</summary>
+      <div class="blog-faq-answer"><p>Warto uszeregować je według wpływu na kluczowe metryki biznesowe, zwykle zaczynając od tych wpływających bezpośrednio na przychód, takich jak duplikaty zakupu, a kończąc na mniej krytycznych, takich jak pojedyncze niezarejestrowane wymiary niestandardowe.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy jednorazowy audyt wystarczy na dłużej?</summary>
+      <div class="blog-faq-answer"><p>Nie. Audyt pokazuje stan konta w jednym momencie, a konfiguracja i implementacja zmieniają się w czasie. Bez cyklicznego monitoringu po audycie te same problemy mogą po cichu wrócić przy kolejnej zmianie na stronie.</p></div>
+    </details>
+  </div>
+`
+
+const QUALITY_AUTOMATION_BODY_HTML = `
+  <p>Ręczna kontrola jakości danych w GA4 działa dobrze, dopóki masz jedno konto i pamiętasz, żeby sprawdzać je regularnie. Przy drugim koncie, trzecim kliencie albo zwykłym natłoku innych obowiązków ten sam proces zaczyna się sypać, nie dlatego, że ktoś jest niekompetentny, tylko dlatego, że ręczne, powtarzalne sprawdzanie tych samych rzeczy nie skaluje się wraz z liczbą kont.</p>
+
+  <p>Ten artykuł pokazuje, jakie są dostępne opcje automatyzacji kontroli jakości danych w GA4, od własnych skryptów po gotowe narzędzia, i jak wygląda wdrożenie najprostszej z nich, bez pisania jednej linijki kodu.</p>
+
+  <h2>Czym jest automatyzacja kontroli jakości danych</h2>
+
+  <p>Automatyzacja w tym kontekście oznacza przeniesienie powtarzalnego, ręcznego sprawdzania konkretnych wskaźników, takich jak obecność kluczowych zdarzeń, udział „(not set)” czy duplikaty zakupu, na system, który robi to cyklicznie sam, bez udziału człowieka, i informuje tylko wtedy, gdy coś faktycznie wymaga uwagi.</p>
+
+  <p>Różnica względem ręcznego podejścia nie dotyczy tego, co jest sprawdzane, tylko tego, kto o tym pamięta. Przy automatyzacji nikt nie musi pamiętać, żeby otworzyć GA4 i przejrzeć te same raporty po raz kolejny.</p>
+
+  <h2>Dlaczego ręczne sprawdzanie zawodzi w praktyce</h2>
+
+  <ul>
+    <li><b>Błędy pojawiają się losowo w czasie, nie tylko w dniu sprawdzania.</b> Ręczna kontrola raz w tygodniu czy raz w miesiącu systematycznie przeocza problemy, które pojawiły się i zdążyły narobić szkód między kolejnymi sprawdzeniami.</li>
+    <li><b>Pamięć ludzka zawodzi przy wielu kontach naraz.</b> Przy kilkunastu klientach łatwo przejść przez pełną procedurę sprawdzania dokładnie dla pierwszych dwóch kont i pobieżnie dla reszty, zwłaszcza pod presją czasu.</li>
+    <li><b>Czas poświęcony na ręczne sprawdzanie rośnie liniowo z liczbą kont.</b> Dziesięć kont wymaga dziesięciokrotnie więcej czasu niż jedno, bez żadnej korzyści skali, bo każde konto wymaga osobnego, ręcznego przejścia przez te same kroki.</li>
+    <li><b>Nowi członkowie zespołu nie znają historii konta.</b> Bez zapisanej normy trudno ocenić, czy bieżąca wartość jest typowa, czy już niepokojąca, zwłaszcza dla osoby, która dopiero dołączyła do obsługi danego klienta.</li>
+  </ul>
+
+  <h2>Jakie są dostępne opcje automatyzacji</h2>
+
+  <ul>
+    <li><b>Własny skrypt oparty na GA4 Data API.</b> Zespoły z zasobami programistycznymi mogą napisać własny skrypt odpytujący Data API cyklicznie i porównujący wyniki z zapisanymi progami. Daje pełną kontrolę nad logiką, ale wymaga utrzymania kodu, infrastruktury do jego uruchamiania oraz bieżącego dostosowywania do zmian w samym API.</li>
+    <li><b>Looker Studio z regułami warunkowymi.</b> Pozwala zbudować dashboard z wizualnym formatowaniem warunkowym, sygnalizującym odchylenie od normy kolorem. Nie wysyła jednak automatycznych powiadomień bez dodatkowej integracji i wymaga, żeby ktoś faktycznie otworzył dashboard, żeby zobaczyć ostrzeżenie.</li>
+    <li><b>Gotowe narzędzie SaaS zbudowane pod ten konkretny cel.</b> Narzędzia takie jak AlertGA4 łączą gotowy zestaw sprawdzeń, codzienne, automatyczne wykonanie i powiadomienie mailowe w jedną usługę, bez konieczności pisania ani utrzymywania własnego kodu.</li>
+  </ul>
+
+  <h2>Porównanie podejść</h2>
+
+  <table class="blog-table">
+    <tr><th>Cecha</th><th>Własny skrypt na Data API</th><th>Looker Studio</th><th>Gotowe narzędzie (np. AlertGA4)</th></tr>
+    <tr><td>Wymagana wiedza techniczna</td><td>Programowanie, znajomość API</td><td>Podstawy analizy danych, bez kodu</td><td>Brak, konfiguracja przez interfejs</td></tr>
+    <tr><td>Czas wdrożenia</td><td>Dni do tygodni</td><td>Godziny do dni</td><td>Kilkanaście minut</td></tr>
+    <tr><td>Automatyczne powiadomienia mailowe</td><td>Trzeba zbudować samodzielnie</td><td>Wymaga dodatkowej integracji</td><td>Wbudowane od razu</td></tr>
+    <tr><td>Utrzymanie w czasie</td><td>Stałe, po stronie zespołu</td><td>Umiarkowane</td><td>Po stronie dostawcy narzędzia</td></tr>
+    <tr><td>Gotowe reguły pod znane problemy GA4</td><td>Trzeba zaprojektować samodzielnie</td><td>Trzeba zaprojektować samodzielnie</td><td>Tak, od razu po podłączeniu</td></tr>
+    <tr><td>Koszt</td><td>Czas zespołu programistycznego</td><td>Bezpłatne narzędzie, czas na konfigurację</td><td>Płatny abonament</td></tr>
+  </table>
+
+  <h2>Jak wygląda automatyzacja bez pisania kodu krok po kroku</h2>
+
+  <ol>
+    <li>Połącz swoje konto Google z narzędziem monitorującym przez standardowe logowanie OAuth, nadając dostęp wyłącznie do odczytu danych GA4.</li>
+    <li>Wybierz usługę GA4 do podłączenia z listy kont, do których masz dostęp, albo wpisz identyfikator usługi ręcznie.</li>
+    <li>Przejdź przez kreator konfiguracji, który na podstawie realnych danych z Twojej usługi podpowiada, które zdarzenia, parametry i progi warto monitorować.</li>
+    <li>Ustaw adres mailowy, na który mają trafiać alerty, oraz zdecyduj, czy wolisz codzienne podsumowanie, czy wiadomość tylko wtedy, gdy faktycznie pojawi się problem.</li>
+    <li>Zapisz konfigurację. Od tego momentu sprawdzanie odbywa się automatycznie, codziennie, bez dalszego udziału z Twojej strony.</li>
+    <li>Reaguj na alerty w miarę ich otrzymywania, traktując brak wiadomości jako potwierdzenie, że wszystko mieści się w normie, a nie jako powód, żeby przestać zaglądać do dashboardu zupełnie.</li>
+  </ol>
+
+  <h2>Co powinien sprawdzać dobry zautomatyzowany system kontroli jakości</h2>
+
+  <ul>
+    <li><b>Codzienną częstotliwość, nie tygodniową czy miesięczną.</b> Im rzadziej system sprawdza dane, tym dłużej problem zdąży trwać, zanim ktokolwiek się o nim dowie.</li>
+    <li><b>Konkretne, znane checki, nie tylko ogólne metryki.</b> Informacja, że sesje spadły o 20 procent, mówi mniej niż informacja, że self-referral wzrósł do 4 procent sesji z typowego poziomu poniżej 1 procenta.</li>
+    <li><b>Diagnozę w powiadomieniu, nie tylko sam fakt zmiany.</b> Dobry alert mówi, która dokładnie wartość się zmieniła, jak bardzo i względem czego, zamiast zmuszać do ręcznego sprawdzania szczegółów po otrzymaniu ogólnego ostrzeżenia.</li>
+    <li><b>Wsparcie wielu kont z jednego miejsca.</b> Przy obsłudze więcej niż jednej usługi GA4 wartość automatyzacji rośnie proporcjonalnie do liczby kont, pod warunkiem że wszystkie da się przejrzeć z jednego, wspólnego miejsca.</li>
+    <li><b>Niski próg wejścia, dopasowany do zespołu bez zasobów programistycznych.</b> Jeśli wdrożenie automatyzacji samo w sobie wymaga tygodni pracy programisty, część zespołów nigdy jej nie uruchomi, mimo realnej potrzeby.</li>
+  </ul>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Zespoły marketingowe bez własnych zasobów programistycznych</b>, dla których napisanie własnego skryptu na Data API jest poza zasięgiem, ale potrzeba kontroli jakości danych jest tak samo realna.</li>
+    <li><b>Agencje obsługujące rosnącą liczbę kont GA4</b>, dla których ręczne sprawdzanie przestaje się skalować dokładnie w momencie, w którym biznes zaczyna rosnąć.</li>
+    <li><b>Zespoły programistyczne, które wdrożyły własny skrypt, ale nie mają czasu go utrzymywać</b>, dla których gotowe narzędzie bywa tańsze w przeliczeniu na czas niż dalsze utrzymanie własnego rozwiązania.</li>
+  </ul>
+`
+
+const QUALITY_AUTOMATION_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy automatyzacja kontroli jakości danych wymaga znajomości GA4 Data API?</summary>
+      <div class="blog-faq-answer"><p>Tylko jeśli budujesz własne rozwiązanie od podstaw. Gotowe narzędzia, takie jak AlertGA4, łączą się z GA4 przez standardowe logowanie Google i nie wymagają żadnej znajomości API ani programowania.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy Looker Studio wystarczy do automatyzacji kontroli jakości danych?</summary>
+      <div class="blog-faq-answer"><p>Looker Studio dobrze sprawdza się jako wizualny dashboard z formatowaniem warunkowym, ale nie wysyła automatycznych powiadomień bez dodatkowej integracji i wymaga, żeby ktoś aktywnie go otworzył, żeby zauważyć problem.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Ile czasu zajmuje wdrożenie gotowego narzędzia do automatyzacji?</summary>
+      <div class="blog-faq-answer"><p>Podłączenie jednej usługi GA4 i przejście przez kreator konfiguracji zajmuje zwykle kilkanaście minut. Codzienne, automatyczne sprawdzanie zaczyna działać od razu po zapisaniu konfiguracji.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy automatyzacja zastępuje potrzebę rozumienia danych w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie. Automatyzacja eliminuje potrzebę ręcznego, powtarzalnego sprawdzania tych samych wskaźników, ale decyzja, co zrobić z otrzymanym alertem, wciąż wymaga zrozumienia kontekstu biznesowego danego konta.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Co jeśli obsługuję kilkanaście kont GA4 dla różnych klientów?</summary>
+      <div class="blog-faq-answer"><p>To właśnie scenariusz, w którym automatyzacja daje największą korzyść. Narzędzia takie jak AlertGA4 pozwalają zarządzać wieloma usługami GA4 z jednego konta, z jednym dashboardem pokazującym wynik każdej z nich.</p></div>
+    </details>
+  </div>
+`
+
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'alerty-w-google-analytics-4',
@@ -731,7 +1205,10 @@ export const BLOG_POSTS: BlogPost[] = [
     title: 'Audyt GA4 — checklist 10 rzeczy, które warto sprawdzić, zanim zaufasz raportom',
     excerpt: 'Praktyczna lista kontrolna: dziesięć miejsc, w których GA4 najczęściej kłamie, zanim błąd trafi do miesięcznego raportu.',
     targetPhrase: 'audyt GA4',
-    status: 'coming-soon',
+    status: 'published',
+    publishedAt: '2026-11-05',
+    bodyHtml: AUDIT_CHECKLIST_BODY_HTML,
+    faqHtml: AUDIT_CHECKLIST_FAQ_HTML,
   },
   {
     slug: 'self-referral-ga4',
@@ -831,6 +1308,46 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-24',
     bodyHtml: REPORTING_CHECKLIST_BODY_HTML,
     faqHtml: REPORTING_CHECKLIST_FAQ_HTML,
+  },
+  {
+    slug: 'monitoring-zdarzen-ga4',
+    title: 'Monitoring zdarzeń GA4: jak to robić i dlaczego warto',
+    excerpt: 'Czym jest monitoring zdarzeń w GA4, jakie metody są dostępne (ręczne i automatyczne) i co się dzieje, gdy nikt go nie prowadzi.',
+    targetPhrase: 'monitoring zdarzeń GA4',
+    status: 'published',
+    publishedAt: '2026-11-05',
+    bodyHtml: MONITORING_EVENTS_BODY_HTML,
+    faqHtml: MONITORING_EVENTS_FAQ_HTML,
+  },
+  {
+    slug: 'weryfikacja-zdarzen-ga4',
+    title: 'Weryfikacja zdarzeń GA4: kompletny przewodnik krok po kroku',
+    excerpt: 'Jak sprawdzić, czy zdarzenie w GA4 faktycznie działa poprawnie: DebugView, podgląd GTM i na co zwracać uwagę przy weryfikacji.',
+    targetPhrase: 'weryfikacja zdarzeń GA4',
+    status: 'published',
+    publishedAt: '2026-11-05',
+    bodyHtml: EVENT_VERIFICATION_BODY_HTML,
+    faqHtml: EVENT_VERIFICATION_FAQ_HTML,
+  },
+  {
+    slug: 'rozbieznosci-danych-ga4',
+    title: 'Dlaczego liczby w GA4 się nie zgadzają? Najczęstsze przyczyny rozbieżności danych',
+    excerpt: 'Sampling, strefy czasowe, okna atrybucji i tryb zgodności — skąd biorą się rozbieżności między GA4 a innymi źródłami danych i jak je zdiagnozować.',
+    targetPhrase: 'rozbieżności danych GA4',
+    status: 'published',
+    publishedAt: '2026-11-05',
+    bodyHtml: DATA_DISCREPANCIES_BODY_HTML,
+    faqHtml: DATA_DISCREPANCIES_FAQ_HTML,
+  },
+  {
+    slug: 'automatyzacja-kontroli-jakosci-danych-ga4',
+    title: 'Jak zautomatyzować kontrolę jakości danych w GA4 (bez pisania kodu)',
+    excerpt: 'Dlaczego ręczna kontrola jakości danych w GA4 nie skaluje się i jakie są opcje automatyzacji, od własnego skryptu po gotowe narzędzie.',
+    targetPhrase: 'automatyzacja kontroli jakości danych GA4',
+    status: 'published',
+    publishedAt: '2026-11-05',
+    bodyHtml: QUALITY_AUTOMATION_BODY_HTML,
+    faqHtml: QUALITY_AUTOMATION_FAQ_HTML,
   },
 ]
 
