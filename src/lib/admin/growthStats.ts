@@ -34,11 +34,20 @@ function dayKey(d: Date): string {
 // just signed up on the 25th, even though that signup was already folded
 // into that same bucket's total). Labeling by the week's last day instead
 // makes the "as of" date match what the number actually reflects.
-function weekKey(d: Date): string {
+//
+// But the current week is still in progress — its Sunday hasn't happened
+// yet, so labeling it by that future date made the chart's "As of" date
+// (and last x-axis tick) show a day that hasn't occurred (e.g. "As of 8
+// Nov" when it's only the 6th). Cap the key at `now` so the open week is
+// labeled by today instead of its not-yet-reached end date; completed
+// weeks are unaffected since their Sunday is already in the past.
+function weekKey(d: Date, now: Date): string {
   const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
   const dayOfWeek = (monday.getUTCDay() + 6) % 7 // 0 = Monday
   monday.setUTCDate(monday.getUTCDate() - dayOfWeek + 6) // + 6 = that week's Sunday
-  return dayKey(monday)
+  const sunday = dayKey(monday)
+  const todayStr = dayKey(now)
+  return sunday > todayStr ? todayStr : sunday
 }
 
 // Builds a cumulative growth series (users + projects) over a shared set of
@@ -52,7 +61,7 @@ export function buildGrowthSeries(userDates: Date[], projectDates: Date[]): Grow
   const today = new Date()
   const rangeDays = Math.max(1, Math.ceil((today.getTime() - earliest.getTime()) / (24 * 60 * 60 * 1000)))
   const useWeekly = rangeDays > 60
-  const bucketFn = useWeekly ? weekKey : dayKey
+  const bucketFn = useWeekly ? (d: Date) => weekKey(d, today) : dayKey
 
   // Walk by key, not by raw date-vs-today comparison: stepping the cursor
   // exactly 7 days at a time from `earliest` only lands back on today's own
