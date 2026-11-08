@@ -7,6 +7,9 @@ import LandingCtaBand from '@/components/marketing/LandingCtaBand'
 import TrialPromoBanner from '@/components/marketing/TrialPromoBanner'
 import { LANDING_BASE_STYLES } from '@/components/marketing/landingStyles'
 import { getPostBySlug } from '@/lib/blog/posts'
+import UtmBuilder from '@/components/blog/UtmBuilder'
+
+const WIDGETS = { 'utm-builder': UtmBuilder } as const
 
 interface Props { params: Promise<{ slug: string }> }
 
@@ -53,6 +56,9 @@ export default async function BlogPostPage({ params }: Props) {
   const secondaryCta = user
     ? null
     : { href: '/login', label: 'Zaloguj się' }
+
+  const Widget = post.widget ? WIDGETS[post.widget] : null
+  const [bodyBefore, bodyAfter] = Widget ? (post.bodyHtml ?? '').split('<!--WIDGET-->') : [post.bodyHtml ?? '', '']
 
   const structuredData = {
     '@context': 'https://schema.org',
@@ -103,6 +109,8 @@ export default async function BlogPostPage({ params }: Props) {
         .blog-post-body a { color: #16a34a; }
         .blog-post-body i { color: #5b6570; }
 
+        .blog-post-body .blog-code { display: block; font-family: var(--font-mono), monospace; font-size: 13px; color: #232b31; background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 8px; padding: 12px 14px; margin: 0 0 16px; word-break: break-all; }
+
         .blog-figure { margin: 24px 0; }
         .blog-figure img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
         .blog-figure svg { width: 100%; height: auto; display: block; background: #fff; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
@@ -150,7 +158,11 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         <div className="wrap blog-post-body">
-          <article dangerouslySetInnerHTML={{ __html: post.bodyHtml ?? '' }} />
+          <article>
+            <div dangerouslySetInnerHTML={{ __html: bodyBefore }} />
+            {Widget && <Widget />}
+            {bodyAfter && <div dangerouslySetInnerHTML={{ __html: bodyAfter }} />}
+          </article>
           {!user && <TrialPromoBanner />}
           {post.faqHtml && <div dangerouslySetInnerHTML={{ __html: post.faqHtml }} />}
         </div>

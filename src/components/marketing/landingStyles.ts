@@ -184,4 +184,32 @@ export const LANDING_BASE_STYLES = `
   .trial-promo-banner p { font-size: 14px; color: #5b6570; margin: 0 0 18px; }
   .trial-promo-link { font-weight: 600; color: #232b31; text-decoration: none; border-bottom: 2px solid #232b31; padding-bottom: 2px; }
   .trial-promo-link:hover { color: #16a34a; border-color: #16a34a; }
+
+  /* UTM link builder — interactive widget embedded inside a blog article's
+     body. Plain form chrome matching the article's own card/border style
+     (same border/radius/colors as .blog-checklist), not a dashboard-style
+     component, since it renders on the public, logged-out marketing site. */
+  .blog-utm-builder { background: #fff; border: 1px solid #e2e6e8; border-radius: 14px; padding: 22px; margin: 24px 0; }
+  .blog-utm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .blog-utm-field { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; font-weight: 600; color: #232b31; }
+  .blog-utm-field--wide { grid-column: 1 / -1; }
+  .blog-utm-field input {
+    font-family: var(--font-sans), sans-serif; font-size: 14px; font-weight: 400; color: #232b31;
+    border: 1px solid #e2e6e8; border-radius: 8px; padding: 10px 12px; outline: none; background: #fff;
+  }
+  .blog-utm-field input:focus { border-color: #16a34a; }
+  .blog-utm-error { font-size: 13px; color: #b91c1c; margin-top: 14px; }
+  .blog-utm-output { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .blog-utm-output input {
+    flex: 1 1 260px; font-family: var(--font-mono), monospace; font-size: 12.5px; color: #232b31;
+    border: 1px solid #e2e6e8; border-radius: 8px; padding: 11px 12px; background: #f3f6f7; outline: none;
+  }
+  .blog-utm-output button {
+    flex-shrink: 0; font-family: var(--font-sans), sans-serif; font-weight: 600; font-size: 13.5px;
+    color: #fff; background: #232b31; border: none; border-radius: 8px; padding: 0 20px; cursor: pointer;
+  }
+  .blog-utm-output button:disabled { background: #c7ced1; cursor: not-allowed; }
+  .blog-utm-output button:not(:disabled):hover { box-shadow: 0 6px 20px -6px rgba(35,43,49,0.45); }
+  .blog-utm-hint { font-size: 12px; color: #8b939a; margin: 12px 0 0; line-height: 1.5; }
+  @media (max-width: 560px) { .blog-utm-grid { grid-template-columns: 1fr; } }
 `

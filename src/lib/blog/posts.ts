@@ -13,6 +13,12 @@ export interface BlogPost {
   publishedAt?: string // ISO date (YYYY-MM-DD)
   bodyHtml?: string
   faqHtml?: string // rendered after the trial banner, kept separate so the banner sits above the FAQ
+  // Name of an interactive client component to mount inline in the body.
+  // bodyHtml must contain the literal marker '<!--WIDGET-->' once, at the
+  // point where the component should render — see app/blog/[slug]/page.tsx,
+  // which splits bodyHtml on that marker and renders the component between
+  // the two halves.
+  widget?: 'utm-builder'
 }
 
 const ALERTS_BODY_HTML = `
@@ -1189,6 +1195,364 @@ const QUALITY_AUTOMATION_FAQ_HTML = `
   </div>
 `
 
+const AUTOMATIC_EVENTS_BODY_HTML = `
+  <p>Po podłączeniu GA4 do strony część zdarzeń pojawia się w raportach, zanim ktokolwiek napisze choć jedną linijkę kodu śledzącego. To bywa mylące: skoro GA4 samo zaczyna coś pokazywać, łatwo założyć, że wszystko, czego potrzebujesz, już działa.</p>
+
+  <p>W rzeczywistości GA4 dzieli zdarzenia na trzy wyraźnie różne kategorie, z różnym poziomem automatyzacji. Ten artykuł pokazuje, które zdarzenia zbierają się naprawdę same, które włączasz przełącznikiem, i dlaczego część parametrów, mimo że GA4 je wysyła, nie pojawia się nigdzie w raportach, dopóki ich ręcznie nie zarejestrujesz.</p>
+
+  <h2>Trzy kategorie zdarzeń w GA4</h2>
+
+  <p>Google dzieli zdarzenia w GA4 na trzy grupy, i ten podział jest kluczowy do zrozumienia, co faktycznie wymaga Twojej uwagi:</p>
+
+  <ul>
+    <li><b>Zdarzenia zbierane zawsze, bez możliwości wyłączenia.</b> Działają od razu po wdrożeniu podstawowego tagu GA4, niezależnie od żadnych ustawień.</li>
+    <li><b>Zdarzenia Pomiaru ulepszonego (Enhanced measurement).</b> Włączone domyślnie w większości przypadków, ale sterowane osobnymi przełącznikami, które można wyłączyć albo donastroić.</li>
+    <li><b>Zdarzenia rekomendowane i własne.</b> GA4 w ogóle ich nie zbiera, dopóki ktoś nie wyśle ich ręcznie, przez gtag, Google Tag Managera albo bezpośrednie wywołanie Measurement Protocol.</li>
+  </ul>
+
+  <h2>Zdarzenia, których GA4 nie da się wyłączyć</h2>
+
+  <p>Trzy zdarzenia działają zawsze, niezależnie od ustawień Pomiaru ulepszonego i niezależnie od tego, czy w ogóle wiesz o ich istnieniu:</p>
+
+  <ul>
+    <li><b>first_visit</b>, wysyłane raz, przy pierwszej wizycie danego użytkownika na stronie.</li>
+    <li><b>session_start</b>, wysyłane na początku każdej nowej sesji.</li>
+    <li><b>user_engagement</b>, wysyłane cyklicznie, dopóki użytkownik aktywnie korzysta ze strony na pierwszym planie przeglądarki. To ono stoi za metrykami związanymi z czasem zaangażowania.</li>
+  </ul>
+
+  <p>Te trzy zdarzenia nie wymagają żadnej konfiguracji ani decyzji z Twojej strony. Jedyne, co możesz z nimi zrobić, to je zignorować, bo wyłączenie po prostu nie jest opcją.</p>
+
+  <h2>Pomiar ulepszony: zdarzenia, które włączasz przełącznikiem</h2>
+
+  <p>Pomiar ulepszony (Enhanced measurement) to zestaw zdarzeń, które GA4 potrafi zbierać automatycznie z samego kodu strony, bez ręcznej implementacji w warstwie danych, pod warunkiem że dany przełącznik jest włączony. Każdy z nich da się wyłączyć osobno, co w praktyce rzadko ma sens, ale warto wiedzieć, że ta opcja istnieje.</p>
+
+  <table class="blog-table">
+    <tr><th>Zdarzenie</th><th>Co je wyzwala</th><th>Kluczowe parametry</th><th>Domyślnie włączone</th></tr>
+    <tr><td>page_view</td><td>wyświetlenie strony, w tym zmiana adresu w aplikacjach jednostronicowych</td><td>page_location, page_referrer, page_title</td><td>Tak</td></tr>
+    <tr><td>scroll</td><td>przewinięcie strony do co najmniej 90 procent jej długości</td><td>percent_scrolled</td><td>Tak</td></tr>
+    <tr><td>click</td><td>kliknięcie w link prowadzący poza bieżącą domenę</td><td>link_url, link_domain, outbound</td><td>Tak</td></tr>
+    <tr><td>view_search_result</td><td>wejście na adres URL zawierający rozpoznany parametr wyszukiwania</td><td>search_term</td><td>Tak</td></tr>
+    <tr><td>video_start / video_progress / video_complete</td><td>odtwarzanie osadzonego filmu z YouTube</td><td>video_title, video_url, video_current_time</td><td>Tak</td></tr>
+    <tr><td>file_download</td><td>kliknięcie w link prowadzący do pliku, np. pdf, docx, xlsx</td><td>file_name, file_extension, link_url</td><td>Tak</td></tr>
+    <tr><td>form_start / form_submit</td><td>pierwsza interakcja z formularzem oraz jego wysłanie</td><td>form_id, form_destination</td><td>Tak</td></tr>
+  </table>
+
+  <p>Wszystkie te przełączniki znajdują się w jednym miejscu: w ustawieniach strumienia danych Web.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 760 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ścieżka w panelu administracyjnym GA4 do ustawień Pomiaru ulepszonego: Administracja, Strumienie danych, wybór strumienia Web, ikona Pomiaru ulepszonego">
+      <defs>
+        <marker id="arrowA" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8b939a" />
+        </marker>
+      </defs>
+      <rect x="10" y="40" width="160" height="100" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="90" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#16a34a">KROK 1</text>
+      <text x="90" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Administracja</text>
+      <text x="90" y="104" text-anchor="middle" font-size="10.5" fill="#8b939a">ikona koła zębatego</text>
+      <text x="90" y="118" text-anchor="middle" font-size="10.5" fill="#8b939a">w lewym dolnym rogu</text>
+
+      <line x1="170" y1="90" x2="196" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowA)" />
+
+      <rect x="200" y="40" width="160" height="100" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="280" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#16a34a">KROK 2</text>
+      <text x="280" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Strumienie danych</text>
+      <text x="280" y="104" text-anchor="middle" font-size="10.5" fill="#8b939a">kolumna „Usługa”</text>
+      <text x="280" y="118" text-anchor="middle" font-size="10.5" fill="#8b939a">w panelu Administracji</text>
+
+      <line x1="360" y1="90" x2="386" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowA)" />
+
+      <rect x="390" y="40" width="160" height="100" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="470" y="62" text-anchor="middle" font-size="10" font-weight="700" fill="#16a34a">KROK 3</text>
+      <text x="470" y="84" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Twój strumień Web</text>
+      <text x="470" y="104" text-anchor="middle" font-size="10.5" fill="#8b939a">kliknij nazwę domeny</text>
+      <text x="470" y="118" text-anchor="middle" font-size="10.5" fill="#8b939a">na liście strumieni</text>
+
+      <line x1="550" y1="90" x2="576" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowA)" />
+
+      <rect x="580" y="30" width="170" height="120" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="665" y="55" text-anchor="middle" font-size="10" font-weight="700" fill="#16a34a">KROK 4</text>
+      <text x="665" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">Pomiar ulepszony</text>
+      <text x="665" y="98" text-anchor="middle" font-size="10.5" fill="#166534">ikona koła zębatego obok</text>
+      <text x="665" y="112" text-anchor="middle" font-size="10.5" fill="#166534">przełącznika u góry</text>
+    </svg>
+    <figcaption>Poglądowa ścieżka do ustawień Pomiaru ulepszonego w panelu administracyjnym GA4. Dokładny układ menu może się nieznacznie różnić w zależności od wersji interfejsu.</figcaption>
+  </figure>
+
+  <p>Po dotarciu do tego ekranu zobaczysz listę wszystkich zdarzeń z tabeli powyżej, każde z osobnym przełącznikiem. Warto przejrzeć ją raz po wdrożeniu i świadomie zdecydować, czy wszystkie są Ci rzeczywiście potrzebne, zamiast zostawiać domyślne ustawienia bez sprawdzenia.</p>
+
+  <h2>Parametr, który trzeba zadeklarować ręcznie: wyszukiwanie w witrynie</h2>
+
+  <p>Zdarzenie view_search_result jest dobrym przykładem tego, że „automatyczne” nie zawsze znaczy „zadziała bez żadnej konfiguracji”. GA4 uruchamia je, gdy w adresie URL wykryje jeden z rozpoznawanych parametrów wyszukiwania, najczęściej q, s, search, query albo keyword.</p>
+
+  <p>Problem pojawia się, gdy wyszukiwarka na Twojej stronie używa innej nazwy parametru, na przykład ?szukaj=buty zamiast ?q=buty. W takiej sytuacji GA4 nie rozpozna adresu jako wyniku wyszukiwania, zdarzenie view_search_result się nie uruchomi, a parametr search_term pozostanie pusty, mimo że użytkownik faktycznie czegoś szukał.</p>
+
+  <p>Rozwiązanie jest proste, ale trzeba o nim wiedzieć: w ustawieniach Pomiaru ulepszonego, przy sekcji wyszukiwania w witrynie, możesz dopisać własną nazwę parametru do listy rozpoznawanych.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 760 230" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Panel ustawień wyszukiwania w witrynie w Pomiarze ulepszonym GA4, z listą domyślnie rozpoznawanych parametrów URL i miejscem na dodanie własnego">
+      <defs>
+        <marker id="arrowB" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#16a34a" />
+        </marker>
+      </defs>
+
+      <rect x="10" y="10" width="330" height="210" rx="12" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="30" y="36" font-size="13" font-weight="700" fill="#232b31">Pomiar ulepszony</text>
+
+      <text x="30" y="68" font-size="11.5" fill="#3a4148">Wyświetlenia strony</text>
+      <rect x="268" y="58" width="34" height="16" rx="8" fill="#16a34a" />
+      <circle cx="294" cy="66" r="6" fill="#fff" />
+
+      <text x="30" y="100" font-size="11.5" fill="#3a4148">Przewijanie</text>
+      <rect x="268" y="90" width="34" height="16" rx="8" fill="#16a34a" />
+      <circle cx="294" cy="98" r="6" fill="#fff" />
+
+      <rect x="18" y="118" width="314" height="40" rx="8" fill="#f0fdf4" />
+      <text x="30" y="134" font-size="11.5" font-weight="600" fill="#166534">Wyszukiwanie w witrynie</text>
+      <rect x="208" y="124" width="34" height="16" rx="8" fill="#16a34a" />
+      <circle cx="234" cy="132" r="6" fill="#fff" />
+      <circle cx="300" cy="140" r="11" fill="#fff" stroke="#16a34a" stroke-width="1.5" />
+      <text x="300" y="144" text-anchor="middle" font-size="12" fill="#16a34a">⚙</text>
+      <text x="30" y="150" font-size="10" fill="#166534">parametry zapytania URL</text>
+
+      <text x="30" y="192" font-size="11.5" fill="#3a4148">Pobieranie plików</text>
+      <rect x="268" y="182" width="34" height="16" rx="8" fill="#16a34a" />
+      <circle cx="294" cy="190" r="6" fill="#fff" />
+
+      <line x1="311" y1="140" x2="420" y2="90" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arrowB)" />
+
+      <rect x="430" y="10" width="320" height="210" rx="12" fill="#fff" stroke="#16a34a" stroke-width="1.5" />
+      <text x="450" y="36" font-size="12.5" font-weight="700" fill="#232b31">Parametry zapytania wyszukiwania</text>
+      <text x="450" y="60" font-size="10.5" fill="#8b939a">Domyślnie rozpoznawane:</text>
+      <text x="450" y="78" font-size="11.5" fill="#5b6570">q · s · search · query · keyword</text>
+      <line x1="450" y1="92" x2="730" y2="92" stroke="#e2e6e8" />
+      <text x="450" y="114" font-size="10.5" fill="#8b939a">Dopisz własny, jeśli Twoja wyszukiwarka</text>
+      <text x="450" y="128" font-size="10.5" fill="#8b939a">używa innej nazwy parametru:</text>
+      <rect x="450" y="140" width="92" height="34" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4 3" />
+      <text x="496" y="162" text-anchor="middle" font-size="12.5" font-weight="700" fill="#166534">szukaj</text>
+      <circle cx="552" cy="157" r="10" fill="#16a34a" />
+      <text x="552" y="161" text-anchor="middle" font-size="13" fill="#fff">+</text>
+      <text x="450" y="196" font-size="10" fill="#8b939a">np. ?szukaj=buty zamiast ?q=buty</text>
+    </svg>
+    <figcaption>Domyślna lista parametrów wyszukiwania w ustawieniach Pomiaru ulepszonego i miejsce na dodanie własnego, niestandardowego parametru URL.</figcaption>
+  </figure>
+
+  <p>Bez tego kroku strony z niestandardową wyszukiwarką systematycznie tracą dane o tym, czego faktycznie szukają ich użytkownicy, mimo że cała reszta Pomiaru ulepszonego działa poprawnie.</p>
+
+  <h2>Dlaczego parametr może docierać do GA4, a mimo to nie widać go w raportach</h2>
+
+  <p>To jeden z najczęściej mylących mechanizmów w GA4. Zdarzenie i jego parametry mogą docierać do GA4 całkowicie poprawnie, widoczne nawet w szczegółach pojedynczego zdarzenia w raporcie czasu rzeczywistego, a mimo to nie będą dostępne jako kolumna czy wymiar w standardowych raportach ani w Eksploracjach.</p>
+
+  <p>Powód jest prosty: GA4 pokazuje parametr zdarzenia jako pełnoprawny wymiar do analizy dopiero wtedy, gdy zarejestrujesz go jako niestandardowy wymiar (custom dimension). Bez tego kroku parametr istnieje w surowych danych zdarzenia, ale nie da się go użyć do segmentacji, filtrowania ani budowy własnego zestawienia.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 620 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Formularz tworzenia niestandardowego wymiaru w GA4 dla parametru zdarzenia search_term">
+      <rect x="10" y="10" width="600" height="240" rx="12" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="30" y="40" font-size="14" font-weight="700" fill="#232b31">Nowy niestandardowy wymiar</text>
+
+      <text x="30" y="66" font-size="10.5" fill="#8b939a">Nazwa wymiaru</text>
+      <rect x="30" y="72" width="560" height="34" rx="6" fill="#f3f6f7" stroke="#e2e6e8" />
+      <text x="42" y="94" font-size="11.5" fill="#232b31">Hasło wyszukiwania</text>
+
+      <text x="30" y="128" font-size="10.5" fill="#8b939a">Zakres</text>
+      <rect x="30" y="134" width="270" height="34" rx="6" fill="#f3f6f7" stroke="#e2e6e8" />
+      <text x="42" y="156" font-size="11.5" fill="#232b31">Zdarzenie</text>
+      <text x="282" y="156" font-size="11" fill="#8b939a">▾</text>
+
+      <text x="320" y="128" font-size="10.5" fill="#8b939a">Parametr zdarzenia</text>
+      <rect x="320" y="134" width="270" height="34" rx="6" fill="#f3f6f7" stroke="#e2e6e8" />
+      <text x="332" y="156" font-family="monospace" font-size="11.5" fill="#232b31">search_term</text>
+
+      <rect x="460" y="196" width="140" height="38" rx="8" fill="#16a34a" />
+      <text x="530" y="220" text-anchor="middle" font-size="12.5" font-weight="700" fill="#fff">Zapisz wymiar</text>
+    </svg>
+    <figcaption>Rejestrowanie parametru zdarzenia jako niestandardowego wymiaru w GA4, na przykładzie parametru search_term wysyłanego przy zdarzeniu view_search_result.</figcaption>
+  </figure>
+
+  <p>Warto pamiętać, że standardowa usługa GA4 pozwala zarejestrować ograniczoną liczbę niestandardowych wymiarów na poziomie zdarzenia, więc nie opłaca się rejestrować każdego parametru z automatu. Lepiej świadomie wybrać te, które faktycznie wykorzystasz w analizie, raportach albo segmentacji.</p>
+
+  <h2>Zdarzenia rekomendowane i własne: to, czego GA4 w ogóle nie zbiera samo</h2>
+
+  <p>Trzecia kategoria to zdarzenia, które GA4 nie zbiera w żaden automatyczny sposób, niezależnie od ustawień Pomiaru ulepszonego. Dzielą się na dwie grupy:</p>
+
+  <ul>
+    <li><b>Zdarzenia rekomendowane.</b> Google publikuje gotowe nazwy i schematy parametrów dla typowych akcji biznesowych: login, sign_up, purchase, add_to_cart, generate_lead, begin_checkout i podobne. GA4 rozumie te nazwy i poprawnie je prezentuje w standardowych raportach e-commerce, ale musisz je wysłać samodzielnie, przez gtag albo Google Tag Managera.</li>
+    <li><b>Zdarzenia własne.</b> Akcje specyficzne dla Twojego biznesu, takie jak pobranie cennika, zapis do newslettera czy otwarcie konkretnego kalkulatora, nie mają żadnej gotowej nazwy w GA4. Nazwę, strukturę i parametry ustalasz od zera, najlepiej trzymając się tej samej konwencji nazewnictwa co w zdarzeniach rekomendowanych: małe litery, podkreślenia zamiast spacji.</li>
+  </ul>
+
+  <p>Oba typy wymagają tego samego: kogoś, kto zaimplementuje je w warstwie danych albo bezpośrednio w kodzie, i kto przetestuje, że faktycznie docierają do GA4 z poprawnymi parametrami, zanim zacznie się na nich opierać raportowanie. Sposób takiej weryfikacji opisaliśmy osobno w <a href="/blog/weryfikacja-zdarzen-ga4">artykule o weryfikacji zdarzeń GA4</a>.</p>
+
+  <h2>Checklist po wdrożeniu GA4</h2>
+
+  <figure class="blog-figure">
+    <div class="blog-checklist">
+      <div class="blog-checklist-head">Zanim uznasz wdrożenie GA4 za kompletne</div>
+      <ul class="blog-checklist-list">
+        <li><span class="blog-checklist-check">✓</span> Przejrzałeś listę przełączników Pomiaru ulepszonego i świadomie zdecydowałeś, które zostają włączone</li>
+        <li><span class="blog-checklist-check">✓</span> Jeśli wyszukiwarka na stronie używa własnego parametru URL, dopisałeś go do listy rozpoznawanych</li>
+        <li><span class="blog-checklist-check">✓</span> Kluczowe parametry zdarzeń (np. search_term, currency, transaction_id) są zarejestrowane jako niestandardowe wymiary</li>
+        <li><span class="blog-checklist-check">✓</span> Zdarzenia rekomendowane dla kluczowych akcji biznesowych (zakup, lead, rejestracja) są wdrożone pod właściwą, oczekiwaną przez GA4 nazwą</li>
+        <li><span class="blog-checklist-check">✓</span> Zdarzenia własne, specyficzne dla Twojego biznesu, mają spójną konwencję nazewnictwa</li>
+        <li><span class="blog-checklist-check">✓</span> Każde nowe zdarzenie zostało zweryfikowane w DebugView przed uznaniem wdrożenia za zakończone</li>
+      </ul>
+    </div>
+  </figure>
+
+  <h2>Jak AlertGA4 pilnuje pokrycia zdarzeń i parametrów</h2>
+
+  <p>Nawet poprawnie wdrożone zdarzenia i parametry potrafią przestać działać miesiące po wdrożeniu, przy zupełnie niezwiązanej zmianie na stronie. AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność skonfigurowanych zdarzeń oraz pokrycie ich parametrów, porównując bieżący dzień z historyczną normą tego samego konta.</p>
+
+  <figure class="blog-figure">
+    <img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" />
+    <figcaption>Każde monitorowane zdarzenie ma własny status, bieżący wolumen i zmianę względem poprzedniego okresu.</figcaption>
+  </figure>
+
+  <p>Gdy kluczowy parametr, na przykład search_term albo transaction_id, przestaje docierać razem ze zdarzeniem, dostajesz maila tego samego dnia, zamiast dowiadywać się o tym przy okazji miesięcznego przeglądu danych.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Osoby wdrażające GA4 samodzielnie, bez agencji</b>, dla których rozróżnienie między zdarzeniami automatycznymi a tymi wymagającymi ręcznej deklaracji nie jest oczywiste od razu.</li>
+    <li><b>Sklepy i strony z własną wyszukiwarką</b>, które najczęściej tracą dane o wyszukiwanych frazach właśnie przez niestandardowy parametr URL.</li>
+    <li><b>Analitycy budujący własne raporty i segmenty</b>, którzy natrafiają na parametr widoczny w danych surowych, ale niedostępny jako wymiar, dopóki nie zarejestrują go ręcznie.</li>
+  </ul>
+
+  <p>Największy koszt tej kategorii błędów to nie brak danych w ogóle, tylko fałszywe poczucie, że dane są kompletne, podczas gdy w rzeczywistości brakuje jednego świadomego kroku konfiguracyjnego, o którym nikt nie pomyślał przy wdrożeniu.</p>
+`
+
+const AUTOMATIC_EVENTS_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy page_view jest zdarzeniem automatycznym w GA4?</summary>
+      <div class="blog-faq-answer"><p>Technicznie jest częścią Pomiaru ulepszonego, nie zdarzeń zbieranych bezwarunkowo jak first_visit czy session_start. Jest domyślnie włączony i da się go wyłączyć w ustawieniach strumienia, choć w praktyce prawie nikt tego nie robi.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Jak dodać własny parametr wyszukiwania do GA4?</summary>
+      <div class="blog-faq-answer"><p>W ustawieniach Pomiaru ulepszonego, w sekcji wyszukiwania w witrynie, dopisz nazwę parametru URL używanego przez Twoją wyszukiwarkę do listy rozpoznawanych, obok domyślnych, takich jak q czy search.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Dlaczego parametr zdarzenia nie pojawia się w raportach GA4, mimo że widzę go w czasie rzeczywistym?</summary>
+      <div class="blog-faq-answer"><p>Bo sama obecność parametru w danych zdarzenia to za mało, żeby stał się wymiarem dostępnym do analizy. Trzeba zarejestrować go jako niestandardowy wymiar w ustawieniach usługi.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czym różnią się zdarzenia rekomendowane od zdarzeń własnych?</summary>
+      <div class="blog-faq-answer"><p>Zdarzenia rekomendowane mają gotową nazwę i schemat parametrów zdefiniowany przez Google, np. purchase czy sign_up. Zdarzenia własne nie mają żadnego gotowego wzorca, nazwę i parametry ustalasz samodzielnie.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy samo włączenie Pomiaru ulepszonego wystarczy, żeby mieć kompletne dane w GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie. Pomiar ulepszony pokrywa typowe interakcje ogólne, ale nie obejmuje zdarzeń biznesowych, takich jak zakup czy rejestracja, ani zdarzeń specyficznych dla Twojej strony, które zawsze trzeba wdrożyć ręcznie.</p></div>
+    </details>
+  </div>
+`
+
+const UTM_BODY_HTML = `
+  <p>UTM to pięć krótkich parametrów doklejanych do adresu URL, które mówią GA4 (i każdemu innemu narzędziu analitycznemu), skąd dokładnie pochodzi dany ruch. Nazwa pochodzi od Urchin Tracking Module, systemu firmy Urchin Software, którą Google przejął w 2005 roku i na którego bazie zbudował pierwszą wersję Google Analytics.</p>
+
+  <p>Ten artykuł pokazuje, czym są poszczególne parametry UTM, jak GA4 je wykorzystuje, jakich zasad trzymać się przy ich budowaniu, i zawiera gotowy generator, który sam złoży poprawny link na podstawie wpisanych przez Ciebie wartości.</p>
+
+  <h2>Czym są parametry UTM</h2>
+
+  <p>UTM to zwykłe parametry zapytania w adresie URL, dokładnie takie same technicznie jak każdy inny ciąg po znaku zapytania. GA4 rozpoznaje pięć konkretnych nazw tych parametrów i na ich podstawie przypisuje sesję do konkretnego źródła, medium i kampanii, zamiast polegać wyłącznie na automatycznym wykrywaniu na podstawie nagłówka referrer.</p>
+
+  <p>Przykład pełnego linku z UTM:</p>
+
+  <code class="blog-code">https://twojastrona.pl/oferta?utm_source=newsletter&utm_medium=email&utm_campaign=black-friday-2026</code>
+
+  <h2>Pięć parametrów UTM i do czego służy każdy z nich</h2>
+
+  <table class="blog-table">
+    <tr><th>Parametr</th><th>Do czego służy</th><th>Przykładowa wartość</th><th>Wymagany</th></tr>
+    <tr><td>utm_source</td><td>skąd pochodzi ruch, konkretne źródło</td><td>newsletter, facebook, google</td><td>Tak</td></tr>
+    <tr><td>utm_medium</td><td>rodzaj kanału, przez który trafia ruch</td><td>email, cpc, social, referral</td><td>Tak</td></tr>
+    <tr><td>utm_campaign</td><td>nazwa konkretnej kampanii albo akcji</td><td>black-friday-2026, newsletter-tygodniowy</td><td>Tak</td></tr>
+    <tr><td>utm_term</td><td>słowo kluczowe, głównie przy płatnych kampaniach w wyszukiwarce</td><td>monitoring-ga4</td><td>Nie</td></tr>
+    <tr><td>utm_content</td><td>rozróżnienie wariantów w ramach tej samej kampanii</td><td>baner-gorny, link-w-stopce</td><td>Nie</td></tr>
+  </table>
+
+  <p>Trzy pierwsze parametry warto traktować jako obowiązkowe przy każdym linku kampanijnym. utm_term i utm_content przydają się głównie wtedy, gdy w ramach jednej kampanii testujesz kilka wariantów kreacji albo kilka grup słów kluczowych i chcesz je rozróżnić w raportach.</p>
+
+  <h2>Jak GA4 wykorzystuje parametry UTM</h2>
+
+  <p>Bez żadnych UTM GA4 i tak przypisze sesję do jakiegoś źródła i medium, na podstawie nagłówka referrer przeglądarki albo rozpoznanych parametrów reklamowych, takich jak gclid dla Google Ads. Problem w tym, że automatyczne wykrywanie dobrze radzi sobie z ruchem z wyszukiwarek i znanych platform reklamowych, ale nie ma szans rozpoznać kanałów takich jak newsletter, link w poście na Facebooku czy baner w aplikacji partnera.</p>
+
+  <p>UTM nadpisuje to automatyczne wykrywanie. Gdy GA4 widzi w adresie URL utm_source i utm_medium, przypisuje sesję dokładnie do tych wartości, niezależnie od tego, co pokazywałby sam nagłówek referrer. To daje kontrolę, ale oznacza też, że błędnie dobrany UTM potrafi zepsuć atrybucję równie skutecznie co jego brak, tylko w drugą stronę: zamiast braku danych o źródle, dostajesz dane fałszywe, które wyglądają na kompletne i wiarygodne.</p>
+
+  <h2>Zasady budowania UTM, które oszczędzają problemy później</h2>
+
+  <ul>
+    <li><b>Zawsze małe litery.</b> GA4 traktuje wartości parametrów jako dosłowne ciągi znaków, więc „Facebook” i „facebook” to dwa osobne wiersze w raporcie źródła i medium, mimo że dla człowieka to oczywiście to samo źródło.</li>
+    <li><b>Jedna, spójna nazwa dla tego samego kanału.</b> Jeśli raz użyjesz utm_medium=email, a innym razem utm_medium=mailing albo utm_medium=newsletter dla tego samego typu wysyłki, GA4 pokaże je jako trzy różne media, co rozmywa realny obraz tego kanału w raportach.</li>
+    <li><b>Myślniki zamiast spacji.</b> Spacja w adresie URL zamienia się na nieczytelny ciąg %20, co utrudnia odczytanie linku gołym okiem, na przykład w logach serwera czy podglądzie udostępnionego linku.</li>
+    <li><b>Spisana konwencja nazewnictwa dla całego zespołu.</b> Przy więcej niż jednej osobie budującej linki kampanijne warto mieć wspólny arkusz z listą używanych już wartości source i medium, żeby nikt nie wymyślał nowego wariantu nazwy tam, gdzie już istnieje ustalony.</li>
+    <li><b>utm_campaign opisowe, ale nie przesadnie długie.</b> Nazwa kampanii powinna dać się rozpoznać za pół roku w raporcie, bez konieczności przypominania sobie, co dokładnie oznaczała.</li>
+  </ul>
+
+  <h2>Zbuduj link z UTM</h2>
+
+  <p>Wpisz adres strony docelowej i wartości parametrów poniżej. Generator sam złoży pełny link, zamieni wielkie litery na małe i spacje na myślniki, i pozwoli skopiować gotowy adres jednym kliknięciem.</p>
+
+<!--WIDGET-->
+
+  <h2>Najczęstszy błąd: tagowanie linków na własnej stronie</h2>
+
+  <p>Najpoważniejszy, a jednocześnie najczęściej popełniany błąd przy UTM to doklejanie ich do linków prowadzących do własnej domeny, na przykład w linku w stopce maila prowadzącym z powrotem na stronę główną, albo w linku w menu nawigacyjnym.</p>
+
+  <p>UTM jest pomyślany jako informacja o tym, skąd użytkownik przyszedł z zewnątrz, nie jako sposób na oznaczanie ruchu wewnątrz własnej strony. Kliknięcie w wewnętrzny link z doklejonym UTM potrafi uruchomić w GA4 nową sesję i nadpisać oryginalne źródło, z którego użytkownik faktycznie trafił na stronę, zastępując je przypadkowym wewnętrznym tagiem. To jeden z mechanizmów opisanych szerzej w <a href="/blog/self-referral-ga4">artykule o self-referral w GA4</a>, i jedna z najczęstszych przyczyn tego problemu w praktyce.</p>
+
+  <h2>Inne częste błędy</h2>
+
+  <ul>
+    <li><b>Brak utm_medium przy obecnym utm_source.</b> Samo źródło bez medium daje niepełny obraz, bo GA4 grupuje kanały na podstawie kombinacji obu wartości, nie tylko source.</li>
+    <li><b>Niesprawdzony link przed publikacją.</b> Literówka w nazwie parametru, na przykład utmsource zamiast utm_source, sprawia, że GA4 w ogóle nie rozpozna wartości, a cały ruch z danego linku trafi do automatycznie wykrytego kanału zamiast do oznaczonej kampanii.</li>
+    <li><b>Różne wartości dla tej samej platformy w różnych kampaniach.</b> Jeśli jedna osoba w zespole używa utm_source=ig, a druga utm_source=instagram, w raporcie powstają dwa osobne wiersze zamiast jednego, spójnego źródła.</li>
+    <li><b>Tagowanie organicznych postów w social media jako płatnych.</b> Skopiowanie szablonu UTM z kampanii płatnej do zwykłego, bezpłatnego posta zawyża w raportach wolumen ruchu płatnego kosztem organicznego.</li>
+  </ul>
+
+  <h2>Jak AlertGA4 wiąże się z jakością UTM</h2>
+
+  <p>AlertGA4 nie buduje ani nie waliduje samych linków UTM, ale codziennie sprawdza skutki ich błędnego użycia: nagły wzrost udziału self-referral, nietypowy skok konkretnego medium względem typowej normy konta czy spadek ruchu organicznego, który często towarzyszy błędnie otagowanym kampaniom. Jeśli coś takiego się pojawi, dostajesz maila z konkretną diagnozą tego samego dnia, zamiast zauważyć to dopiero przy miesięcznym podsumowaniu.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Zespoły marketingowe prowadzące kilka kanałów naraz</b>, dla których spójna konwencja UTM jest jedynym sposobem na rzetelne porównanie skuteczności poszczególnych kampanii.</li>
+    <li><b>Agencje budujące linki dla wielu klientów</b>, gdzie brak wspólnej konwencji nazewnictwa między osobami w zespole szybko prowadzi do rozjechanych raportów.</li>
+    <li><b>Każdy, kto wysyła newsletter albo prowadzi kampanię płatną</b>, bo bez UTM te dwa kanały, mimo że generują realny, wartościowy ruch, często giną w GA4 pod ogólną etykietą ruchu bezpośredniego albo organicznego.</li>
+  </ul>
+
+  <p>UTM to jeden z niewielu elementów pomiaru, nad którym masz pełną kontrolę, zanim jeszcze ruch dotrze do GA4. Dobrze zbudowany, konsekwentnie stosowany UTM kosztuje kilka sekund przy tworzeniu linku, a oszczędza godziny prób odtworzenia, skąd faktycznie przyszedł ruch, miesiące później.</p>
+`
+
+const UTM_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy parametry UTM wpływają na SEO albo pozycję strony w wyszukiwarce?</summary>
+      <div class="blog-faq-answer"><p>Nie. UTM to wyłącznie parametry śledzące, odczytywane przez narzędzia analityczne. Nie mają wpływu na ranking, o ile strona ma poprawnie ustawiony tag kanoniczny, który i tak zwykle jest potrzebny niezależnie od UTM.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy można używać UTM w linkach wewnętrznych na własnej stronie?</summary>
+      <div class="blog-faq-answer"><p>Lepiej tego unikać. To jedna z najczęstszych przyczyn self-referral, bo kliknięcie w wewnętrzny link z UTM potrafi nadpisać oryginalne źródło ruchu danego użytkownika.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy wielkość liter w UTM ma znaczenie w GA4?</summary>
+      <div class="blog-faq-answer"><p>Tak. GA4 traktuje wartości parametrów jako dosłowne ciągi znaków, więc „Facebook” i „facebook” pojawią się w raportach jako dwa osobne wiersze.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy utm_term i utm_content są obowiązkowe?</summary>
+      <div class="blog-faq-answer"><p>Nie. Tylko utm_source, utm_medium i utm_campaign uznaje się za podstawowe. utm_term i utm_content są pomocnicze, przydatne głównie przy rozróżnianiu wariantów w ramach jednej kampanii.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy wygenerowany link z UTM da się później skrócić?</summary>
+      <div class="blog-faq-answer"><p>Tak, zewnętrznym serwisem do skracania linków. Warto jednak zachować gdzieś pełną, czytelną wersję linku na własny użytek, bo sam skrócony adres nie pokazuje już, jakie wartości UTM faktycznie zawiera.</p></div>
+    </details>
+  </div>
+`
+
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'alerty-w-google-analytics-4',
@@ -1348,6 +1712,27 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: QUALITY_AUTOMATION_BODY_HTML,
     faqHtml: QUALITY_AUTOMATION_FAQ_HTML,
+  },
+  {
+    slug: 'automatyczne-zdarzenia-ga4',
+    title: 'Automatyczne zdarzenia w GA4: co zbiera się samo, a co trzeba zadeklarować',
+    excerpt: 'Które zdarzenia GA4 zbiera bez żadnej konfiguracji, które włączasz przełącznikiem Pomiaru ulepszonego, i dlaczego część parametrów trzeba dodatkowo zarejestrować, żeby zobaczyć je w raportach.',
+    targetPhrase: 'automatyczne zdarzenia GA4',
+    status: 'published',
+    publishedAt: '2026-11-08',
+    bodyHtml: AUTOMATIC_EVENTS_BODY_HTML,
+    faqHtml: AUTOMATIC_EVENTS_FAQ_HTML,
+  },
+  {
+    slug: 'utm-budowanie-linkow-ga4',
+    title: 'UTM w GA4: jak budować linki do śledzenia źródeł ruchu (z generatorem)',
+    excerpt: 'Czym są parametry UTM, jak poprawnie budować linki kampanijne i jakich błędów unikać, żeby ta sama kampania nie rozjechała się w raportach GA4. Z wbudowanym generatorem linków.',
+    targetPhrase: 'UTM GA4',
+    status: 'published',
+    publishedAt: '2026-11-08',
+    bodyHtml: UTM_BODY_HTML,
+    faqHtml: UTM_FAQ_HTML,
+    widget: 'utm-builder',
   },
 ]
 
