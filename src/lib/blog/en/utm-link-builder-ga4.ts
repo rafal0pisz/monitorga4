@@ -5,6 +5,12 @@ const BODY_HTML = `
 
   <p>This article covers what each UTM parameter does, how GA4 uses them, which rules to follow when building them, and includes a ready-made generator that assembles a correct link from whatever values you type in.</p>
 
+  <h2>Build a link with UTM</h2>
+
+  <p>Enter your destination URL and parameter values below. The generator will assemble the full link, convert uppercase letters to lowercase and spaces to hyphens, and let you copy the finished address with one click. It will also show you, live, which GA4 default channel the utm_source and utm_medium values you type would be assigned to, before you ever send a single link.</p>
+
+<!--WIDGET-->
+
   <h2>What are UTM parameters</h2>
 
   <p>UTM parameters are plain query string parameters in a URL, technically no different from any other string after the question mark. GA4 recognizes five specific parameter names and uses them to assign a session to a specific source, medium, and campaign, instead of relying only on automatic detection based on the referrer header.</p>
@@ -107,12 +113,6 @@ const BODY_HTML = `
   </table>
 
   <p>A sheet like this does two things at once: it's a history of every link sent, worth coming back to months later, and it's also a dictionary of the source and medium values already in use, one that every new person on the team should check before inventing their own variant of a name.</p>
-
-  <h2>Build a link with UTM</h2>
-
-  <p>Enter your destination URL and parameter values below. The generator will assemble the full link, convert uppercase letters to lowercase and spaces to hyphens, and let you copy the finished address with one click. It will also show you, live, which GA4 default channel the utm_source and utm_medium values you type would be assigned to, before you ever send a single link.</p>
-
-<!--WIDGET-->
 
   <h2>The most common mistake: tagging links on your own site</h2>
 

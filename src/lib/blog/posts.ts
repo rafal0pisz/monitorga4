@@ -1458,6 +1458,12 @@ const UTM_BODY_HTML = `
 
   <p>Ten artykuł pokazuje, czym są poszczególne parametry UTM, jak GA4 je wykorzystuje, jakich zasad trzymać się przy ich budowaniu, i zawiera gotowy generator, który sam złoży poprawny link na podstawie wpisanych przez Ciebie wartości.</p>
 
+  <h2>Zbuduj link z UTM</h2>
+
+  <p>Wpisz adres strony docelowej i wartości parametrów poniżej. Generator sam złoży pełny link, zamieni wielkie litery na małe i spacje na myślniki, i pozwoli skopiować gotowy adres jednym kliknięciem. Na bieżąco zobaczysz też, do jakiego domyślnego kanału GA4 trafiłby ruch z wpisanych przez Ciebie wartości utm_source i utm_medium, zanim jeszcze wyślesz jakikolwiek link.</p>
+
+<!--WIDGET-->
+
   <h2>Czym są parametry UTM</h2>
 
   <p>UTM to zwykłe parametry zapytania w adresie URL, dokładnie takie same technicznie jak każdy inny ciąg po znaku zapytania. GA4 rozpoznaje pięć konkretnych nazw tych parametrów i na ich podstawie przypisuje sesję do konkretnego źródła, medium i kampanii, zamiast polegać wyłącznie na automatycznym wykrywaniu na podstawie nagłówka referrer.</p>
@@ -1560,12 +1566,6 @@ const UTM_BODY_HTML = `
   </table>
 
   <p>Taki arkusz pełni dwie funkcje naraz: jest historią wszystkich wysłanych linków, do której można wrócić miesiące później, i jednocześnie słownikiem już użytych wartości source i medium, który każda nowa osoba w zespole powinna sprawdzić, zanim wymyśli własny wariant nazwy.</p>
-
-  <h2>Zbuduj link z UTM</h2>
-
-  <p>Wpisz adres strony docelowej i wartości parametrów poniżej. Generator sam złoży pełny link, zamieni wielkie litery na małe i spacje na myślniki, i pozwoli skopiować gotowy adres jednym kliknięciem. Na bieżąco zobaczysz też, do jakiego domyślnego kanału GA4 trafiłby ruch z wpisanych przez Ciebie wartości utm_source i utm_medium, zanim jeszcze wyślesz jakikolwiek link.</p>
-
-<!--WIDGET-->
 
   <h2>Najczęstszy błąd: tagowanie linków na własnej stronie</h2>
 
