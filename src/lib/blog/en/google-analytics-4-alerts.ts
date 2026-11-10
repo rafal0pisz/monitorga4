@@ -161,7 +161,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'google-analytics-4-alerts',
   plSlug: 'alerty-w-google-analytics-4',
-  title: "Alerts in Google Analytics 4: What They Can and Can't Do",
+  title: "Alerts in Google Analytics 4: what they can and can't do",
   excerpt: 'What Insights in GA4 is, how to set it up, where its limits are, and how it differs from everyday monitoring with AlertGA4.',
   targetPhrase: 'GA4 alerts',
   status: 'published',

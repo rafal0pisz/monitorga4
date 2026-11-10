@@ -89,7 +89,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-reporting-checklist',
   plSlug: 'checklist-raportowania-ga4',
-  title: "GA4 Reporting Checklist for Agencies: What to Check Before You Send a Client Report",
+  title: "GA4 reporting checklist for agencies: what to check before you send a client report",
   excerpt: 'Eight checkpoints worth running through before every recurring GA4 report, so you never send a client inflated or incomplete numbers.',
   targetPhrase: 'GA4 reporting checklist',
   status: 'published',

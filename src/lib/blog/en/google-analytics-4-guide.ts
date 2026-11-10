@@ -236,7 +236,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'google-analytics-4-guide',
   plSlug: 'google-analytics-4-przewodnik',
-  title: 'Google Analytics 4: The Complete Guide to the Platform, Its Strengths, and Its Limitations',
+  title: 'Google Analytics 4: the complete guide to the platform, its strengths, and its limitations',
   excerpt: 'What GA4 is, what it’s used for, its strengths and weaknesses, how it connects web and mobile app data, and exactly what User-ID is.',
   targetPhrase: 'Google Analytics 4 guide',
   status: 'published',

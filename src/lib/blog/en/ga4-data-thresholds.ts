@@ -111,7 +111,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-data-thresholds',
   plSlug: 'progi-danych-ga4',
-  title: 'GA4 Data Thresholds: Why Your Report Suddenly Shows Empty Rows',
+  title: 'GA4 data thresholds: why your report suddenly shows empty rows',
   excerpt: 'What data thresholds are in GA4, when they kick in, and how to tell a hidden row apart from a genuine lack of traffic.',
   targetPhrase: 'GA4 data thresholds',
   status: 'published',

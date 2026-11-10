@@ -77,7 +77,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-audit-checklist',
   plSlug: 'audyt-ga4-checklist',
-  title: 'GA4 Audit Checklist: 10 Things to Check Before You Trust Your Reports',
+  title: 'GA4 audit checklist: 10 things to check before you trust your reports',
   excerpt: 'A practical checklist: ten places where GA4 most often gets it wrong, before the error ends up in a monthly report.',
   targetPhrase: 'GA4 audit checklist',
   status: 'published',

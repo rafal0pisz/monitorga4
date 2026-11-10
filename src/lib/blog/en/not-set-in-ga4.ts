@@ -89,7 +89,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'not-set-in-ga4',
   plSlug: 'not-set-ga4',
-  title: 'Why You\'re Seeing "(not set)" in GA4 and How to Fix It Step by Step',
+  title: 'Why you\'re seeing "(not set)" in GA4 and how to fix it step by step',
   excerpt: 'The most common sources of "(not set)" in source, channel, and landing page, and how to reduce how often it shows up.',
   targetPhrase: '(not set) in GA4',
   status: 'published',

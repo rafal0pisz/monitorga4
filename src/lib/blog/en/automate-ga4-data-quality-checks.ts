@@ -92,7 +92,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'automate-ga4-data-quality-checks',
   plSlug: 'automatyzacja-kontroli-jakosci-danych-ga4',
-  title: 'How to Automate GA4 Data Quality Checks (Without Writing Code)',
+  title: 'How to automate GA4 data quality checks (without writing code)',
   excerpt: "Why manual GA4 data quality checks don't scale, and what automation options exist, from a custom script to a ready-made tool.",
   targetPhrase: 'automate GA4 data quality checks',
   status: 'published',

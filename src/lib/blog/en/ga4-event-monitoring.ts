@@ -101,7 +101,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-event-monitoring',
   plSlug: 'monitoring-zdarzen-ga4',
-  title: 'GA4 Event Monitoring: How to Do It and Why It Matters',
+  title: 'GA4 event monitoring: how to do it and why it matters',
   excerpt: 'What event monitoring in GA4 actually is, which methods are available (manual and automated), and what happens when nobody keeps watch.',
   targetPhrase: 'GA4 event monitoring',
   status: 'published',

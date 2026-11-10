@@ -88,7 +88,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-data-discrepancies',
   plSlug: 'rozbieznosci-danych-ga4',
-  title: "Why GA4 Numbers Don't Match: The Most Common Causes of Data Discrepancies",
+  title: "Why GA4 numbers don't match: the most common causes of data discrepancies",
   excerpt: 'Sampling, time zones, attribution windows, and Consent Mode: where discrepancies between GA4 and other data sources come from, and how to diagnose them.',
   targetPhrase: 'GA4 data discrepancies',
   status: 'published',

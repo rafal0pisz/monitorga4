@@ -133,7 +133,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'bot-traffic-ga4',
   plSlug: 'ruch-botowy-ga4',
-  title: "Bot Traffic in GA4: How to Spot It and Deal With It (Even Outside GA4)",
+  title: "Bot traffic in GA4: how to spot it and deal with it (even outside GA4)",
   excerpt: "How to spot bot traffic that got past GA4's default filter, and which solutions reduce bots before they even reach your site.",
   targetPhrase: 'bot traffic GA4',
   status: 'published',

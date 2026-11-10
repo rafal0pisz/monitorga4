@@ -248,7 +248,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-automatically-collected-events',
   plSlug: 'automatyczne-zdarzenia-ga4',
-  title: "Automatically Collected Events in GA4: What's Tracked on Its Own, and What You Still Have to Declare",
+  title: "Automatically collected events in GA4: what's tracked on its own, and what you still have to declare",
   excerpt: 'Which events GA4 collects with zero configuration, which ones you switch on through Enhanced measurement, and why some parameters still need to be registered by hand before they show up in reports.',
   targetPhrase: 'GA4 automatically collected events',
   status: 'published',

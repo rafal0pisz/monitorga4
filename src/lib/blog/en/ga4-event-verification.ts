@@ -91,7 +91,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'ga4-event-verification',
   plSlug: 'weryfikacja-zdarzen-ga4',
-  title: 'GA4 Event Verification: A Complete Step-by-Step Guide',
+  title: 'GA4 event verification: a complete step-by-step guide',
   excerpt: 'How to check whether an event in GA4 actually works correctly: DebugView, GTM Preview, and what to watch for during verification.',
   targetPhrase: 'GA4 event verification',
   status: 'published',

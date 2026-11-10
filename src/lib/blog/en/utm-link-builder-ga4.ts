@@ -100,7 +100,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'utm-link-builder-ga4',
   plSlug: 'utm-budowanie-linkow-ga4',
-  title: 'UTM Parameters in GA4: How to Build Links to Track Traffic Sources (with a Link Builder)',
+  title: 'UTM parameters in GA4: how to build links to track traffic sources (with a link builder)',
   excerpt: 'What UTM parameters are, how to build campaign links correctly, and which mistakes to avoid so the same campaign doesn’t split into several rows in your GA4 reports. Includes a built-in link generator.',
   targetPhrase: 'UTM parameters GA4',
   status: 'published',

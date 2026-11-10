@@ -83,7 +83,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'duplicate-purchase-events-ga4',
   plSlug: 'zduplikowane-zakupy-ga4',
-  title: 'Duplicate Purchase Events in GA4: How Fake Revenue Distorts Your Reports',
+  title: 'Duplicate purchase events in GA4: how fake revenue distorts your reports',
   excerpt: 'How a duplicated purchase event inflates revenue and ROAS in GA4, and how to catch it before it affects your ad budget.',
   targetPhrase: 'duplicate purchase events GA4',
   status: 'published',

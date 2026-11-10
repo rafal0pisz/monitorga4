@@ -239,7 +239,7 @@ const FAQ_HTML = `
 export const post: BlogPostEn = {
   slug: 'what-is-a-data-layer',
   plSlug: 'data-layer-czym-jest',
-  title: 'What Is a Data Layer, and How Do You Use It in Web Analytics',
+  title: 'What is a Data Layer, and how do you use it in web analytics',
   excerpt: 'A complete guide to the Data Layer: what it is technically, how to implement it on a page, its e-commerce schema, and exactly how it connects to Google Tag Manager.',
   targetPhrase: 'what is a data layer',
   status: 'published',
