@@ -1479,11 +1479,38 @@ const UTM_BODY_HTML = `
 
   <p>Trzy pierwsze parametry warto traktować jako obowiązkowe przy każdym linku kampanijnym. utm_term i utm_content przydają się głównie wtedy, gdy w ramach jednej kampanii testujesz kilka wariantów kreacji albo kilka grup słów kluczowych i chcesz je rozróżnić w raportach.</p>
 
+  <h2>UTM a automatyczne tagowanie w Google Ads</h2>
+
+  <p>Google Ads ma własny mechanizm atrybucji, niezależny od UTM: automatyczne tagowanie (auto-tagging), które dokleja do linku parametr gclid zamiast utm_source i utm_medium. GA4 rozpoznaje gclid i samodzielnie przypisuje taką sesję do kanału Paid Search, razem z pełnymi informacjami o kampanii, grupie reklam i słowie kluczowym, pobranymi bezpośrednio z konta reklamowego.</p>
+
+  <p>Problem pojawia się, gdy ktoś dodatkowo doklei ręczne UTM do linku w reklamie Google Ads, licząc, że to nic nie zepsuje. W praktyce ręczne utm_source i utm_medium na linku, który ma już gclid, mogą nadpisać dane pochodzące z automatycznego tagowania, czego skutkiem bywa kampania widoczna w raportach jako zwykłe źródło google i medium cpc, zamiast precyzyjnego przypisania do konkretnej kampanii, grupy reklam i słowa kluczowego z panelu Google Ads.</p>
+
+  <p>Zasada jest prosta: linki w Google Ads zostaw z samym automatycznym tagowaniem, włączonym domyślnie na koncie, a UTM buduj ręcznie tylko dla kanałów, które same się nie otagują: e-mail, media społecznościowe, materiały offline, linki partnerskie, posty organiczne.</p>
+
   <h2>Jak GA4 wykorzystuje parametry UTM</h2>
 
   <p>Bez żadnych UTM GA4 i tak przypisze sesję do jakiegoś źródła i medium, na podstawie nagłówka referrer przeglądarki albo rozpoznanych parametrów reklamowych, takich jak gclid dla Google Ads. Problem w tym, że automatyczne wykrywanie dobrze radzi sobie z ruchem z wyszukiwarek i znanych platform reklamowych, ale nie ma szans rozpoznać kanałów takich jak newsletter, link w poście na Facebooku czy baner w aplikacji partnera.</p>
 
   <p>UTM nadpisuje to automatyczne wykrywanie. Gdy GA4 widzi w adresie URL utm_source i utm_medium, przypisuje sesję dokładnie do tych wartości, niezależnie od tego, co pokazywałby sam nagłówek referrer. To daje kontrolę, ale oznacza też, że błędnie dobrany UTM potrafi zepsuć atrybucję równie skutecznie co jego brak, tylko w drugą stronę: zamiast braku danych o źródle, dostajesz dane fałszywe, które wyglądają na kompletne i wiarygodne.</p>
+
+  <h2>Jak GA4 przypisuje ruch do kanału na podstawie source i medium</h2>
+
+  <p>Wartości utm_source i utm_medium nie trafiają do raportów jako osobne, niepowiązane kolumny. GA4 łączy je razem w jeden z predefiniowanych kanałów domyślnych (Default channel group), widocznych między innymi w raporcie pozyskania użytkowników. Ta klasyfikacja działa na podstawie reguł dopasowujących konkretne kombinacje source i medium, a czasem dodatkowych sygnałów, takich jak obecność gclid, do nazwy kanału.</p>
+
+  <table class="blog-table">
+    <tr><th>Kanał domyślny</th><th>Przykładowe source / medium</th></tr>
+    <tr><td>Paid Search</td><td>google / cpc, bing / cpc, albo sama obecność gclid</td></tr>
+    <tr><td>Organic Search</td><td>google / organic, bing / organic</td></tr>
+    <tr><td>Paid Social</td><td>facebook / cpc, linkedin / paid-social</td></tr>
+    <tr><td>Organic Social</td><td>facebook / social, instagram / organic-social</td></tr>
+    <tr><td>Email</td><td>dowolne źródło z medium=email</td></tr>
+    <tr><td>Affiliates</td><td>dowolne źródło z medium=affiliate</td></tr>
+    <tr><td>Referral</td><td>domena odsyłająca bez rozpoznanego medium, np. partner.pl / referral</td></tr>
+    <tr><td>Direct</td><td>brak source i medium, brak referrera</td></tr>
+    <tr><td>Unassigned</td><td>kombinacja source i medium, której GA4 nie potrafi dopasować do żadnej reguły</td></tr>
+  </table>
+
+  <p>Ostatni wiersz tej tabeli tłumaczy jeden z częstszych powodów frustracji przy budowaniu UTM: nietypowa, własna wartość utm_medium, na przykład medium=baner-offline, nie pasuje do żadnej reguły GA4, i taki ruch trafia do kanału Unassigned, mimo że dane source i medium są technicznie poprawnie wysłane i w pełni widoczne w szczegółowych raportach. Dlatego przy wyborze utm_medium warto, tam gdzie to możliwe, trzymać się wartości, które GA4 rzeczywiście rozpoznaje, takich jak cpc, email, social czy affiliate, a własne, niestandardowe medium rezerwować dla sytuacji, w których żadna z tych etykiet faktycznie nie pasuje.</p>
 
   <h2>Zasady budowania UTM, które oszczędzają problemy później</h2>
 
@@ -1494,6 +1521,45 @@ const UTM_BODY_HTML = `
     <li><b>Spisana konwencja nazewnictwa dla całego zespołu.</b> Przy więcej niż jednej osobie budującej linki kampanijne warto mieć wspólny arkusz z listą używanych już wartości source i medium, żeby nikt nie wymyślał nowego wariantu nazwy tam, gdzie już istnieje ustalony.</li>
     <li><b>utm_campaign opisowe, ale nie przesadnie długie.</b> Nazwa kampanii powinna dać się rozpoznać za pół roku w raporcie, bez konieczności przypominania sobie, co dokładnie oznaczała.</li>
   </ul>
+
+  <h2>Szablon nazewnictwa UTM dla różnych kanałów</h2>
+
+  <p>Poniższa tabela to punkt wyjścia do własnej konwencji, dopasowany do kanałów, które najczęściej wymagają ręcznego tagowania, bo same się nie otagują.</p>
+
+  <table class="blog-table">
+    <tr><th>Kanał</th><th>utm_source</th><th>utm_medium</th><th>Przykładowy utm_campaign</th></tr>
+    <tr><td>Newsletter</td><td>newsletter</td><td>email</td><td>newsletter-tygodniowy-45</td></tr>
+    <tr><td>Post na Facebooku (organiczny)</td><td>facebook</td><td>social</td><td>premiera-produktu-x</td></tr>
+    <tr><td>Reklama na Facebooku lub Instagramie</td><td>facebook albo instagram</td><td>paid-social</td><td>black-friday-2026</td></tr>
+    <tr><td>Program partnerski</td><td>nazwa partnera</td><td>affiliate</td><td>nazwa-programu</td></tr>
+    <tr><td>SMS</td><td>sms</td><td>sms</td><td>wyprzedaz-wiosenna</td></tr>
+    <tr><td>Kod QR w materiałach drukowanych</td><td>qr-ulotka, qr-plakat</td><td>offline</td><td>targi-2026</td></tr>
+    <tr><td>Współpraca z influencerem</td><td>nazwa influencera</td><td>influencer</td><td>kampania-jesien</td></tr>
+  </table>
+
+  <p>Nazwy w kolumnie utm_source dla influencerów i partnerów warto ustandaryzować od razu na starcie współpracy, na przykład pierwsza litera imienia i nazwisko, żeby uniknąć sytuacji, w której ten sam partner pojawia się w raportach pod kilkoma różnymi wariantami nazwy.</p>
+
+  <h2>UTM w kodach QR i materiałach offline</h2>
+
+  <p>UTM nie ogranicza się do linków publikowanych w internecie. Ten sam mechanizm świetnie sprawdza się tam, gdzie chcesz zmierzyć, czy materiał drukowany, stojak reklamowy albo ulotka faktycznie generują ruch na stronie, czego bez tagowania nie da się odróżnić od zwykłego ruchu organicznego czy bezpośredniego.</p>
+
+  <p>W praktyce wygląda to tak: pod kodem QR na plakacie czy ulotce umieszczasz pełny link z UTM, na przykład z utm_source=qr-plakat i utm_medium=offline, zamiast surowego adresu strony głównej. Każde zeskanowanie takiego kodu trafia do GA4 z pełną informacją o źródle, co pozwala policzyć realny ruch z konkretnego materiału, a przy kilku wariantach plakatów rozwieszonych w różnych lokalizacjach nawet porównać je między sobą przez osobne wartości utm_content.</p>
+
+  <p>Długi, pełny link z UTM bywa niewygodny do ręcznego wpisania, ale pod kodem QR ta długość nie ma żadnego znaczenia, bo użytkownik i tak nigdy go nie wpisuje ręcznie, tylko skanuje. Jeśli zależy Ci na krótszym, czytelnym adresie do wydrukowania osobno, obok kodu QR, jako zapasowym sposobie wejścia na stronę, warto skorzystać z zewnętrznego serwisu do skracania linków, zachowując gdzieś osobno pełną wersję z UTM na własny użytek.</p>
+
+  <h2>Jak dokumentować konwencję UTM w zespole</h2>
+
+  <p>Przy jednej osobie budującej linki kampanijne pamięć wystarcza. Przy kilku osobach, albo przy agencji obsługującej wielu klientów, bez spisanej konwencji prędzej czy później pojawią się rozjechane warianty tej samej wartości, dokładnie tak, jak opisano to wyżej przy błędzie z „ig” i „instagram”.</p>
+
+  <p>Najprostsze rozwiązanie to współdzielony arkusz kalkulacyjny, dostępny dla każdego, kto buduje linki, z kolumnami odpowiadającymi strukturze UTM:</p>
+
+  <table class="blog-table">
+    <tr><th>Data</th><th>Kanał</th><th>utm_source</th><th>utm_medium</th><th>utm_campaign</th><th>Osoba</th></tr>
+    <tr><td>2026-11-10</td><td>Newsletter</td><td>newsletter</td><td>email</td><td>newsletter-tygodniowy-45</td><td>Anna</td></tr>
+    <tr><td>2026-11-12</td><td>Facebook Ads</td><td>facebook</td><td>paid-social</td><td>black-friday-2026</td><td>Marek</td></tr>
+  </table>
+
+  <p>Taki arkusz pełni dwie funkcje naraz: jest historią wszystkich wysłanych linków, do której można wrócić miesiące później, i jednocześnie słownikiem już użytych wartości source i medium, który każda nowa osoba w zespole powinna sprawdzić, zanim wymyśli własny wariant nazwy.</p>
 
   <h2>Zbuduj link z UTM</h2>
 
@@ -1514,19 +1580,13 @@ const UTM_BODY_HTML = `
     <li><b>Niesprawdzony link przed publikacją.</b> Literówka w nazwie parametru, na przykład utmsource zamiast utm_source, sprawia, że GA4 w ogóle nie rozpozna wartości, a cały ruch z danego linku trafi do automatycznie wykrytego kanału zamiast do oznaczonej kampanii.</li>
     <li><b>Różne wartości dla tej samej platformy w różnych kampaniach.</b> Jeśli jedna osoba w zespole używa utm_source=ig, a druga utm_source=instagram, w raporcie powstają dwa osobne wiersze zamiast jednego, spójnego źródła.</li>
     <li><b>Tagowanie organicznych postów w social media jako płatnych.</b> Skopiowanie szablonu UTM z kampanii płatnej do zwykłego, bezpłatnego posta zawyża w raportach wolumen ruchu płatnego kosztem organicznego.</li>
+    <li><b>Zmiana wartości UTM w trakcie trwania kampanii.</b> Edycja utm_campaign po tym, jak link został już rozesłany albo opublikowany, dzieli dane tej samej kampanii na dwie osobne wartości w raportach, mimo że dla odbiorców to wciąż ten sam link.</li>
+    <li><b>Ręczne UTM na linkach z Google Ads z włączonym automatycznym tagowaniem.</b> Jak opisano wyżej, dokładanie własnych utm_source i utm_medium do linku, który i tak otrzymuje gclid, potrafi nadpisać precyzyjniejsze dane pochodzące wprost z konta reklamowego.</li>
   </ul>
 
   <h2>Jak AlertGA4 wiąże się z jakością UTM</h2>
 
   <p>AlertGA4 nie buduje ani nie waliduje samych linków UTM, ale codziennie sprawdza skutki ich błędnego użycia: nagły wzrost udziału self-referral, nietypowy skok konkretnego medium względem typowej normy konta czy spadek ruchu organicznego, który często towarzyszy błędnie otagowanym kampaniom. Jeśli coś takiego się pojawi, dostajesz maila z konkretną diagnozą tego samego dnia, zamiast zauważyć to dopiero przy miesięcznym podsumowaniu.</p>
-
-  <h2>Dla kogo ma to znaczenie</h2>
-
-  <ul>
-    <li><b>Zespoły marketingowe prowadzące kilka kanałów naraz</b>, dla których spójna konwencja UTM jest jedynym sposobem na rzetelne porównanie skuteczności poszczególnych kampanii.</li>
-    <li><b>Agencje budujące linki dla wielu klientów</b>, gdzie brak wspólnej konwencji nazewnictwa między osobami w zespole szybko prowadzi do rozjechanych raportów.</li>
-    <li><b>Każdy, kto wysyła newsletter albo prowadzi kampanię płatną</b>, bo bez UTM te dwa kanały, mimo że generują realny, wartościowy ruch, często giną w GA4 pod ogólną etykietą ruchu bezpośredniego albo organicznego.</li>
-  </ul>
 
   <p>UTM to jeden z niewielu elementów pomiaru, nad którym masz pełną kontrolę, zanim jeszcze ruch dotrze do GA4. Dobrze zbudowany, konsekwentnie stosowany UTM kosztuje kilka sekund przy tworzeniu linku, a oszczędza godziny prób odtworzenia, skąd faktycznie przyszedł ruch, miesiące później.</p>
 `
@@ -1554,6 +1614,18 @@ const UTM_FAQ_HTML = `
     <details class="blog-faq-item">
       <summary>Czy wygenerowany link z UTM da się później skrócić?</summary>
       <div class="blog-faq-answer"><p>Tak, zewnętrznym serwisem do skracania linków. Warto jednak zachować gdzieś pełną, czytelną wersję linku na własny użytek, bo sam skrócony adres nie pokazuje już, jakie wartości UTM faktycznie zawiera.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy UTM działa tak samo dla linków w Google Ads jak dla innych kanałów?</summary>
+      <div class="blog-faq-answer"><p>Nie do końca. Google Ads ma własny mechanizm automatycznego tagowania (gclid), który GA4 rozpoznaje samodzielnie. Ręczne UTM nie jest tam potrzebne i w niektórych sytuacjach może nadpisać precyzyjniejsze dane pochodzące z automatycznego tagowania.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Dlaczego mój ruch z UTM trafia do kanału „Unassigned” zamiast oczekiwanego kanału?</summary>
+      <div class="blog-faq-answer"><p>Bo użyta wartość utm_medium nie pasuje do żadnej reguły domyślnego grupowania kanałów w GA4. Trzymanie się rozpoznawanych wartości, takich jak cpc, email, social czy affiliate, rozwiązuje ten problem w większości przypadków.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy UTM nadaje się do mierzenia ruchu z kodów QR i materiałów drukowanych?</summary>
+      <div class="blog-faq-answer"><p>Tak, to jeden z lepszych sposobów na zmierzenie realnego ruchu z materiałów offline, pod warunkiem że pod każdym kodem QR umieścisz pełny link z UTM zamiast surowego adresu strony głównej.</p></div>
     </details>
   </div>
 `
