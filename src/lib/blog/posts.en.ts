@@ -11,6 +11,22 @@
 // used for hreflang alternates and the language switcher on a given post.
 // This module's own `plSlug` is the reverse link (en -> pl), used the same
 // way from the English side.
+import { post as googleAnalytics4Alerts } from './en/google-analytics-4-alerts'
+import { post as ga4AuditChecklist } from './en/ga4-audit-checklist'
+import { post as duplicatePurchaseEventsGa4 } from './en/duplicate-purchase-events-ga4'
+import { post as botTrafficGa4 } from './en/bot-traffic-ga4'
+import { post as notSetInGa4 } from './en/not-set-in-ga4'
+import { post as ga4DataThresholds } from './en/ga4-data-thresholds'
+import { post as ga4ReportingChecklist } from './en/ga4-reporting-checklist'
+import { post as ga4EventMonitoring } from './en/ga4-event-monitoring'
+import { post as ga4EventVerification } from './en/ga4-event-verification'
+import { post as ga4DataDiscrepancies } from './en/ga4-data-discrepancies'
+import { post as automateGa4DataQualityChecks } from './en/automate-ga4-data-quality-checks'
+import { post as ga4AutomaticallyCollectedEvents } from './en/ga4-automatically-collected-events'
+import { post as utmLinkBuilderGa4 } from './en/utm-link-builder-ga4'
+import { post as whatIsADataLayer } from './en/what-is-a-data-layer'
+import { post as googleAnalytics4Guide } from './en/google-analytics-4-guide'
+
 export interface BlogPostEn {
   slug: string
   plSlug: string
@@ -24,7 +40,23 @@ export interface BlogPostEn {
   widget?: 'utm-builder'
 }
 
-export const BLOG_POSTS_EN: BlogPostEn[] = []
+export const BLOG_POSTS_EN: BlogPostEn[] = [
+  googleAnalytics4Alerts,
+  ga4AuditChecklist,
+  duplicatePurchaseEventsGa4,
+  botTrafficGa4,
+  notSetInGa4,
+  ga4DataThresholds,
+  ga4ReportingChecklist,
+  ga4EventMonitoring,
+  ga4EventVerification,
+  ga4DataDiscrepancies,
+  automateGa4DataQualityChecks,
+  ga4AutomaticallyCollectedEvents,
+  utmLinkBuilderGa4,
+  whatIsADataLayer,
+  googleAnalytics4Guide,
+]
 
 export function getPublishedPostsEn(): BlogPostEn[] {
   return BLOG_POSTS_EN
