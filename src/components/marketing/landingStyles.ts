@@ -198,6 +198,16 @@ export const LANDING_BASE_STYLES = `
     border: 1px solid #e2e6e8; border-radius: 8px; padding: 10px 12px; outline: none; background: #fff;
   }
   .blog-utm-field input:focus { border-color: #16a34a; }
+
+  /* Live default-channel-group preview, based on whatever source/medium/
+     campaign is currently typed — sits right under the field grid, above
+     the generated-link output, since it reacts to the same inputs. */
+  .blog-utm-channel { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-top: 18px; padding-top: 16px; border-top: 1px solid #e2e6e8; }
+  .blog-utm-channel-label { font-size: 13px; color: #5b6570; }
+  .blog-utm-channel-value { font-size: 14px; font-weight: 700; color: #166534; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 2px 10px; }
+  .blog-utm-channel-value--neutral { color: #5b6570; background: #f3f6f7; border-color: #e2e6e8; }
+  .blog-utm-channel-value--warning { color: #92650a; background: #fefce8; border-color: #fde68a; }
+
   .blog-utm-error { font-size: 13px; color: #b91c1c; margin-top: 14px; }
   .blog-utm-output { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
   .blog-utm-output input {

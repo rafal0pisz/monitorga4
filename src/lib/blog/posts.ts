@@ -1563,7 +1563,7 @@ const UTM_BODY_HTML = `
 
   <h2>Zbuduj link z UTM</h2>
 
-  <p>Wpisz adres strony docelowej i wartości parametrów poniżej. Generator sam złoży pełny link, zamieni wielkie litery na małe i spacje na myślniki, i pozwoli skopiować gotowy adres jednym kliknięciem.</p>
+  <p>Wpisz adres strony docelowej i wartości parametrów poniżej. Generator sam złoży pełny link, zamieni wielkie litery na małe i spacje na myślniki, i pozwoli skopiować gotowy adres jednym kliknięciem. Na bieżąco zobaczysz też, do jakiego domyślnego kanału GA4 trafiłby ruch z wpisanych przez Ciebie wartości utm_source i utm_medium, zanim jeszcze wyślesz jakikolwiek link.</p>
 
 <!--WIDGET-->
 

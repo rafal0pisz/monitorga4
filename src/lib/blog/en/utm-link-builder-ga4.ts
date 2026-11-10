@@ -110,7 +110,7 @@ const BODY_HTML = `
 
   <h2>Build a link with UTM</h2>
 
-  <p>Enter your destination URL and parameter values below. The generator will assemble the full link, convert uppercase letters to lowercase and spaces to hyphens, and let you copy the finished address with one click.</p>
+  <p>Enter your destination URL and parameter values below. The generator will assemble the full link, convert uppercase letters to lowercase and spaces to hyphens, and let you copy the finished address with one click. It will also show you, live, which GA4 default channel the utm_source and utm_medium values you type would be assigned to, before you ever send a single link.</p>
 
 <!--WIDGET-->
 
