@@ -1553,6 +1553,491 @@ const UTM_FAQ_HTML = `
   </div>
 `
 
+const DATA_LAYER_BODY_HTML = `
+  <p>Jeśli choć raz konfigurowałeś tag w Google Tag Managerze, prawdopodobnie natknąłeś się na pojęcie Data Layer, czyli warstwy danych. Dla wielu osób zaczynających przygodę z analityką internetową to jeden z pierwszych terminów, który brzmi bardziej skomplikowanie, niż jest w rzeczywistości.</p>
+
+  <p>Ten artykuł wyjaśnia Data Layer od podstaw: czym jest technicznie, jak go używać na stronie, jaką pełni rolę w analityce internetowej, i jak dokładnie łączy się z Google Tag Managerem. Celowo idziemy głębiej niż w typowym wprowadzeniu, razem z konkretnymi przykładami kodu, które możesz od razu przełożyć na własną implementację.</p>
+
+  <h2>Czym jest Data Layer</h2>
+
+  <p>Data Layer to w najprostszym ujęciu zwykła struktura danych w JavaScript, najczęściej tablica, która żyje w przeglądarce jako obiekt globalny <code>window.dataLayer</code>. Nic więcej, żadnej magii: to ten sam rodzaj obiektu, którego używasz codziennie przy pisaniu dowolnego kodu JavaScript, tyle że przypisana do konkretnej, ustalonej nazwy i przeznaczona do jednego zadania: przekazywania informacji o tym, co dzieje się na stronie, do narzędzi takich jak Google Tag Manager.</p>
+
+  <p>Koncepcję spopularyzował Google razem z wprowadzeniem Google Tag Managera, ale sam pomysł jest uniwersalny i dużo starszy niż GTM: oddzielić dane opisujące zdarzenia na stronie od kodu, który te dane odczytuje i coś z nimi robi. Zamiast tagu śledzącego, który sam musi znać strukturę HTML strony i szukać konkretnych przycisków czy klas CSS, tag odczytuje gotowe, ustandaryzowane dane z jednego, wspólnego miejsca.</p>
+
+  <h2>Jak technicznie działa dataLayer</h2>
+
+  <p>Techniczne działanie dataLayer opiera się na jednej metodzie: <code>push()</code>. To standardowa metoda tablicy w JavaScript, służąca do dodawania nowego elementu na jej koniec. Dla Data Layer oznacza to dodanie nowego obiektu opisującego zdarzenie, które właśnie wystąpiło na stronie.</p>
+
+  <pre class="blog-code-block"><code>window.dataLayer = window.dataLayer || [];
+dataLayer.push({
+  event: 'formularz_wyslany',
+  form_id: 'kontakt-glowny'
+});</code></pre>
+
+  <p>Pierwsza linijka jest równie ważna co sam push: <code>window.dataLayer = window.dataLayer || []</code> tworzy tablicę dataLayer, jeśli jeszcze nie istnieje, i nie nadpisuje jej, jeśli już istnieje. To zabezpieczenie przed jednym z najczęstszych błędów, o którym więcej w dalszej części artykułu.</p>
+
+  <p>Każdy obiekt przekazany do <code>dataLayer.push()</code> zwykle zawiera przynajmniej jedno pole: <code>event</code>, czyli nazwę zdarzenia. To właśnie po tej nazwie Google Tag Manager rozpoznaje, że wydarzyło się coś, na co powinien zareagować. Obok <code>event</code> możesz przekazać dowolną liczbę dodatkowych pól, nazywanych zwykle parametrami albo zmiennymi warstwy danych, opisujących szczegóły tego zdarzenia.</p>
+
+  <p>dataLayer działa jak kolejka: GTM nasłuchuje na zmiany w tej tablicy i reaguje na każdy nowy element w kolejności, w jakiej się pojawił. Dlatego kolejność wywołań <code>push()</code> na stronie ma znaczenie, zwłaszcza przy bardziej złożonych scenariuszach, takich jak lejek e-commerce.</p>
+
+  <h2>Czym jest Data Layer w analityce internetowej</h2>
+
+  <p>W kontekście analityki internetowej Data Layer pełni rolę pośrednika i tłumacza jednocześnie. Strona internetowa mówi swoim językiem: zdarzenia DOM, kliknięcia w konkretne elementy, zmiany stanu formularza. Narzędzia analityczne, takie jak GA4, oczekują swojego, ustandaryzowanego języka: nazw zdarzeń i parametrów w konkretnym formacie. Data Layer jest miejscem, w którym te dwa języki się spotykają.</p>
+
+  <p>Największa praktyczna korzyść z tego podziału to odporność na zmiany w kodzie strony. Bez Data Layer typowa implementacja śledzenia opiera się na selektorach CSS albo strukturze DOM: trigger w GTM nasłuchuje na kliknięcie w element o konkretnej klasie albo identyfikatorze. Gdy zespół produktowy przeprojektuje stronę i zmieni tę klasę, trigger przestaje działać, często bez żadnego ostrzeżenia.</p>
+
+  <p>Z Data Layer ten sam trigger nasłuchuje na nazwę zdarzenia, na przykład <code>add_to_cart</code>, niezależnie od tego, jak wygląda HTML przycisku, który to zdarzenie wywołał. Dopóki deweloper wie, że musi wywołać <code>dataLayer.push()</code> przy dodaniu produktu do koszyka, reszta implementacji w GTM i GA4 jest odporna na dowolne zmiany wizualne strony.</p>
+
+  <p>To rozdzielenie ma jeszcze jedną konsekwencję: osoba konfigurująca pomiar w GTM nie musi znać się na HTML ani CSS, a programista implementujący Data Layer nie musi rozumieć szczegółów konfiguracji GA4. Każda strona odpowiada za swój fragment, a Data Layer jest kontraktem, który je łączy.</p>
+
+  <h2>Jak używać Data Layer na stronie: przykłady z praktyki</h2>
+
+  <p>Poniżej kilka typowych scenariuszy, z którymi spotkasz się przy niemal każdej implementacji pomiaru.</p>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Proste zdarzenie niestandardowe</h3>
+
+  <pre class="blog-code-block"><code>dataLayer.push({
+  event: 'zapis_do_newslettera',
+  lokalizacja_formularza: 'stopka'
+});</code></pre>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Dodanie produktu do koszyka (schemat e-commerce GA4)</h3>
+
+  <pre class="blog-code-block"><code>dataLayer.push({ ecommerce: null });
+dataLayer.push({
+  event: 'add_to_cart',
+  ecommerce: {
+    currency: 'PLN',
+    value: 129.99,
+    items: [{
+      item_id: 'SKU_12345',
+      item_name: 'Buty biegowe Model X',
+      price: 129.99,
+      quantity: 1
+    }]
+  }
+});</code></pre>
+
+  <p>Pierwsza linijka, <code>dataLayer.push({ ecommerce: null })</code>, czyści poprzednią wartość klucza <code>ecommerce</code>. To ustalona praktyka przy pracy ze zdarzeniami e-commerce, która zapobiega sytuacji, w której GTM, przy niepełnym nadpisaniu obiektu, miesza dane z poprzedniego zdarzenia z danymi bieżącego.</p>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Zakończony zakup</h3>
+
+  <pre class="blog-code-block"><code>dataLayer.push({ ecommerce: null });
+dataLayer.push({
+  event: 'purchase',
+  ecommerce: {
+    transaction_id: 'ZAM-2026-00451',
+    currency: 'PLN',
+    value: 259.98,
+    items: [{
+      item_id: 'SKU_12345',
+      item_name: 'Buty biegowe Model X',
+      price: 129.99,
+      quantity: 2
+    }]
+  }
+});</code></pre>
+
+  <h2>Standardowy schemat Data Layer dla e-commerce</h2>
+
+  <p>GA4 oczekuje konkretnej struktury danych dla zdarzeń e-commerce, nazywanej schematem Enhanced Ecommerce. Trzymanie się tego schematu od początku oszczędza mnóstwo czasu przy konfiguracji tagów w GTM, bo zmienne Data Layer Variable mogą odwoływać się do dokładnie tych samych, przewidywalnych ścieżek na każdej stronie sklepu.</p>
+
+  <table class="blog-table">
+    <tr><th>Pole</th><th>Poziom</th><th>Opis</th></tr>
+    <tr><td>event</td><td>najwyższy</td><td>nazwa zdarzenia, np. view_item, add_to_cart, begin_checkout, purchase</td></tr>
+    <tr><td>ecommerce.currency</td><td>ecommerce</td><td>kod waluty w formacie ISO 4217, np. PLN, EUR</td></tr>
+    <tr><td>ecommerce.value</td><td>ecommerce</td><td>łączna wartość koszyka albo transakcji</td></tr>
+    <tr><td>ecommerce.transaction_id</td><td>ecommerce (purchase)</td><td>unikalny identyfikator zamówienia w Twoim systemie</td></tr>
+    <tr><td>ecommerce.items</td><td>ecommerce</td><td>tablica produktów objętych zdarzeniem</td></tr>
+    <tr><td>items[].item_id</td><td>pojedynczy produkt</td><td>identyfikator produktu, zwykle SKU</td></tr>
+    <tr><td>items[].item_name</td><td>pojedynczy produkt</td><td>nazwa produktu widoczna w raportach</td></tr>
+    <tr><td>items[].price</td><td>pojedynczy produkt</td><td>cena jednostkowa</td></tr>
+    <tr><td>items[].quantity</td><td>pojedynczy produkt</td><td>liczba sztuk danego produktu w zdarzeniu</td></tr>
+  </table>
+
+  <h2>Jak używać Data Layer w Google Tag Managerze</h2>
+
+  <p>Sam Data Layer na stronie niewiele daje bez odpowiedniej konfiguracji po stronie GTM. Trzy elementy łączą te dwa światy: zmienne, triggery i poprawna kolejność ładowania skryptów.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 760 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Przepływ danych od strony przez Data Layer i Google Tag Manager do GA4">
+      <defs>
+        <marker id="arrowD" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8b939a" />
+        </marker>
+      </defs>
+      <rect x="10" y="40" width="160" height="100" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="90" y="75" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Strona</text>
+      <text x="90" y="95" text-anchor="middle" font-size="10.5" fill="#8b939a">wywołuje</text>
+      <text x="90" y="110" text-anchor="middle" font-size="10.5" fill="#8b939a">dataLayer.push()</text>
+
+      <line x1="170" y1="90" x2="196" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowD)" />
+
+      <rect x="200" y="40" width="160" height="100" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="280" y="75" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Data Layer</text>
+      <text x="280" y="95" text-anchor="middle" font-size="10.5" fill="#8b939a">window.dataLayer</text>
+      <text x="280" y="110" text-anchor="middle" font-size="10.5" fill="#8b939a">kolejka zdarzeń</text>
+
+      <line x1="360" y1="90" x2="386" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowD)" />
+
+      <rect x="390" y="30" width="170" height="120" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="475" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Google Tag</text>
+      <text x="475" y="78" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Manager</text>
+      <text x="475" y="98" text-anchor="middle" font-size="10.5" fill="#8b939a">zmienna + trigger</text>
+      <text x="475" y="112" text-anchor="middle" font-size="10.5" fill="#8b939a">Custom Event</text>
+
+      <line x1="560" y1="90" x2="586" y2="90" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowD)" />
+
+      <rect x="590" y="40" width="160" height="100" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="670" y="75" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">Tag GA4</text>
+      <text x="670" y="95" text-anchor="middle" font-size="10.5" fill="#166534">wysyła zdarzenie</text>
+      <text x="670" y="110" text-anchor="middle" font-size="10.5" fill="#166534">do usługi GA4</text>
+    </svg>
+    <figcaption>Uproszczony przepływ danych: strona zapisuje zdarzenie do Data Layer, GTM je odczytuje przez zmienną i trigger, a tag przekazuje je dalej, np. do GA4.</figcaption>
+  </figure>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Zmienne Data Layer Variable</h3>
+
+  <p>Żeby GTM mógł odczytać konkretne pole z obiektu przekazanego do dataLayer, potrzebuje zmiennej typu Data Layer Variable. Przy jej tworzeniu podajesz nazwę zmiennej Data Layer dokładnie taką, jaka występuje w obiekcie wysyłanym przez stronę, włącznie z wielkością liter. Dla zagnieżdżonych pól, takich jak wartość koszyka, używa się notacji z kropką, na przykład <code>ecommerce.value</code>.</p>
+
+  <p>To jedno z miejsc, w których najłatwiej o pomyłkę: literówka albo niezgodna wielkość liter w nazwie zmiennej sprawia, że GTM po cichu nie znajduje wartości i przekazuje dalej puste pole, bez żadnego komunikatu błędu.</p>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Triggery Custom Event</h3>
+
+  <p>Żeby cokolwiek się wydarzyło po stronie GTM, potrzebny jest trigger reagujący na konkretną nazwę zdarzenia z pola <code>event</code>. Trigger typu Custom Event porównuje tę nazwę z warunkiem, który ustawisz, na przykład „równa się add_to_cart”, i uruchamia powiązane z nim tagi tylko wtedy, gdy warunek jest spełniony.</p>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Kolejność ładowania ma znaczenie</h3>
+
+  <p>Kod inicjalizujący tablicę dataLayer musi znaleźć się na stronie przed fragmentem ładującym kontener GTM, nie po nim. Jeśli kolejność jest odwrotna, każde zdarzenie wysłane przed pełnym załadowaniem GTM może zostać przegapione, bo w momencie jego wysłania kontener jeszcze nie nasłuchuje na zmiany w tablicy.</p>
+
+  <pre class="blog-code-block">&lt;script&gt;
+  window.dataLayer = window.dataLayer || [];
+&lt;/script&gt;
+&lt;!-- Google Tag Manager (uproszczony przykład kolejności) --&gt;
+&lt;script&gt;(function(w,d,s,l,i){ /* ... ładowanie kontenera GTM ... */ })(window,document,'script','dataLayer','GTM-XXXXXXX');&lt;/script&gt;</pre>
+
+  <p>W praktyce większość nowoczesnych implementacji CMS i frameworków frontendowych robi to poprawnie z automatu, ale warto to świadomie zweryfikować, zwłaszcza przy ręcznej instalacji albo migracji na nową platformę.</p>
+
+  <h3 style="font-size:17px; font-weight:700; margin:24px 0 10px; color:#232b31;">Wersja Data Layer w ustawieniach kontenera</h3>
+
+  <p>GTM pozwala wybrać wersję Data Layer w ustawieniach kontenera (Data Layer Version 1 albo 2). Wersja 2 to standard od wielu lat i obsługuje m.in. bardziej niezawodne przekazywanie zdarzeń przy nawigacji w aplikacjach jednostronicowych. Jeśli nie masz konkretnego powodu, żeby zostać przy wersji 1, nie ma potrzeby jej zmieniać.</p>
+
+  <h2>Najczęstsze błędy przy pracy z Data Layer</h2>
+
+  <ul>
+    <li><b>Nadpisywanie tablicy zamiast dodawania do niej.</b> Zapis <code>window.dataLayer = [{...}]</code> zamiast <code>dataLayer.push({...})</code> kasuje wszystko, co GTM wcześniej zapisał w tej tablicy, włącznie z własną konfiguracją kontenera.</li>
+    <li><b>Wysyłanie zdarzeń przed inicjalizacją tablicy.</b> Jeśli jakiś fragment kodu wywoła <code>dataLayer.push()</code>, zanim linijka <code>window.dataLayer = window.dataLayer || []</code> w ogóle się wykona, zdarzenie zakończy się błędem, bo dataLayer jeszcze nie istnieje.</li>
+    <li><b>Niezgodność nazw pól między stroną a konfiguracją GTM.</b> Zmienna Data Layer Variable musi odwoływać się do dokładnie tej samej nazwy klucza, której używa strona, włącznie z wielkością liter i zagnieżdżeniem.</li>
+    <li><b>Brak czyszczenia obiektu ecommerce między zdarzeniami.</b> Pominięcie <code>dataLayer.push({ ecommerce: null })</code> przed kolejnym zdarzeniem e-commerce potrafi sprawić, że GTM połączy dane z dwóch różnych zdarzeń w jedno, błędne zestawienie.</li>
+    <li><b>Wysyłanie zdarzenia zanim dane są kompletne.</b> Push wywołany, zanim backend albo frontend zdąży uzupełnić wszystkie potrzebne pola, wysyła do GA4 zdarzenie z brakującymi albo pustymi parametrami.</li>
+    <li><b>Dublowanie tego samego zdarzenia.</b> Typowe przy migracjach albo refaktoryzacji: stary i nowy kod oba wywołują <code>dataLayer.push()</code> dla tego samego działania użytkownika, co sztucznie podwaja liczbę zdarzeń w GA4.</li>
+  </ul>
+
+  <h2>Checklist przy wdrażaniu Data Layer</h2>
+
+  <figure class="blog-figure">
+    <div class="blog-checklist">
+      <div class="blog-checklist-head">Zanim uznasz implementację Data Layer za gotową</div>
+      <ul class="blog-checklist-list">
+        <li><span class="blog-checklist-check">✓</span> Kod inicjalizujący dataLayer ładuje się przed fragmentem GTM, nie po nim</li>
+        <li><span class="blog-checklist-check">✓</span> Nazwy zdarzeń i pól są spisane w jednym, wspólnym dokumencie dla dewelopera i osoby konfigurującej GTM</li>
+        <li><span class="blog-checklist-check">✓</span> Zdarzenia e-commerce czyszczą poprzedni obiekt ecommerce przed każdym kolejnym push</li>
+        <li><span class="blog-checklist-check">✓</span> Każde zdarzenie zostało sprawdzone w podglądzie GTM (Preview) przed publikacją kontenera</li>
+        <li><span class="blog-checklist-check">✓</span> Dane docierające do GA4 zostały zweryfikowane w DebugView, nie tylko w podglądzie GTM</li>
+        <li><span class="blog-checklist-check">✓</span> Żadne zdarzenie nie jest wysyłane podwójnie przy tej samej akcji użytkownika</li>
+      </ul>
+    </div>
+  </figure>
+
+  <h2>Jak Data Layer wiąże się z codziennym monitoringiem GA4</h2>
+
+  <p>Data Layer jest źródłem większości danych, które później trafiają do GA4, więc błąd popełniony na tym etapie prędzej czy później odbija się w raportach. Problem w tym, że sama strona rzadko sygnalizuje, że coś poszło nie tak: kod wykona się bez błędu w konsoli, tag w GTM odpali się zgodnie z planem, a mimo to zdarzenie w GA4 przyjdzie z pustym albo zdublowanym parametrem, bo gdzieś po drodze dataLayer przekazał niekompletne dane.</p>
+
+  <p>AlertGA4 nie analizuje bezpośrednio kodu Data Layer na stronie, ale codziennie sprawdza jego skutki widoczne już w samej usłudze GA4: obecność kluczowych zdarzeń, pokrycie ich parametrów i kompletność lejka e-commerce. Więcej o tym, jak wygląda takie sprawdzanie w praktyce, opisaliśmy w <a href="/blog/monitoring-zdarzen-ga4">artykule o monitoringu zdarzeń GA4</a> oraz w <a href="/blog/weryfikacja-zdarzen-ga4">przewodniku po weryfikacji zdarzeń</a>.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Deweloperzy wdrażający pomiar na nowej stronie albo w nowym sklepie</b>, dla których zrozumienie Data Layer jest warunkiem wstępnym poprawnej współpracy z osobą konfigurującą GTM i GA4.</li>
+    <li><b>Specjaliści ds. analityki konfigurujący GTM</b>, którzy muszą wiedzieć, czego dokładnie oczekiwać od Data Layer, żeby poprawnie zbudować zmienne i triggery.</li>
+    <li><b>Zespoły przechodzące migrację platformy e-commerce albo CMS</b>, dla których nowa implementacja Data Layer to jeden z najważniejszych elementów do przetestowania przed startem nowej strony.</li>
+  </ul>
+
+  <p>Data Layer nie jest dodatkiem do analityki internetowej, jest jej fundamentem. Dobrze zaprojektowany, konsekwentnie wypełniany danymi, pozwala budować pomiar odporny na zmiany wizualne strony. Zaniedbany, staje się źródłem cichych błędów, które najpierw widać w GA4, a dopiero potem, przy bliższym sprawdzeniu, w samym kodzie strony.</p>
+`
+
+const DATA_LAYER_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czy Data Layer jest tym samym co Google Tag Manager?</summary>
+      <div class="blog-faq-answer"><p>Nie. Data Layer to niezależna struktura danych w JavaScript, która może istnieć nawet bez GTM. Google Tag Manager jest jednym z narzędzi, które odczytuje dane z Data Layer, ale nie jedynym możliwym.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy można mieć Data Layer bez Google Tag Managera?</summary>
+      <div class="blog-faq-answer"><p>Tak. Sama tablica dataLayer to zwykły obiekt JavaScript i technicznie może ją odczytywać dowolny kod, nie tylko GTM. W praktyce jednak zdecydowana większość implementacji Data Layer powstaje właśnie z myślą o współpracy z GTM.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Dlaczego moje zdarzenie nie pojawia się w GTM, mimo że widzę je w dataLayer w konsoli przeglądarki?</summary>
+      <div class="blog-faq-answer"><p>Najczęstsza przyczyna to niezgodność nazwy zdarzenia albo pola między tym, co faktycznie wysyła strona, a tym, co skonfigurowano w triggerze albo zmiennej w GTM. Druga częsta przyczyna to zdarzenie wysłane zanim kontener GTM zdążył się w pełni załadować.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Po co czyścić obiekt ecommerce przed każdym nowym zdarzeniem?</summary>
+      <div class="blog-faq-answer"><p>Żeby uniknąć sytuacji, w której GTM, przy niepełnym nadpisaniu zagnieżdżonego obiektu, połączy dane z poprzedniego zdarzenia e-commerce z danymi bieżącego, co prowadzi do błędnych wartości w raportach.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy Data Layer trzeba implementować osobno dla każdej podstrony?</summary>
+      <div class="blog-faq-answer"><p>Nie osobno, ale konsekwentnie. Ta sama nazwa zdarzenia i ta sama struktura parametrów powinny być używane wszędzie tam, gdzie występuje ta sama akcja użytkownika, niezależnie od tego, na której podstronie się wydarzyła.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy błąd w Data Layer da się wykryć bez zaglądania w kod strony?</summary>
+      <div class="blog-faq-answer"><p>Częściowo tak. Podgląd GTM i DebugView w GA4 pokazują skutki błędów w Data Layer, takie jak brakujące parametry czy nieodpalające się tagi, nawet bez analizy samego kodu JavaScript. Nie zawsze jednak wskażą dokładną przyczynę, do tego zwykle trzeba już zajrzeć w kod.</p></div>
+    </details>
+  </div>
+`
+
+const GA4_OVERVIEW_BODY_HTML = `
+  <p>Google Analytics 4 jest dziś domyślnym narzędziem analitycznym praktycznie każdej strony i aplikacji korzystającej z ekosystemu Google, ale wciąż bywa rozumiane powierzchownie: jako „to nowe GA, które zastąpiło stare GA”. To prawda, ale pomija najważniejsze: GA4 to zupełnie inna filozofia pomiaru niż jej poprzedniczka, Universal Analytics, zbudowana od podstaw wokół zdarzeń, a nie sesji i stron.</p>
+
+  <p>Ten artykuł to obszerne wprowadzenie do GA4: czym właściwie jest, do czego służy, jak wygląda jej model danych, jakie ma realne zalety i wady, oraz jak dokładnie łączy dane z serwisów internetowych i aplikacji mobilnych w jedną, spójną usługę. Jeśli wdrażasz GA4 po raz pierwszy albo porządkujesz wiedzę po migracji z Universal Analytics, znajdziesz tu pełny obraz, nie tylko listę funkcji.</p>
+
+  <h2>Czym jest Google Analytics 4</h2>
+
+  <p>Google Analytics 4 to czwarta, obecna generacja darmowego narzędzia analitycznego Google, służącego do mierzenia ruchu i zachowań użytkowników na stronach internetowych i w aplikacjach mobilnych. Zastąpiła Universal Analytics, która przestała przetwarzać nowe dane latem 2023 roku (a jej wersja 360 rok później), co w praktyce wymusiło migrację na GA4 na całym rynku, niezależnie od tego, czy firma była na to gotowa.</p>
+
+  <p>Kluczowa różnica względem poprzedniczki nie jest kosmetyczna. Universal Analytics była zbudowana wokół sesji i odsłon strony jako podstawowej jednostki pomiaru. GA4 traktuje wszystko jako zdarzenie: odsłonę strony, kliknięcie, przewinięcie, zakup, zalogowanie. Nawet sama odsłona strony to w GA4 zdarzenie o nazwie <i>page_view</i>, a nie osobna, uprzywilejowana kategoria danych. Ten fundament event-based ma konsekwencje dla niemal każdego innego aspektu narzędzia, od raportowania po integracje.</p>
+
+  <h2>Do czego służy GA4</h2>
+
+  <p>GA4 odpowiada na kilka różnych potrzeb biznesowych jednocześnie, co czasem gubi się w rozmowie o samych funkcjach:</p>
+
+  <ul>
+    <li><b>Analiza ruchu i jego źródeł.</b> Skąd przychodzą użytkownicy, jakimi kanałami, ile sesji i użytkowników generuje każdy z nich, i jak te liczby zmieniają się w czasie.</li>
+    <li><b>Pomiar konwersji i zdarzeń kluczowych.</b> Śledzenie konkretnych działań uznanych za wartościowe dla biznesu: zakupów, zapisów, wysłanych formularzy, pobrań.</li>
+    <li><b>Budowanie odbiorców do remarketingu.</b> Grupy użytkowników zdefiniowane na podstawie ich zachowania w GA4 można eksportować bezpośrednio do Google Ads, żeby kierować do nich reklamy.</li>
+    <li><b>Analiza produktowa aplikacji mobilnych.</b> GA4 wyrosła częściowo z Google Analytics for Firebase, więc natywnie obsługuje zdarzenia i lejki typowe dla aplikacji, nie tylko stron www.</li>
+    <li><b>Modelowanie i prognozowanie.</b> Przy wystarczającej ilości danych GA4 udostępnia metryki predykcyjne, takie jak prawdopodobieństwo zakupu czy przewidywany przychód od danej grupy użytkowników.</li>
+  </ul>
+
+  <h2>Jak używać GA4 w analityce internetowej: model danych oparty na zdarzeniach</h2>
+
+  <p>Żeby efektywnie korzystać z GA4, trzeba zrozumieć, że cała usługa operuje na trzech poziomach: zdarzeniach, parametrach zdarzeń i właściwościach użytkownika (user properties).</p>
+
+  <ul>
+    <li><b>Zdarzenie (event)</b> to pojedyncza akcja albo wystąpienie, które chcesz zmierzyć, zidentyfikowane nazwą, np. <i>page_view</i>, <i>add_to_cart</i>, <i>purchase</i>. Szczegółowo opisaliśmy, które zdarzenia GA4 zbiera automatycznie, a które trzeba wdrożyć ręcznie, w <a href="/blog/automatyczne-zdarzenia-ga4">osobnym artykule o automatycznych zdarzeniach GA4</a>.</li>
+    <li><b>Parametr zdarzenia</b> to dodatkowa informacja opisująca dane wystąpienie zdarzenia, np. <i>value</i> i <i>currency</i> przy zdarzeniu zakupu, albo <i>search_term</i> przy zdarzeniu wyszukiwania.</li>
+    <li><b>Właściwość użytkownika (user property)</b> to informacja opisująca samego użytkownika, niezależna od konkretnego zdarzenia, np. jego status subskrypcji, preferowany język albo przypisanie do grupy testu A/B, utrzymywana między wizytami.</li>
+  </ul>
+
+  <p>W praktyce korzystanie z GA4 oznacza najpierw świadome zaprojektowanie tego, jakie zdarzenia, parametry i właściwości użytkownika są istotne dla Twojego biznesu, a dopiero potem budowanie na nich raportów, segmentów i odbiorców. To odwrotna kolejność niż w Universal Analytics, gdzie część danych, takich jak odsłony czy czas na stronie, GA4 dawała niemal za darmo, bez konieczności przemyślenia struktury pomiaru z góry.</p>
+
+  <h2>Jak zacząć korzystać z GA4 krok po kroku</h2>
+
+  <ol>
+    <li>Załóż usługę GA4 w Google Analytics i dodaj strumień danych: Web dla strony internetowej, iOS albo Android dla aplikacji mobilnej.</li>
+    <li>Zaimplementuj podstawowy tag pomiarowy: gtag.js albo Google Tag Manager dla strony, pakiet Firebase SDK dla aplikacji.</li>
+    <li>Przejrzyj i donastrój Pomiar ulepszony (Enhanced measurement) dla strumienia Web, zgodnie z tym, co opisaliśmy w artykule o automatycznych zdarzeniach GA4.</li>
+    <li>Zaimplementuj zdarzenia rekomendowane i własne dla kluczowych działań biznesowych, korzystając z Data Layer i Google Tag Managera, jeśli pomiar opiera się na tej architekturze.</li>
+    <li>Oznacz zdarzenia uznane za najważniejsze jako zdarzenia kluczowe (key events), żeby były widoczne w raportach konwersji i dostępne jako cel optymalizacji w Google Ads.</li>
+    <li>Zweryfikuj całą implementację w DebugView przed uznaniem jej za gotową do produkcji.</li>
+    <li>Ustal harmonogram regularnego sprawdzania jakości danych, ręcznie albo przez zautomatyzowane narzędzie, zamiast traktować wdrożenie jako jednorazowe zadanie.</li>
+  </ol>
+
+  <h2>Zalety GA4</h2>
+
+  <ul>
+    <li><b>Wspólny model danych dla web i aplikacji.</b> Jedna usługa potrafi łączyć dane z wielu platform, czego Universal Analytics, wymagająca osobnego narzędzia Firebase Analytics dla aplikacji, nie oferowała.</li>
+    <li><b>Darmowy eksport do BigQuery.</b> Nawet bezpłatna usługa GA4 pozwala na codzienny eksport surowych danych zdarzeń do BigQuery, co w Universal Analytics było zarezerwowane dla płatnej wersji 360.</li>
+    <li><b>Elastyczny model oparty na zdarzeniach.</b> Możliwość definiowania dowolnych zdarzeń i parametrów, dopasowanych do konkretnego modelu biznesowego, zamiast sztywnego zestawu metryk.</li>
+    <li><b>Wbudowane modelowanie i metryki predykcyjne.</b> Prawdopodobieństwo zakupu, prawdopodobieństwo odejścia klienta i przewidywany przychód, generowane automatycznie przy wystarczającym wolumenie danych.</li>
+    <li><b>Integracja z Google Ads i Consent Mode.</b> Natywne wsparcie dla trybu zgodności na pliki cookie i bezpośrednie budowanie odbiorców reklamowych bez dodatkowych narzędzi pośredniczących.</li>
+    <li><b>Insights oparte na wykrywaniu anomalii.</b> Automatyczne sygnalizowanie nietypowych zmian w danych, opisane szerzej w <a href="/blog/alerty-w-google-analytics-4">artykule o alertach w GA4</a>.</li>
+  </ul>
+
+  <h2>Wady GA4</h2>
+
+  <ul>
+    <li><b>Stroma krzywa uczenia się.</b> Osoby przyzwyczajone do Universal Analytics musiały nauczyć się nowej terminologii i nowego sposobu myślenia o danych, co dla wielu zespołów oznaczało tygodnie adaptacji.</li>
+    <li><b>Ograniczona retencja danych na poziomie zdarzeń.</b> Dane użytkownika i zdarzeń dostępne do analizy w Eksploracjach są domyślnie przechowywane krócej niż w Universal Analytics, standardowo 2 miesiące, maksymalnie 14 po zmianie ustawienia.</li>
+    <li><b>Progi danych (data thresholds).</b> Mechanizm ochrony prywatności potrafi ukryć część wierszy raportu przy małych grupach użytkowników, co szczegółowo opisaliśmy w <a href="/blog/progi-danych-ga4">artykule o progach danych w GA4</a>.</li>
+    <li><b>Sampling w rozbudowanych Eksploracjach.</b> Przy bardzo dużym wolumenie danych i złożonych zapytaniach GA4 może opierać wynik na próbce, a nie pełnym zbiorze danych.</li>
+    <li><b>Mniej gotowych raportów „z pudełka”.</b> Część zestawień oczywistych w Universal Analytics wymaga w GA4 ręcznego zbudowania własnej Eksploracji.</li>
+    <li><b>Wysoka zależność od jakości wdrożenia.</b> Ponieważ większość wartościowych danych biznesowych wymaga świadomej implementacji zdarzeń, błędy we wdrożeniu mają w GA4 większy wpływ na jakość raportów niż miały w bardziej zautomatyzowanej Universal Analytics.</li>
+  </ul>
+
+  <h2>Zalety i wady GA4 w jednym zestawieniu</h2>
+
+  <table class="blog-table">
+    <tr><th>Obszar</th><th>Zaleta</th><th>Wada</th></tr>
+    <tr><td>Zakres pomiaru</td><td>Wspólny model dla web i aplikacji</td><td>Wymaga świadomego zaprojektowania zdarzeń od podstaw</td></tr>
+    <tr><td>Dane surowe</td><td>Darmowy eksport do BigQuery</td><td>Retencja danych w interfejsie krótsza niż w UA</td></tr>
+    <tr><td>Prywatność</td><td>Natywna integracja z Consent Mode</td><td>Progi danych mogą ukrywać część wierszy raportu</td></tr>
+    <tr><td>Analiza</td><td>Elastyczne, własne Eksploracje</td><td>Mniej gotowych raportów standardowych niż w UA</td></tr>
+    <tr><td>Skala danych</td><td>Automatyczne insighty i modelowanie</td><td>Sampling przy bardzo dużych zapytaniach</td></tr>
+  </table>
+
+  <h2>Wspólne zbieranie danych w Web i App</h2>
+
+  <p>Jedną z największych architektonicznych zmian względem Universal Analytics jest to, że jedna usługa GA4 może zbierać dane z wielu strumieni jednocześnie: ze strony internetowej, z aplikacji na iOS i z aplikacji na Androida. W Universal Analytics pomiar aplikacji wymagał osobnego narzędzia, Google Analytics for Firebase, z osobnym interfejsem i osobnymi raportami, które trzeba było ręcznie zestawiać z danymi webowymi.</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 760 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Diagram pokazujący, jak jedna usługa GA4 łączy dane ze strumienia Web, strumienia iOS i strumienia Android">
+      <defs>
+        <marker id="arrowE" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#8b939a" />
+        </marker>
+      </defs>
+
+      <rect x="10" y="20" width="220" height="90" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="120" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Strumień Web</text>
+      <text x="120" y="75" text-anchor="middle" font-size="10.5" fill="#8b939a">gtag.js / Google Tag Manager</text>
+
+      <rect x="270" y="20" width="220" height="90" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="380" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Strumień iOS</text>
+      <text x="380" y="75" text-anchor="middle" font-size="10.5" fill="#8b939a">Firebase SDK</text>
+
+      <rect x="530" y="20" width="220" height="90" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="640" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#232b31">Strumień Android</text>
+      <text x="640" y="75" text-anchor="middle" font-size="10.5" fill="#8b939a">Firebase SDK</text>
+
+      <line x1="120" y1="110" x2="340" y2="175" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowE)" />
+      <line x1="380" y1="110" x2="380" y2="175" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowE)" />
+      <line x1="640" y1="110" x2="420" y2="175" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowE)" />
+
+      <rect x="230" y="180" width="300" height="80" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="380" y="213" text-anchor="middle" font-size="13" font-weight="700" fill="#166534">Jedna usługa GA4</text>
+      <text x="380" y="233" text-anchor="middle" font-size="10.5" fill="#166534">wspólne raporty, odbiorcy i eksport do BigQuery</text>
+    </svg>
+    <figcaption>Jedna usługa GA4 może zbierać dane z wielu strumieni jednocześnie, łącząc raportowanie web i aplikacji mobilnych w jednym miejscu.</figcaption>
+  </figure>
+
+  <p>W praktyce oznacza to, że możesz zobaczyć w jednym raporcie łączną liczbę użytkowników z wszystkich platform naraz, porównać zachowanie użytkowników web i aplikacji obok siebie, oraz budować odbiorców do remarketingu obejmujących obie platformy jednocześnie, bez ręcznego łączenia eksportów z dwóch osobnych narzędzi.</p>
+
+  <h2>Łączenie danych Web i App: jaki łącznik faktycznie stoi za tym procesem</h2>
+
+  <p>Samo umieszczenie strumieni Web i App pod jedną usługą GA4 daje wspólne miejsce raportowania, ale nie odpowiada jeszcze na pytanie, co łączy dane konkretnego, pojedynczego użytkownika między platformami. To osobny mechanizm, nazywany Reporting Identity, konfigurowany w ustawieniach usługi (Administracja, Ustawienia usługi, Tożsamość raportowania).</p>
+
+  <p>GA4 domyślnie korzysta z trybu <b>Blended</b> (połączonego), który próbuje zidentyfikować tego samego użytkownika w ustalonej kolejności priorytetu:</p>
+
+  <figure class="blog-figure">
+    <svg viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Kolejność priorytetu w trybie Blended: User-ID, potem Google Signals, potem identyfikator urządzenia">
+      <defs>
+        <marker id="arrowF" markerWidth="8" markerHeight="8" refX="4" refY="7" orient="auto">
+          <path d="M0,0 L8,0 L4,8 Z" fill="#8b939a" />
+        </marker>
+      </defs>
+      <rect x="60" y="15" width="380" height="70" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="80" y="42" font-size="13" font-weight="700" fill="#166534">1. User-ID</text>
+      <text x="80" y="62" font-size="10.5" fill="#166534">jeśli Twoja implementacja go wysyła</text>
+
+      <line x1="250" y1="88" x2="250" y2="112" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowF)" />
+
+      <rect x="60" y="115" width="380" height="70" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="80" y="142" font-size="13" font-weight="700" fill="#232b31">2. Google Signals</text>
+      <text x="80" y="162" font-size="10.5" fill="#8b939a">konta Google z włączoną personalizacją reklam</text>
+
+      <line x1="250" y1="188" x2="250" y2="212" stroke="#8b939a" stroke-width="1.5" marker-end="url(#arrowF)" />
+
+      <rect x="60" y="215" width="380" height="70" rx="10" fill="#fff" stroke="#e2e6e8" stroke-width="1.5" />
+      <text x="80" y="242" font-size="13" font-weight="700" fill="#232b31">3. Identyfikator urządzenia</text>
+      <text x="80" y="262" font-size="10.5" fill="#8b939a">zawsze dostępny, osobny dla każdej platformy</text>
+    </svg>
+    <figcaption>Tryb Blended sięga po kolejne źródło dopiero wtedy, gdy poprzednie nie jest dostępne dla danego użytkownika.</figcaption>
+  </figure>
+
+  <p>Innymi słowy: jeśli wdrożysz własny User-ID, GA4 użyje go jako najpewniejszego, deterministycznego łącznika między sesją na stronie a sesją w aplikacji tej samej osoby. Jeśli go nie wdrożysz, GA4 spróbuje oprzeć się na Google Signals, czyli zagregowanych, probabilistycznych sygnałach z kont Google zalogowanych użytkowników, o ile mają włączoną personalizację reklam. Gdy żadne z tych dwóch źródeł nie jest dostępne, GA4 traktuje sesję web i sesję w aplikacji jako dwóch różnych, niepowiązanych użytkowników, identyfikowanych wyłącznie osobnym identyfikatorem urządzenia dla każdej platformy.</p>
+
+  <p>Oprócz trybu Blended, w ustawieniach Tożsamości raportowania dostępne są też tryby <b>Observed</b> (bez modelowania statystycznego uzupełniającego braki) oraz <b>By device</b> (czysto urządzeniowy, bez żadnego łączenia między platformami). Większość usług zostaje przy domyślnym trybie Blended, bo daje najpełniejszy obraz przy najmniejszym nakładzie konfiguracji.</p>
+
+  <h2>Czym jest User-ID</h2>
+
+  <p>User-ID to własny, nadawany przez Ciebie identyfikator konkretnego, zalogowanego użytkownika, wysyłany razem z danymi do GA4 zarówno ze strony, jak i z aplikacji. To jedyny w pełni deterministyczny sposób na połączenie aktywności tej samej osoby na różnych platformach i różnych urządzeniach, bez polegania na probabilistycznym modelowaniu.</p>
+
+  <p>Kilka zasad, o których trzeba pamiętać przy wdrażaniu User-ID:</p>
+
+  <ul>
+    <li><b>To musi być Twój własny, wewnętrzny identyfikator</b>, na przykład klucz główny użytkownika w Twojej bazie danych, nie żadna bezpośrednio identyfikująca dana osobowa. Zasady Google Analytics wprost zabraniają wysyłania jako User-ID adresu e-mail, numeru telefonu czy innych danych pozwalających bezpośrednio zidentyfikować osobę.</li>
+    <li><b>Musi być stabilny w czasie.</b> Ten sam użytkownik powinien zawsze otrzymywać tę samą wartość User-ID, niezależnie od tego, kiedy i z jakiego urządzenia się loguje, inaczej łączenie sesji nie zadziała.</li>
+    <li><b>Wysyłasz go dopiero po zalogowaniu.</b> Zanim użytkownik się zaloguje, GA4 i tak zbiera jego aktywność, tyle że bez możliwości połączenia jej z przyszłymi sesjami po zalogowaniu na innym urządzeniu czy platformie, dopóki nie wyślesz User-ID.</li>
+    <li><b>Implementacja różni się między web i app.</b> Na stronie internetowej ustawia się go przez parametr konfiguracyjny gtag albo dedykowane pole w tagu konfiguracyjnym GA4 w Google Tag Managerze. W aplikacji mobilnej odpowiada za to metoda <code>setUserId()</code> w pakiecie Firebase SDK.</li>
+    <li><b>Włącza dodatkowe możliwości raportowania.</b> Oprócz samego łączenia sesji, User-ID odblokowuje widok User-ID w raportach oraz dokładniejsze, mniej zduplikowane liczenie użytkowników, bo GA4 przestaje liczyć tę samą osobę osobno na każdym urządzeniu i platformie.</li>
+    <li><b>Podlega tym samym progom prywatności co inne wymiary.</b> Raporty oparte na User-ID również mogą podlegać progom danych, opisanym w <a href="/blog/progi-danych-ga4">artykule o progach danych w GA4</a>, jeśli liczba użytkowników w danym zestawieniu jest zbyt mała.</li>
+  </ul>
+
+  <h2>Checklist przy konfiguracji GA4 dla web i aplikacji</h2>
+
+  <figure class="blog-figure">
+    <div class="blog-checklist">
+      <div class="blog-checklist-head">Zanim uznasz konfigurację wielu platform za kompletną</div>
+      <ul class="blog-checklist-list">
+        <li><span class="blog-checklist-check">✓</span> Strumienie Web, iOS i Android (jeśli dotyczy) są podłączone do tej samej usługi GA4</li>
+        <li><span class="blog-checklist-check">✓</span> Nazwy zdarzeń i parametrów są spójne między platformami tam, gdzie opisują to samo działanie użytkownika</li>
+        <li><span class="blog-checklist-check">✓</span> Świadomie wybrany tryb Tożsamości raportowania (Blended, Observed albo By device)</li>
+        <li><span class="blog-checklist-check">✓</span> User-ID wdrożony konsekwentnie na wszystkich platformach, jeśli zależy Ci na dokładnym łączeniu sesji</li>
+        <li><span class="blog-checklist-check">✓</span> User-ID nie zawiera żadnych danych pozwalających bezpośrednio zidentyfikować osobę</li>
+        <li><span class="blog-checklist-check">✓</span> Kluczowe zdarzenia biznesowe oznaczone jako zdarzenia kluczowe na poziomie całej usługi</li>
+      </ul>
+    </div>
+  </figure>
+
+  <h2>Jak AlertGA4 wspiera codzienną pracę z GA4</h2>
+
+  <p>Niezależnie od tego, czy Twoja usługa GA4 obsługuje wyłącznie stronę internetową, czy też łączy dane web i aplikacji mobilnej, mechanizm, który najczęściej zawodzi, jest ten sam: nikt nie dowiaduje się automatycznie, gdy zdarzenie przestaje działać albo parametr przestaje docierać. AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność i wolumen skonfigurowanych zdarzeń oraz pokrycie ich parametrów, porównując bieżący dzień z historyczną normą tego samego konta.</p>
+
+  <figure class="blog-figure">
+    <img src="/blog/alertga4-dashboard.png" alt="Widok panelu AlertGA4 z podsumowaniem stanu monitorowanych kont GA4" width="1280" height="900" loading="lazy" />
+    <figcaption>Jeden dashboard pokazuje status wszystkich podłączonych usług GA4, niezależnie od liczby obsługiwanych kont.</figcaption>
+  </figure>
+
+  <p>Gdy coś odbiega od normy, AlertGA4 wysyła maila z konkretną diagnozą tego samego dnia, zamiast dowiadywać się o problemie przy okazji miesięcznego przeglądu danych.</p>
+
+  <h2>Dla kogo ma to znaczenie</h2>
+
+  <ul>
+    <li><b>Firmy migrujące z Universal Analytics</b>, dla których zrozumienie modelu zdarzeń GA4 jest warunkiem wstępnym poprawnego odtworzenia dotychczasowych raportów w nowym narzędziu.</li>
+    <li><b>Zespoły produktowe prowadzące jednocześnie stronę i aplikację mobilną</b>, dla których wspólne raportowanie web i app w jednej usłudze eliminuje ręczne zestawianie danych z dwóch osobnych narzędzi.</li>
+    <li><b>Firmy z kontem użytkownika i logowaniem</b>, dla których wdrożenie User-ID realnie poprawia dokładność liczenia użytkowników i jakość analizy ścieżki klienta między urządzeniami.</li>
+  </ul>
+
+  <h2>Podsumowanie</h2>
+
+  <p>Google Analytics 4 to coś więcej niż kolejna wersja starego narzędzia: to inna filozofia pomiaru, oparta na zdarzeniach zamiast sesji, zaprojektowana od podstaw do obsługi zarówno stron internetowych, jak i aplikacji mobilnych w jednej, wspólnej usłudze. Ta elastyczność ma swoją cenę w postaci stromej krzywej uczenia się i większej zależności od jakości wdrożenia niż w Universal Analytics, ale w zamian daje możliwości, których poprzedniczka nigdy nie oferowała: darmowy eksport do BigQuery, natywną integrację z Consent Mode i jedno miejsce raportowania dla wielu platform naraz.</p>
+
+  <p>Pełne wykorzystanie tych możliwości wymaga świadomych decyzji: jakie zdarzenia i parametry wdrożyć, czy i jak skonfigurować User-ID, który tryb Tożsamości raportowania wybrać. Żadna z nich nie dzieje się automatycznie, w przeciwieństwie do wielu funkcji, które Universal Analytics dawała bez pytania. To właśnie ta różnica, bardziej niż nowy interfejs, najlepiej tłumaczy, dlaczego migracja na GA4 dla wielu firm okazała się trudniejsza, niż się spodziewały.</p>
+`
+
+const GA4_OVERVIEW_FAQ_HTML = `
+  <h2>Najczęściej zadawane pytania</h2>
+
+  <div class="blog-faq">
+    <details class="blog-faq-item">
+      <summary>Czym GA4 różni się od Universal Analytics?</summary>
+      <div class="blog-faq-answer"><p>Przede wszystkim modelem danych. Universal Analytics była zbudowana wokół sesji i odsłon strony, a GA4 traktuje każdą interakcję, włącznie z samą odsłoną strony, jako zdarzenie. GA4 natywnie łączy też dane web i aplikacji mobilnych w jednej usłudze, czego UA nie robiła.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy GA4 jest darmowe?</summary>
+      <div class="blog-faq-answer"><p>Tak, podstawowa wersja GA4 jest bezpłatna, łącznie z codziennym eksportem danych do BigQuery. Istnieje też płatna wersja GA4 360 dla dużych organizacji, z wyższymi limitami i dodatkowymi funkcjami.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy muszę wdrożyć User-ID, żeby korzystać z GA4?</summary>
+      <div class="blog-faq-answer"><p>Nie, GA4 działa w pełni bez User-ID, korzystając wtedy z Google Signals albo samego identyfikatora urządzenia. User-ID jest opcjonalnym, ale wartościowym dodatkiem, zwłaszcza jeśli Twój biznes ma logowanie i zależy Ci na dokładnym łączeniu aktywności tego samego użytkownika między platformami.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy mogę użyć adresu e-mail użytkownika jako User-ID?</summary>
+      <div class="blog-faq-answer"><p>Nie. Zasady Google Analytics zabraniają wysyłania jako User-ID jakichkolwiek danych pozwalających bezpośrednio zidentyfikować osobę, w tym adresu e-mail. Powinien to być Twój własny, wewnętrzny identyfikator, na przykład klucz użytkownika z bazy danych.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Czy dane web i app w GA4 łączą się automatycznie bez żadnej konfiguracji?</summary>
+      <div class="blog-faq-answer"><p>Strumienie trafiają do wspólnych raportów automatycznie po podłączeniu do jednej usługi. Łączenie aktywności tego samego, konkretnego użytkownika między platformami zależy jednak od trybu Tożsamości raportowania i od tego, czy wdrożono User-ID, a nie dzieje się w pełni automatycznie bez żadnych ustawień.</p></div>
+    </details>
+    <details class="blog-faq-item">
+      <summary>Który tryb Tożsamości raportowania jest najlepszy?</summary>
+      <div class="blog-faq-answer"><p>Dla większości usług domyślny tryb Blended jest dobrym wyborem, bo wykorzystuje najlepsze dostępne źródło w danej sytuacji. Tryb By device ma sens głównie tam, gdzie z powodów prawnych albo biznesowych trzeba świadomie zrezygnować z łączenia danych między urządzeniami.</p></div>
+    </details>
+  </div>
+`
+
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'alerty-w-google-analytics-4',
@@ -1733,6 +2218,26 @@ export const BLOG_POSTS: BlogPost[] = [
     bodyHtml: UTM_BODY_HTML,
     faqHtml: UTM_FAQ_HTML,
     widget: 'utm-builder',
+  },
+  {
+    slug: 'data-layer-czym-jest',
+    title: 'Czym jest Data Layer i jak go używać w analityce internetowej',
+    excerpt: 'Pełny przewodnik po Data Layer: czym jest technicznie, jak go wdrożyć na stronie, jaki ma schemat dla e-commerce i jak dokładnie łączy się z Google Tag Managerem.',
+    targetPhrase: 'Data Layer',
+    status: 'published',
+    publishedAt: '2026-11-10',
+    bodyHtml: DATA_LAYER_BODY_HTML,
+    faqHtml: DATA_LAYER_FAQ_HTML,
+  },
+  {
+    slug: 'google-analytics-4-przewodnik',
+    title: 'Google Analytics 4: kompletny przewodnik po usłudze, jej zaletach i ograniczeniach',
+    excerpt: 'Czym jest GA4, do czego służy, jakie ma zalety i wady, jak łączy dane web i aplikacji mobilnych, i czym dokładnie jest User-ID.',
+    targetPhrase: 'Google Analytics 4',
+    status: 'published',
+    publishedAt: '2026-11-10',
+    bodyHtml: GA4_OVERVIEW_BODY_HTML,
+    faqHtml: GA4_OVERVIEW_FAQ_HTML,
   },
 ]
 

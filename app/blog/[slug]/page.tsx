@@ -111,6 +111,13 @@ export default async function BlogPostPage({ params }: Props) {
 
         .blog-post-body .blog-code { display: block; font-family: var(--font-mono), monospace; font-size: 13px; color: #232b31; background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 8px; padding: 12px 14px; margin: 0 0 16px; word-break: break-all; }
 
+        /* Multi-line JS snippets (Data Layer examples) — a separate class
+           from .blog-code (single-line URLs) since code needs white-space:
+           pre to keep indentation, not word-break:break-all which would
+           mangle it mid-token. */
+        .blog-post-body pre.blog-code-block { font-family: var(--font-mono), monospace; font-size: 12.5px; line-height: 1.65; color: #232b31; background: #f3f6f7; border: 1px solid #e2e6e8; border-radius: 8px; padding: 14px 16px; margin: 0 0 16px; overflow-x: auto; white-space: pre; }
+        .blog-post-body pre.blog-code-block code { background: none; border: none; padding: 0; font-size: inherit; }
+
         .blog-figure { margin: 24px 0; }
         .blog-figure img { width: 100%; height: auto; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
         .blog-figure svg { width: 100%; height: auto; display: block; background: #fff; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
