@@ -76,14 +76,14 @@ const BODY_HTML = `
   <p>Every monitored property is checked automatically, once a day, with no need to open any panel by hand. Each check's result lands on a dashboard with an overall data-quality score for that property and a trend against previous days.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-dashboard.png" alt="AlertGA4 dashboard with a list of monitored projects and their data-quality scores" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-dashboard.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-dashboard.png" alt="AlertGA4 dashboard with a list of monitored projects and their data-quality scores" width="1280" height="900" loading="lazy" /></a>
     <figcaption>AlertGA4's dashboard: every monitored GA4 property with its current score and trend in one place.</figcaption>
   </figure>
 
   <p>When a check detects a problem, you get an email with a specific diagnosis: which exact metric failed, what value it has, and how it changed versus the previous period. That's the real difference versus a plain insight: instead of "something changed", you get something like "self-referral rose to 3.2 percent of sessions, up from 0.3 percent a week earlier".</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="AlertGA4's checks view for a single project, with Pass, Warn, and Fail results" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="AlertGA4's checks view for a single project, with Pass, Warn, and Fail results" width="1280" height="900" loading="lazy" /></a>
     <figcaption>The checks view for a single project: every metric with its value, change versus the previous period, and status.</figcaption>
   </figure>
 

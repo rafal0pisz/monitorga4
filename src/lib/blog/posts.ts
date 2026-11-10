@@ -102,14 +102,14 @@ const ALERTS_BODY_HTML = `
   <p>Każda monitorowana usługa jest sprawdzana automatycznie, raz dziennie, bez ręcznego wchodzenia do żadnego panelu. Wynik każdego checka trafia na dashboard z ogólnym wynikiem jakości danych dla danej usługi oraz trendem względem poprzednich dni.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-dashboard.png" alt="Dashboard AlertGA4 z listą monitorowanych projektów i ich wynikami jakości danych" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-dashboard.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-dashboard.png" alt="Dashboard AlertGA4 z listą monitorowanych projektów i ich wynikami jakości danych" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Dashboard AlertGA4: wszystkie monitorowane usługi GA4 z aktualnym wynikiem i trendem w jednym miejscu.</figcaption>
   </figure>
 
   <p>Gdy któryś check wykryje problem, dostajesz maila z konkretną diagnozą: który dokładnie wskaźnik nie przeszedł, jaką ma wartość i jak zmieniła się względem poprzedniego okresu. To jest różnica wobec samego insightu: zamiast „coś się zmieniło”, dostajesz informację w stylu „self-referral wzrósł do 3,2 procent sesji, z 0,3 procent tydzień wcześniej”.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 dla konkretnego projektu, z wynikami Pass, Warn i Fail" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 dla konkretnego projektu, z wynikami Pass, Warn i Fail" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Widok checków dla pojedynczego projektu: każdy wskaźnik z wartością, zmianą względem poprzedniego okresu i statusem.</figcaption>
   </figure>
 
@@ -788,7 +788,7 @@ const MONITORING_EVENTS_BODY_HTML = `
   <p>AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność i wolumen skonfigurowanych zdarzeń, porównując je z poprzednimi dniami tej samej usługi. Kreator konfiguracji czyta rzeczywiste dane z Twojego konta i podpowiada, które zdarzenia warto monitorować, razem z ich wolumenem z ostatnich 30 dni, zamiast wymagać ręcznego wpisywania nazw z pamięci.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Każde monitorowane zdarzenie ma własny status, bieżący wolumen i zmianę względem poprzedniego okresu.</figcaption>
   </figure>
 
@@ -1409,7 +1409,7 @@ const AUTOMATIC_EVENTS_BODY_HTML = `
   <p>Nawet poprawnie wdrożone zdarzenia i parametry potrafią przestać działać miesiące po wdrożeniu, przy zupełnie niezwiązanej zmianie na stronie. AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność skonfigurowanych zdarzeń oraz pokrycie ich parametrów, porównując bieżący dzień z historyczną normą tego samego konta.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="Widok checków AlertGA4 z listą monitorowanych zdarzeń i ich statusem" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Każde monitorowane zdarzenie ma własny status, bieżący wolumen i zmianę względem poprzedniego okresu.</figcaption>
   </figure>
 
@@ -2063,7 +2063,7 @@ const GA4_OVERVIEW_BODY_HTML = `
   <p>Niezależnie od tego, czy Twoja usługa GA4 obsługuje wyłącznie stronę internetową, czy też łączy dane web i aplikacji mobilnej, mechanizm, który najczęściej zawodzi, jest ten sam: nikt nie dowiaduje się automatycznie, gdy zdarzenie przestaje działać albo parametr przestaje docierać. AlertGA4 po podłączeniu usługi GA4 codziennie sprawdza obecność i wolumen skonfigurowanych zdarzeń oraz pokrycie ich parametrów, porównując bieżący dzień z historyczną normą tego samego konta.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-dashboard.png" alt="Widok panelu AlertGA4 z podsumowaniem stanu monitorowanych kont GA4" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-dashboard.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-dashboard.png" alt="Widok panelu AlertGA4 z podsumowaniem stanu monitorowanych kont GA4" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Jeden dashboard pokazuje status wszystkich podłączonych usług GA4, niezależnie od liczby obsługiwanych kont.</figcaption>
   </figure>
 

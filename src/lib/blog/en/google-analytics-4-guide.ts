@@ -189,7 +189,7 @@ const BODY_HTML = `
   <p>Whether your GA4 property covers only a website or combines web and mobile app data, the mechanism that fails most often is the same: nobody finds out automatically when an event stops working or a parameter stops arriving. Once connected to a GA4 property, AlertGA4 checks the presence and volume of configured events and their parameter coverage every day, comparing the current day against that account's own historical norm.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-dashboard.png" alt="AlertGA4 dashboard view summarizing the status of monitored GA4 properties" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-dashboard.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-dashboard.png" alt="AlertGA4 dashboard view summarizing the status of monitored GA4 properties" width="1280" height="900" loading="lazy" /></a>
     <figcaption>A single dashboard shows the status of every connected GA4 property, regardless of how many accounts you manage.</figcaption>
   </figure>
 

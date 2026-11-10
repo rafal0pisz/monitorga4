@@ -209,7 +209,7 @@ const BODY_HTML = `
   <p>Even correctly implemented events and parameters can stop working months after launch, triggered by a completely unrelated change elsewhere on the site. Once you connect a GA4 property, AlertGA4 checks the presence of configured events and their parameter coverage every day, comparing the current day against that same account's historical baseline.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="AlertGA4 checks view with a list of monitored events and their status" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="AlertGA4 checks view with a list of monitored events and their status" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Every monitored event has its own status, current volume, and change against the previous period.</figcaption>
   </figure>
 

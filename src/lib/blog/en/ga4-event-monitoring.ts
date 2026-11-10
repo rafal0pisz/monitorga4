@@ -62,7 +62,7 @@ const BODY_HTML = `
   <p>Once you connect a GA4 property, AlertGA4 checks the presence and volume of configured events every day, comparing them against previous days on the same property. The setup wizard reads real data from your account and suggests which events are worth monitoring, along with their volume over the last 30 days, instead of making you type names in from memory.</p>
 
   <figure class="blog-figure">
-    <img src="/blog/alertga4-checks.png" alt="AlertGA4 checks view with a list of monitored events and their status" width="1280" height="900" loading="lazy" />
+    <a href="/blog/alertga4-checks.png" target="_blank" rel="noopener" class="blog-figure-zoom"><img src="/blog/alertga4-checks.png" alt="AlertGA4 checks view with a list of monitored events and their status" width="1280" height="900" loading="lazy" /></a>
     <figcaption>Every monitored event has its own status, current volume, and change against the previous period.</figcaption>
   </figure>
 

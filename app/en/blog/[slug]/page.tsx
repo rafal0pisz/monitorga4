@@ -119,15 +119,42 @@ export default async function BlogPostPageEn({ params }: Props) {
         .blog-figure svg { width: 100%; height: auto; display: block; background: #fff; border-radius: 12px; border: 1px solid #e2e6e8; box-shadow: 0 1px 2px rgba(35,43,49,0.04); }
         .blog-figure figcaption { font-size: 12px; color: #8b939a; margin-top: 8px; text-align: center; }
 
+        /* Dense product-screenshot photos (unlike the SVG diagrams) become
+           unreadable once scaled down to a phone's content width — the
+           dashboard's own small text shrinks well past legible size. Rather
+           than re-crop the screenshots or build a pinch-zoom lightbox, wrap
+           them in a plain link to the full-size image in a new tab, where
+           the phone's native viewer/pinch-zoom works normally. */
+        .blog-figure-zoom { display: block; position: relative; }
+        .blog-figure-zoom img { cursor: zoom-in; }
+        .blog-figure-zoom::after {
+          content: 'Enlarge ⤢'; position: absolute; right: 10px; bottom: 10px;
+          background: rgba(35,43,49,0.85); color: #fff; font-size: 11px; font-weight: 600;
+          padding: 5px 10px; border-radius: 6px; pointer-events: none;
+        }
+
         .blog-checklist { background: #fff; border: 1px solid #e2e6e8; border-radius: 14px; padding: 20px 22px; }
         .blog-checklist-head { font-size: 12px; font-weight: 700; color: #232b31; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
         .blog-post-body .blog-checklist-list { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
         .blog-post-body .blog-checklist-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #3a4148; line-height: 1.5; margin: 0; padding-left: 0; }
         .blog-checklist-check { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #f0fdf4; color: #16a34a; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
 
-        .blog-table { width: 100%; border-collapse: collapse; margin: 8px 0 24px; font-size: 13.5px; }
+        /* display:block + overflow-x:auto on the table itself (rather than
+           wrapping every <table> in the raw content HTML with a div) makes
+           a wide table scroll within its own box on narrow screens instead
+           of forcing the whole page to scroll horizontally — tr/td keep
+           their default table-row/table-cell display, so the browser still
+           builds an anonymous table box internally and column alignment is
+           unaffected. Needed because several tables have unbreakable
+           tokens (items[].item_id, dates, code-like values) that are wider
+           than a phone screen regardless of font size. */
+        .blog-table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; border-collapse: collapse; margin: 8px 0 24px; font-size: 13.5px; }
         .blog-table th, .blog-table td { padding: 10px 14px; border: 1px solid #e2e6e8; text-align: left; vertical-align: top; }
         .blog-table th { background: #f3f6f7; font-weight: 600; }
+        @media (max-width: 640px) {
+          .blog-table { font-size: 12.5px; }
+          .blog-table th, .blog-table td { padding: 8px 10px; }
+        }
 
         .blog-faq { display: flex; flex-direction: column; gap: 10px; margin: 8px 0 24px; }
         .blog-faq-item { background: #fff; border: 1px solid #e2e6e8; border-radius: 12px; padding: 0; overflow: hidden; }
