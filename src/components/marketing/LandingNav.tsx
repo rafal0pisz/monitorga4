@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import LanguageSwitcher from '@/components/marketing/LanguageSwitcher'
-import type { Locale, LocaleRouteKey } from '@/lib/i18n/routes'
+import type { Locale, LocaleRoute, LocaleRouteKey } from '@/lib/i18n/routes'
 
 interface Cta { href: string; label: string }
 
@@ -32,12 +32,13 @@ const STRINGS = {
 }
 
 export default function LandingNav({
-  primaryCta, user, lang = 'pl', routeKey = 'home',
+  primaryCta, user, lang = 'pl', routeKey = 'home', langHrefs,
 }: {
   primaryCta: Cta
   user: boolean
   lang?: Locale
   routeKey?: LocaleRouteKey
+  langHrefs?: LocaleRoute
 }) {
   const [open, setOpen] = useState(false)
   const t = STRINGS[lang]
@@ -59,7 +60,7 @@ export default function LandingNav({
           {navLinks.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
         </div>
         <div className="lp-nav-cta">
-          <LanguageSwitcher lang={lang} routeKey={routeKey} />
+          <LanguageSwitcher lang={lang} routeKey={routeKey} hrefs={langHrefs} />
           <Link href={primaryCta.href} className="btn btn--primary btn--sm">
             <span className="nav-cta-full">{primaryCta.label}</span>
             <span className="nav-cta-short">{user ? primaryCta.label : t.signUpShort}</span>

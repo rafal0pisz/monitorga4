@@ -19,6 +19,11 @@ export interface BlogPost {
   // which splits bodyHtml on that marker and renders the component between
   // the two halves.
   widget?: 'utm-builder'
+  // Slug of this post's English translation under /en/blog, if one exists
+  // (see src/lib/blog/posts.en.ts). Used to build hreflang alternates and
+  // the language switcher's link on this specific post, instead of always
+  // bouncing to the homepage like the generic LOCALE_ROUTES lookup would.
+  enSlug?: string
 }
 
 const ALERTS_BODY_HTML = `
@@ -1500,7 +1505,7 @@ const UTM_BODY_HTML = `
 
   <p>Najpoważniejszy, a jednocześnie najczęściej popełniany błąd przy UTM to doklejanie ich do linków prowadzących do własnej domeny, na przykład w linku w stopce maila prowadzącym z powrotem na stronę główną, albo w linku w menu nawigacyjnym.</p>
 
-  <p>UTM jest pomyślany jako informacja o tym, skąd użytkownik przyszedł z zewnątrz, nie jako sposób na oznaczanie ruchu wewnątrz własnej strony. Kliknięcie w wewnętrzny link z doklejonym UTM potrafi uruchomić w GA4 nową sesję i nadpisać oryginalne źródło, z którego użytkownik faktycznie trafił na stronę, zastępując je przypadkowym wewnętrznym tagiem. To jeden z mechanizmów opisanych szerzej w <a href="/blog/self-referral-ga4">artykule o self-referral w GA4</a>, i jedna z najczęstszych przyczyn tego problemu w praktyce.</p>
+  <p>UTM jest pomyślany jako informacja o tym, skąd użytkownik przyszedł z zewnątrz, nie jako sposób na oznaczanie ruchu wewnątrz własnej strony. Kliknięcie w wewnętrzny link z doklejonym UTM potrafi uruchomić w GA4 nową sesję i nadpisać oryginalne źródło, z którego użytkownik faktycznie trafił na stronę, zastępując je przypadkowym wewnętrznym tagiem. To jeden z mechanizmów stojących za zjawiskiem self-referral, i jedna z najczęstszych przyczyn tego problemu w praktyce.</p>
 
   <h2>Inne częste błędy</h2>
 
@@ -2048,6 +2053,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-19',
     bodyHtml: ALERTS_BODY_HTML,
     faqHtml: ALERTS_FAQ_HTML,
+    enSlug: 'google-analytics-4-alerts',
   },
   {
     slug: 'audyt-ga4-checklist',
@@ -2058,6 +2064,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: AUDIT_CHECKLIST_BODY_HTML,
     faqHtml: AUDIT_CHECKLIST_FAQ_HTML,
+    enSlug: 'ga4-audit-checklist',
   },
   {
     slug: 'self-referral-ga4',
@@ -2075,6 +2082,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-19',
     bodyHtml: DUPLICATE_PURCHASE_BODY_HTML,
     faqHtml: DUPLICATE_PURCHASE_FAQ_HTML,
+    enSlug: 'duplicate-purchase-events-ga4',
   },
   {
     slug: 'ruch-botowy-ga4',
@@ -2085,6 +2093,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-24',
     bodyHtml: BOT_TRAFFIC_BODY_HTML,
     faqHtml: BOT_TRAFFIC_FAQ_HTML,
+    enSlug: 'bot-traffic-ga4',
   },
   {
     slug: 'brakujace-eventy-ga4',
@@ -2102,6 +2111,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-19',
     bodyHtml: NOT_SET_BODY_HTML,
     faqHtml: NOT_SET_FAQ_HTML,
+    enSlug: 'not-set-in-ga4',
   },
   {
     slug: 'ruch-direct-ga4',
@@ -2147,6 +2157,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-24',
     bodyHtml: THRESHOLDS_BODY_HTML,
     faqHtml: THRESHOLDS_FAQ_HTML,
+    enSlug: 'ga4-data-thresholds',
   },
   {
     slug: 'checklist-raportowania-ga4',
@@ -2157,6 +2168,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-10-24',
     bodyHtml: REPORTING_CHECKLIST_BODY_HTML,
     faqHtml: REPORTING_CHECKLIST_FAQ_HTML,
+    enSlug: 'ga4-reporting-checklist',
   },
   {
     slug: 'monitoring-zdarzen-ga4',
@@ -2167,6 +2179,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: MONITORING_EVENTS_BODY_HTML,
     faqHtml: MONITORING_EVENTS_FAQ_HTML,
+    enSlug: 'ga4-event-monitoring',
   },
   {
     slug: 'weryfikacja-zdarzen-ga4',
@@ -2177,6 +2190,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: EVENT_VERIFICATION_BODY_HTML,
     faqHtml: EVENT_VERIFICATION_FAQ_HTML,
+    enSlug: 'ga4-event-verification',
   },
   {
     slug: 'rozbieznosci-danych-ga4',
@@ -2187,6 +2201,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: DATA_DISCREPANCIES_BODY_HTML,
     faqHtml: DATA_DISCREPANCIES_FAQ_HTML,
+    enSlug: 'ga4-data-discrepancies',
   },
   {
     slug: 'automatyzacja-kontroli-jakosci-danych-ga4',
@@ -2197,6 +2212,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-05',
     bodyHtml: QUALITY_AUTOMATION_BODY_HTML,
     faqHtml: QUALITY_AUTOMATION_FAQ_HTML,
+    enSlug: 'automate-ga4-data-quality-checks',
   },
   {
     slug: 'automatyczne-zdarzenia-ga4',
@@ -2207,6 +2223,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-08',
     bodyHtml: AUTOMATIC_EVENTS_BODY_HTML,
     faqHtml: AUTOMATIC_EVENTS_FAQ_HTML,
+    enSlug: 'ga4-automatically-collected-events',
   },
   {
     slug: 'utm-budowanie-linkow-ga4',
@@ -2218,6 +2235,7 @@ export const BLOG_POSTS: BlogPost[] = [
     bodyHtml: UTM_BODY_HTML,
     faqHtml: UTM_FAQ_HTML,
     widget: 'utm-builder',
+    enSlug: 'utm-link-builder-ga4',
   },
   {
     slug: 'data-layer-czym-jest',
@@ -2228,6 +2246,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-10',
     bodyHtml: DATA_LAYER_BODY_HTML,
     faqHtml: DATA_LAYER_FAQ_HTML,
+    enSlug: 'what-is-a-data-layer',
   },
   {
     slug: 'google-analytics-4-przewodnik',
@@ -2238,6 +2257,7 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: '2026-11-10',
     bodyHtml: GA4_OVERVIEW_BODY_HTML,
     faqHtml: GA4_OVERVIEW_FAQ_HTML,
+    enSlug: 'google-analytics-4-guide',
   },
 ]
 

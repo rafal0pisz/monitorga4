@@ -24,7 +24,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.excerpt,
     robots: { index: true, follow: true },
-    alternates: { canonical: `/blog/${post.slug}` },
+    alternates: {
+      canonical: `/blog/${post.slug}`,
+      // Only declared when an English translation actually exists — an
+      // hreflang pointing at a URL that 404s is worse than no hreflang at
+      // all, so untranslated posts fall back to a plain canonical only.
+      ...(post.enSlug && {
+        languages: { pl: `/blog/${post.slug}`, en: `/en/blog/${post.enSlug}`, 'x-default': `/en/blog/${post.enSlug}` },
+      }),
+    },
     openGraph: {
       type: 'article',
       locale: 'pl_PL',
@@ -153,7 +161,11 @@ export default async function BlogPostPage({ params }: Props) {
         .blog-back:hover { color: #232b31; }
       `}</style>
 
-      <LandingNav primaryCta={primaryCta} user={!!user} />
+      <LandingNav
+        primaryCta={primaryCta}
+        user={!!user}
+        langHrefs={post.enSlug ? { pl: `/blog/${post.slug}`, en: `/en/blog/${post.enSlug}` } : { pl: `/blog/${post.slug}`, en: '/en/blog' }}
+      />
 
       <main>
         <div className="wrap blog-post-hero">

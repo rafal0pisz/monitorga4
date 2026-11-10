@@ -62,7 +62,7 @@ export default function LandingFooter({ lang = 'pl' }: { lang?: Locale }) {
             <a href="/en#who-its-for">Who it&rsquo;s for</a>
             <Link href="/en/features">Features</Link>
             <Link href="/en/pricing">Pricing</Link>
-            <Link href="/blog">Blog</Link>
+            <Link href="/en/blog">Blog</Link>
             <Link href="/en/contact">Contact</Link>
           </div>
           <div className="lp-footer-col">
