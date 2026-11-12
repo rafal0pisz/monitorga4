@@ -120,3 +120,13 @@ export function alertEmailLimitMessage(limit: number): string {
     ? `Your plan allows up to ${limit} ${addrWord} per project. Need more? Contact support.`
     : `Your plan allows up to ${limit} ${addrWord} per project. Upgrade to add more.`
 }
+
+// Display-only conversion for the /en/pricing page — actual billing is
+// always in PLN via Stripe (see stripePriceId above), so this never feeds
+// into checkout. A fixed rate (not a live FX rate) so the EN page can't
+// show a number that silently drifts from what's advertised next to it.
+export const EUR_DISPLAY_RATE_PLN = 4.5
+
+export function plnToApproxEur(pln: number): number {
+  return Math.round(pln / EUR_DISPLAY_RATE_PLN)
+}

@@ -2,14 +2,14 @@
 
 import { useRef, useState } from 'react'
 import { ROWS, ROWS_EN, PLAN_KEYS, PLAN_LABELS } from './PlanComparisonTable'
-import { PLANS } from '@/lib/billing/plans'
+import { PLANS, plnToApproxEur } from '@/lib/billing/plans'
 import type { Locale } from '@/lib/i18n/routes'
 
 const SWIPE_THRESHOLD = 40
 
 const STRINGS = {
   pl: { prev: 'Poprzedni plan', next: 'Następny plan', show: (name: string) => `Pokaż plan ${name}`, price: (n: number) => `${n} zł + VAT/mies.` },
-  en: { prev: 'Previous plan', next: 'Next plan', show: (name: string) => `Show ${name} plan`, price: (n: number) => `${n} PLN + VAT/mo` },
+  en: { prev: 'Previous plan', next: 'Next plan', show: (name: string) => `Show ${name} plan`, price: (n: number) => `€${plnToApproxEur(n)} + VAT/mo` },
 }
 
 export default function PlanComparisonCarousel({ lang = 'pl' }: { lang?: Locale }) {

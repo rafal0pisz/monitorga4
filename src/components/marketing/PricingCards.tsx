@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
 import type { Locale } from '@/lib/i18n/routes'
+import { EUR_DISPLAY_RATE_PLN, plnToApproxEur } from '@/lib/billing/plans'
 
 interface PlanCard {
   id: string
@@ -22,16 +23,18 @@ const STRINGS = {
     choosePlanBtn: 'Wybierz plan', signUpBtn: 'Zarejestruj się', redirecting: 'Przekierowanie…',
     genericError: 'Nie udało się rozpocząć płatności.',
     amount: (n: number) => `${n} zł`,
+    rateNote: '',
   },
   en: {
     monthly: 'Monthly', yearly: 'Yearly', yearlyBadge: '-30%',
     unit: ' + VAT / mo',
-    annualNote: (total: number) => `Billed yearly: ${total} PLN + VAT`,
+    annualNote: (total: number) => `Billed yearly: ${total} PLN + VAT (~€${plnToApproxEur(total)})`,
     perService: (n: number) => `up to ${n} GA4 ${n === 1 ? 'property' : 'properties'}`,
     current: 'current', currentPlanBtn: 'Your current plan', switchPlanBtn: 'Switch to this plan',
     choosePlanBtn: 'Choose plan', signUpBtn: 'Sign up', redirecting: 'Redirecting…',
     genericError: 'Could not start checkout.',
-    amount: (n: number) => `${n} PLN`,
+    amount: (n: number) => `€${plnToApproxEur(n)}`,
+    rateNote: `Approximate EUR value at a fixed rate of 1 EUR = ${EUR_DISPLAY_RATE_PLN} PLN. You are billed in PLN.`,
   },
 }
 
@@ -76,6 +79,8 @@ export default function PricingCards({
         <button type="button" className={cycle === 'monthly' ? 'active' : ''} onClick={() => setCycle('monthly')}>{t.monthly}</button>
         <button type="button" className={cycle === 'yearly' ? 'active' : ''} onClick={() => setCycle('yearly')}>{t.yearly} <span className="pricing-toggle-badge">{t.yearlyBadge}</span></button>
       </div>
+
+      {t.rateNote && <p className="pricing-rate-note">{t.rateNote}</p>}
 
       {error && <div className="contact-error" style={{ maxWidth: 480, margin: '0 auto 24px' }}>{error}</div>}
 
