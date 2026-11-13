@@ -17,6 +17,15 @@ import { scoreColor } from '@/types'
 
 type RunRow = { id: string; run_date: string; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
 
+// Above this many declared parameter checks, one live GA4 request per card
+// (ParameterCoveragePanel) risks GA4's per-property concurrent-requests
+// quota even with the dashboard-side throttling in place (see
+// src/lib/ga4/report.ts and src/lib/ga4/clientQueue.ts) — each card can
+// fire up to 6 Google requests on its own. Past this threshold the panel
+// reads the worker's own daily results instead (a fixed day-over-day
+// snapshot, not Period-reactive) rather than live-querying GA4 at all.
+const PARAMETER_CACHED_THRESHOLD = 20
+
 const SECTION_META = {
   ecommerce:     { label: 'Ecommerce',     accent: '#f97316' },
   custom_events: { label: 'Custom Events', accent: '#ca8a04' },
@@ -131,6 +140,7 @@ export default async function ProjectPage({
     paramArr.map((p: any) => ({ event_name: p.event_name, parameter_name: p.parameter_name }))
 
   const expectedEvents: string[] = Array.isArray(project.expected_events) ? project.expected_events : []
+  const parametersAreCached = parameterChecks.length >= PARAMETER_CACHED_THRESHOLD
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background-tertiary)', color: 'var(--color-text-primary)' }}>
@@ -241,7 +251,7 @@ export default async function ProjectPage({
               {isEmpty || !project.ga4_property_id
                 ? <div style={{ padding: 14, borderRadius: 8, textAlign: 'center', backgroundColor: 'var(--color-background-primary)', border: '1px dashed var(--color-border-tertiary)', fontSize: 12, color: 'var(--color-text-secondary)' }}>{emptyMsg}</div>
                 : sectionId === 'parameters'
-                  ? <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} anchorOffset={anchorOffset} />
+                  ? <ParameterCoveragePanel key={liveKey} projectId={id} parameterChecks={parameterChecks} periodDays={periodDays} anchorOffset={anchorOffset} cached={parametersAreCached} />
                   : <EventsDetailPanel key={liveKey} projectId={id} expectedEvents={liveEvents} periodDays={periodDays} anchorOffset={anchorOffset} />
               }
             </div>
