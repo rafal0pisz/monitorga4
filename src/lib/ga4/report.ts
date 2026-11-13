@@ -10,14 +10,27 @@ const BASE_DELAY_MS = 500
 // GA4's "concurrent requests" quota is enforced per property, and several
 // callers fan out internally with no limit of their own (e.g. events/route.ts
 // fires current+prev in parallel; parameters/route.ts can fire up to 3
-// requests per period, x2 periods, per single parameter card). A project
-// page mounting several of those panels at once — or the worker processing
-// one property's checks — can burst past that quota even though no
-// individual caller looks unreasonable. This caps how many requests are ever
-// in flight for the SAME property at once, across every caller in this
-// process; unrelated properties get their own queue and never wait on each
-// other, so this never throttles throughput across different customers.
-const MAX_CONCURRENT_PER_PROPERTY = 3
+// requests per period, x2 periods, per single parameter card). This caps how
+// many requests are ever in flight for the SAME property at once, across
+// every caller in this process; unrelated properties get their own queue and
+// never wait on each other, so this never throttles throughput across
+// different customers.
+//
+// Matches CHECKS_PER_PROJECT_CONCURRENCY in app/api/worker/run/route.ts
+// (6), not some lower dashboard-only number — that constant is already a
+// production-validated safe concurrency for a single property, with
+// WORKER_BATCH_SIZE's timing math built on top of it to stay inside the
+// worker's 300s maxDuration. A single shared cap here must not be lower
+// than that or every worker run risks taking ~2x longer than its budget
+// allows, timing out mid-batch and silently skipping whatever projects
+// hadn't finished yet — missed alerts, which is strictly worse than the
+// dashboard quota errors this was meant to fix. The dashboard-side burst
+// (many separate panels/parameter cards each firing their own request,
+// multiplying past this per-request cap) is handled instead by
+// serializing client requests to 1 in flight per tab (clientQueue.ts) and
+// by coalescing identical queries below — both address the actual
+// multiplicative root cause without touching this number.
+const MAX_CONCURRENT_PER_PROPERTY = 6
 
 const propertyQueues = new Map<string, { active: number; queue: (() => void)[] }>()
 
