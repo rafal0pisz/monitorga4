@@ -50,7 +50,53 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// Many callers issue byte-identical queries close together — e.g. 4+
+// parameter checks on the same event each separately ask "how many
+// `purchase` events happened in this period" as part of their own
+// coverage calculation (parameters/route.ts). Coalescing identical
+// (propertyId, body) calls into a single shared request cuts real Google
+// call volume for exactly that pattern, on top of (not instead of) the
+// per-property concurrency cap above — an account with many parameter
+// checks on a handful of events gets the biggest win here.
+const CACHE_TTL_MS = 15_000
+const CACHE_SWEEP_THRESHOLD = 200
+const resultCache = new Map<string, { promise: Promise<any>; expiresAt: number }>()
+
+function cacheKey(propertyId: string, body: object): string {
+  return `${propertyId}::${JSON.stringify(body)}`
+}
+
+function sweepExpiredCacheEntries() {
+  if (resultCache.size < CACHE_SWEEP_THRESHOLD) return
+  const now = Date.now()
+  for (const [key, entry] of resultCache) {
+    if (entry.expiresAt <= now) resultCache.delete(key)
+  }
+}
+
 export async function ga4Report(propertyId: string, token: string, body: object): Promise<any> {
+  const key = cacheKey(propertyId, body)
+  const cached = resultCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.promise
+
+  sweepExpiredCacheEntries()
+  const promise = runReport(propertyId, token, body)
+  // Cached as soon as the request starts (not once it resolves) so
+  // identical calls that start a moment later, while this one is still in
+  // flight, share the same promise instead of firing their own request.
+  resultCache.set(key, { promise, expiresAt: Date.now() + CACHE_TTL_MS })
+  try {
+    return await promise
+  } catch (err) {
+    // A failed request must not poison every other caller waiting on the
+    // same query — the next one gets a fresh attempt instead of an
+    // immediately-rethrown stale error for the rest of the TTL window.
+    resultCache.delete(key)
+    throw err
+  }
+}
+
+async function runReport(propertyId: string, token: string, body: object): Promise<any> {
   for (let attempt = 0; ; attempt++) {
     await acquire(propertyId)
     let res: Response
