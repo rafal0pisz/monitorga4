@@ -19,10 +19,10 @@ export const ROWS: Row[] = [
   // Lite has no team-invite feature at all (app/api/team/invite/route.ts
   // only allows 'pro'/'agency'/'trial') — 1 seat isn't a marketing number,
   // it's literally the only account that can ever access that plan's
-  // projects. Pro's 3 and Agency's 5 mirror maxMembersPerProject() /
-  // MAX_TEAM_SEATS in src/lib/billing/plans.ts and src/lib/team/access.ts
-  // exactly — Pro's is per service, Agency's is account-wide.
-  { label: 'Użytkownicy', lite: '1', pro: 'do 3 na usługę', agency: '5 na koncie' },
+  // projects. Pro's 5 and Agency's 10 mirror maxTeamSeats() in
+  // src/lib/billing/plans.ts exactly — both are flat, account-wide totals.
+  { label: 'Użytkownicy', lite: '1', pro: '5 na koncie', agency: '10 na koncie' },
+  { label: 'Tworzenie grup (grupowanie usług po kliencie)', lite: '—', pro: '✓', agency: '✓' },
   { label: 'Codzienny automatyczny monitoring', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Niestandardowe zdarzenia (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Zdarzenia e-commerce (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
@@ -43,7 +43,8 @@ export const ROWS: Row[] = [
 // silently drift in meaning, only in wording.
 export const ROWS_EN: Row[] = [
   { label: 'Monitored GA4 properties', lite: 'up to 3', pro: 'up to 15', agency: 'up to 100' },
-  { label: 'Users', lite: '1', pro: 'up to 3 per service', agency: '5 account-wide' },
+  { label: 'Users', lite: '1', pro: '5 account-wide', agency: '10 account-wide' },
+  { label: 'Group creation (group services by client)', lite: '—', pro: '✓', agency: '✓' },
   { label: 'Daily automatic monitoring', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Custom events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },
   { label: 'E-commerce events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },

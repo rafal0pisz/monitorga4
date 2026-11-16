@@ -2,7 +2,7 @@ import NewProjectForm from '@/components/project/NewProjectForm'
 import NewProjectTargetPicker from '@/components/project/NewProjectTargetPicker'
 import StartTrialButton from '@/components/billing/StartTrialButton'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId, planLimit, alertEmailLimit, TRIAL_DAYS } from '@/lib/billing/plans'
+import { effectivePlanId, planLimit, alertEmailLimit, canUseTeamFeature, TRIAL_DAYS } from '@/lib/billing/plans'
 import { getTeamContext } from '@/lib/team/access'
 import Link from 'next/link'
 
@@ -20,10 +20,12 @@ export default async function NewProjectPage() {
   let ownTrialExpired = false
   let ownLimit = 0
   let ownMaxAlertEmails = 2
+  let ownCanCreateGroups = false
   let teamCanCreate = false
   let teamOwnerId: string | null = null
   let teamOwnerEmail: string | null = null
   let teamMaxAlertEmails = 2
+  let teamCanCreateGroups = false
 
   if (!bypass) {
     const user = await getAuthUser()
@@ -48,6 +50,7 @@ export default async function NewProjectPage() {
       const ownEffective = effectivePlanId(ownProfile?.plan_id, ownProfile?.trial_ends_at)
       ownLimit = planLimit(ownEffective)
       ownMaxAlertEmails = alertEmailLimit(ownEffective)
+      ownCanCreateGroups = canUseTeamFeature(ownEffective)
       ownCanCreate = ownEffective !== null && (ownCount ?? 0) < ownLimit
       ownCanStartTrial = ownEffective === null && !ownProfile?.trial_used_at
       ownTrialExpired = ownProfile?.plan_id === 'trial' && ownEffective === null
@@ -57,6 +60,7 @@ export default async function NewProjectPage() {
         const teamEffective = effectivePlanId(teamProfile?.plan_id, teamProfile?.trial_ends_at)
         const teamLimit = planLimit(teamEffective)
         teamMaxAlertEmails = alertEmailLimit(teamEffective)
+        teamCanCreateGroups = canUseTeamFeature(teamEffective)
         teamCanCreate = (teamCount ?? 0) < teamLimit
         teamOwnerId = teamContext.teamOwnerId
         teamOwnerEmail = ownerUserRes?.user?.email ?? null
@@ -78,16 +82,19 @@ export default async function NewProjectPage() {
 
       {canCreateAnywhere ? (
         ownCanCreate && teamCanCreate && teamOwnerId ? (
-          <NewProjectTargetPicker ownTarget={{ label: 'My account' }} teamTarget={{ ownerId: teamOwnerId, label: teamOwnerEmail ? `${teamOwnerEmail}'s team` : 'Team' }} />
+          <NewProjectTargetPicker
+            ownTarget={{ label: 'My account', maxAlertEmails: ownMaxAlertEmails, canCreateGroups: ownCanCreateGroups }}
+            teamTarget={{ ownerId: teamOwnerId, label: teamOwnerEmail ? `${teamOwnerEmail}'s team` : 'Team', maxAlertEmails: teamMaxAlertEmails, canCreateGroups: teamCanCreateGroups }}
+          />
         ) : teamCanCreate && teamOwnerId ? (
           <>
             <div style={{ fontSize: 12.5, color: '#92400e', background: '#fffbeb', border: '0.5px solid #fde68a', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
               This project will be added to your team&apos;s account. Daily automated checks run on {teamOwnerEmail ? <b>{teamOwnerEmail}</b> : 'the owner'}&apos;s Google access — if only your Google account has Viewer access to this GA4 property, make sure {teamOwnerEmail ?? 'they'} get{teamOwnerEmail ? 's' : ''} it too, or checks will fail.
             </div>
-            <NewProjectForm ownerId={teamOwnerId} maxAlertEmails={teamMaxAlertEmails} />
+            <NewProjectForm ownerId={teamOwnerId} maxAlertEmails={teamMaxAlertEmails} canCreateGroups={teamCanCreateGroups} />
           </>
         ) : (
-          <NewProjectForm maxAlertEmails={ownMaxAlertEmails} />
+          <NewProjectForm maxAlertEmails={ownMaxAlertEmails} canCreateGroups={ownCanCreateGroups} />
         )
       ) : ownCanStartTrial ? (
         <div style={{ background: '#f0fdf4', border: '0.5px solid #bbf7d0', borderRadius: 10, padding: '14px 16px' }}>

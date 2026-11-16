@@ -375,10 +375,11 @@ export default async function FeaturesPageEn() {
                 <h2>Team collaboration (Pro and Agency)</h2>
                 <p>Invite your team to work on the account together — without sharing passwords or creating a separate Google account per person. Each person only sees the services you add them to, not the whole account.</p>
                 <ul className="fx-feature-list">
-                  <li>Pro plan: up to 3 people per service</li>
-                  <li>Agency plan: up to 5 people account-wide, assigned to services as needed</li>
+                  <li>Pro plan: up to 5 people account-wide</li>
+                  <li>Agency plan: up to 10 people account-wide</li>
+                  <li>Group services together (e.g. by client) and grant access once for the whole group</li>
                   <li>Invite by email, accepted with their own Google sign-in</li>
-                  <li>GA4 data only becomes visible once that person has real, verified access to the property in Google — the AlertGA4 invite alone isn't enough</li>
+                  <li>GA4 data only becomes visible once that person has real, verified access to the property in Google, the AlertGA4 invite alone isn't enough</li>
                   <li>Your own projects and membership in someone else's team work independently of each other</li>
                 </ul>
               </div>

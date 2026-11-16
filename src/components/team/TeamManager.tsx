@@ -62,12 +62,11 @@ function GroupChip({ name, active, disabled, onClick }: { name: string; active: 
 }
 
 export default function TeamManager({
-  members, allGroups, maxSeats, perProjectCap, appUrl,
+  members, allGroups, maxSeats, appUrl,
 }: {
   members: TeamMemberRow[]
   allGroups: TeamGroupOption[]
   maxSeats: number
-  perProjectCap: number
   appUrl: string
 }) {
   const router = useRouter()
@@ -82,13 +81,6 @@ export default function TeamManager({
 
   const seatsUsed = 1 + members.length
   const atLimit = seatsUsed >= maxSeats
-  const unlimitedPerGroup = perProjectCap >= maxSeats
-
-  // How many members currently have each group, across everyone — so a
-  // chip for someone who DOESN'T already have a group can be disabled
-  // once that group is full, without a round trip to find out.
-  const countByGroup = new Map<string, number>()
-  for (const m of members) for (const gid of m.groupIds) countByGroup.set(gid, (countByGroup.get(gid) ?? 0) + 1)
 
   async function handleInvite() {
     setError(null); setNotice(null)
@@ -181,13 +173,12 @@ export default function TeamManager({
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {allGroups.map(g => {
                     const active = inviteGroupIds.has(g.id)
-                    const full = !unlimitedPerGroup && !active && (countByGroup.get(g.id) ?? 0) >= perProjectCap
                     return (
                       <GroupChip
                         key={g.id}
                         name={formatGroupName(g.name)}
                         active={active}
-                        disabled={full}
+                        disabled={false}
                         onClick={() => setInviteGroupIds(prev => {
                           const next = new Set(prev)
                           if (next.has(g.id)) next.delete(g.id); else next.add(g.id)
@@ -265,20 +256,18 @@ export default function TeamManager({
                       {allGroups.map(g => {
                         const key = `${m.id}_${g.id}`
                         const hasAccess = m.groupIds.includes(g.id)
-                        const groupFull = !unlimitedPerGroup && !hasAccess && (countByGroup.get(g.id) ?? 0) >= perProjectCap
                         return (
                           <GroupChip
                             key={g.id}
                             name={formatGroupName(g.name)}
                             active={hasAccess}
-                            disabled={togglingKey === key || groupFull}
+                            disabled={togglingKey === key}
                             onClick={() => handleToggleAccess(m.id, g.id, !hasAccess)}
                           />
                         )
                       })}
                     </div>
                   )}
-                  {!unlimitedPerGroup && <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '10px 0 0' }}>Your plan allows up to {perProjectCap} people per group.</p>}
                 </div>
               )}
             </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import NewProjectForm from './NewProjectForm'
 
-interface Target { label: string }
+interface Target { label: string; maxAlertEmails: number; canCreateGroups: boolean }
 interface TeamTarget extends Target { ownerId: string }
 
 export default function NewProjectTargetPicker({ ownTarget, teamTarget }: { ownTarget: Target; teamTarget: TeamTarget }) {
@@ -31,7 +31,12 @@ export default function NewProjectTargetPicker({ ownTarget, teamTarget }: { ownT
         </div>
       )}
 
-      <NewProjectForm key={choice} ownerId={choice === 'team' ? teamTarget.ownerId : undefined} />
+      <NewProjectForm
+        key={choice}
+        ownerId={choice === 'team' ? teamTarget.ownerId : undefined}
+        maxAlertEmails={choice === 'team' ? teamTarget.maxAlertEmails : ownTarget.maxAlertEmails}
+        canCreateGroups={choice === 'team' ? teamTarget.canCreateGroups : ownTarget.canCreateGroups}
+      />
     </div>
   )
 }

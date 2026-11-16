@@ -1,9 +1,9 @@
 import { createAdminClient } from '@/lib/supabase/server'
 
-// Agency plan seat count — chosen as a sane default while we validate demand;
-// easy to bump later without touching the invite flow itself. Counts total
-// people with access (the owner + invited members), not just invites.
-export const MAX_TEAM_SEATS = 5
+// Account-wide seat count now varies by plan — see maxTeamSeats() in
+// src/lib/billing/plans.ts (Lite 1 / Pro 5 / Agency 10 / internal
+// unlimited). Counts total people with access (the owner + invited
+// members, pending or accepted), not just invites.
 
 export interface TeamContext {
   // Every owner_id this user may act as: themselves, plus any owner whose

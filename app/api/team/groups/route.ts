@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { effectivePlanId, canUseTeamFeature } from '@/lib/billing/plans'
 
 const GROUP_PREFIX = 'GROUP - '
 
-// Create/rename/delete a project group. Creating one is NOT gated by plan
-// — grouping is an organizational feature everyone gets (every new
-// project is placed in a group, even on Lite — see
-// supabase/migrations/045_default_groups.sql), separate from whether the
-// account can actually GRANT TEAM ACCESS to a group, which stays
-// Pro/Agency/trial-only (enforced in /api/team/group-access instead).
+// Create/rename/delete a project group via this API route (the owner-
+// initiated "Create a group" box, or the new-project wizard's "+ Create new
+// group" option) — gated to Pro/Agency/trial, since Lite has no
+// team-access feature to use a group for anyway. This is separate from
+// create_project's own server-side "GROUP - Default" fallback (which calls
+// Postgres directly, not this route), so every Lite project still always
+// ends up grouped automatically without needing this endpoint.
 export async function POST(request: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -24,12 +26,23 @@ export async function POST(request: NextRequest) {
   if (!(await getAccessibleOwnerIds(user.id)).includes(ownerId)) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
   }
+
+  const admin = createAdminClient()
+  const { data: ownerProfile, error: ownerProfileErr } = await admin.from('profiles')
+    .select('plan_id, trial_ends_at').eq('id', ownerId).single()
+  if (ownerProfileErr) {
+    return NextResponse.json({ error: 'Could not check the plan — please try again.' }, { status: 500 })
+  }
+  const effective = effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
+  if (!canUseTeamFeature(effective)) {
+    return NextResponse.json({ error: 'Creating groups is available on the Pro and Agency plans.' }, { status: 403 })
+  }
+
   // Consistent naming convention regardless of what the owner typed —
   // "Bettersteps" and "GROUP - Bettersteps" both end up as the latter, so
   // groups are never ambiguous with plain project names in any list.
   const name = rawName.toLowerCase().startsWith(GROUP_PREFIX.toLowerCase()) ? rawName : `${GROUP_PREFIX}${rawName}`
 
-  const admin = createAdminClient()
   const { data: group, error: insertErr } = await admin.from('project_groups')
     .insert({ owner_id: ownerId, name })
     .select('id, name').single()

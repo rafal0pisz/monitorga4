@@ -97,7 +97,7 @@ function EventTag({ isStandard }: { isStandard: boolean }) {
   )
 }
 
-export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerId?: string; maxAlertEmails?: number } = {}) {
+export default function NewProjectForm({ ownerId, maxAlertEmails = 2, canCreateGroups = true }: { ownerId?: string; maxAlertEmails?: number; canCreateGroups?: boolean } = {}) {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -142,15 +142,19 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
         const list: { id: string; name: string }[] = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : [])
         setGroups(list)
         const def = list.find(g => g.name === 'GROUP - Default')
-        setSelectedGroupId(def ? def.id : (list[0]?.id ?? NEW_GROUP_VALUE))
+        // Lite accounts can't create a group (see canCreateGroups below), so
+        // falling back to NEW_GROUP_VALUE here would be a dead end — leave
+        // it empty instead, which create_project's own server-side
+        // "GROUP - Default" fallback (migration 045) resolves on submit.
+        setSelectedGroupId(def ? def.id : (list[0]?.id ?? (canCreateGroups ? NEW_GROUP_VALUE : '')))
       } catch {
-        setSelectedGroupId(NEW_GROUP_VALUE)
+        setSelectedGroupId(canCreateGroups ? NEW_GROUP_VALUE : '')
       } finally {
         setGroupsLoading(false)
       }
     }
     loadGroups()
-  }, [ownerId])
+  }, [ownerId, canCreateGroups])
 
   const [alertEmails, setAlertEmails] = useState<string[]>([])
   const [newAlertEmail, setNewAlertEmail] = useState('')
@@ -769,26 +773,28 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
       {/* ── STEP 5 — ALERTS ──────────────────────────────────────────────── */}
       {step === 5 && (
         <Section title="Group">
-          <Field label="Which group does this service belong to?" hint="Grant a group access once and every service in it — including ones added later — is covered automatically, so you don't need to re-grant access each time you add a new service for the same client.">
-            {groupsLoading ? (
+          {groupsLoading ? (
+            <Field label="Which group does this service belong to?">
               <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)' }}>Loading…</p>
-            ) : (
-              <>
-                <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={inp}>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                  <option value={NEW_GROUP_VALUE}>+ Create new group</option>
-                </select>
-                {selectedGroupId === NEW_GROUP_VALUE && (
-                  <input
-                    value={newGroupName}
-                    onChange={e => setNewGroupName(e.target.value)}
-                    placeholder={groups.length === 0 ? 'Default' : 'e.g. Bettersteps'}
-                    style={{ ...inp, marginTop: 8 }}
-                  />
-                )}
-              </>
-            )}
-          </Field>
+            </Field>
+          ) : !canCreateGroups && groups.length === 0 ? (
+            <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)' }}>This service will be placed in a default group automatically. Creating named groups is available on the Pro and Agency plans.</p>
+          ) : (
+            <Field label="Which group does this service belong to?" hint="Grant a group access once and every service in it — including ones added later — is covered automatically, so you don't need to re-grant access each time you add a new service for the same client.">
+              <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={inp}>
+                {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {canCreateGroups && <option value={NEW_GROUP_VALUE}>+ Create new group</option>}
+              </select>
+              {canCreateGroups && selectedGroupId === NEW_GROUP_VALUE && (
+                <input
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  placeholder={groups.length === 0 ? 'Default' : 'e.g. Bettersteps'}
+                  style={{ ...inp, marginTop: 8 }}
+                />
+              )}
+            </Field>
+          )}
         </Section>
       )}
 

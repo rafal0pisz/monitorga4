@@ -121,24 +121,26 @@ export function alertEmailLimitMessage(limit: number): string {
     : `Your plan allows up to ${limit} ${addrWord} per project. Upgrade to add more.`
 }
 
-// Whether this plan can use team features (invite people, grant per-project
-// access — see src/lib/team/access.ts) at all. Trial runs on Pro-plan terms
-// everywhere else in this file, so it gets Pro's team access too.
-export function canUseTeamFeature(planId: string | null | undefined): boolean {
-  return planId === 'agency' || planId === 'pro' || planId === 'trial'
+// Account-wide team seat count — the owner plus every invited member
+// (pending or accepted), see src/lib/team/access.ts for how a seat
+// becomes "used". This is now the ONLY team-size limit: granting an
+// already-invited member access to another group costs nothing extra
+// (see /api/team/group-access), so there's no separate per-group cap —
+// that model (3 people per project on Pro) was retired once every
+// project started belonging to a group and group access became the only
+// sharing unit (migration 046).
+export function maxTeamSeats(planId: string | null | undefined): number {
+  if (planId === 'internal') return Number.MAX_SAFE_INTEGER
+  if (planId === 'agency') return 10
+  if (planId === 'pro' || planId === 'trial') return 5
+  return 1 // lite and no-plan accounts — just the owner, no team at all
 }
 
-// How many distinct team members may be granted access to any ONE project.
-// Agency's ceiling is really just its account-wide seat count (team.ts'
-// MAX_TEAM_SEATS) — once the whole account is capped at 5 people total, no
-// single project can ever exceed that anyway, so no extra per-project
-// number is enforced there. Pro (and trial, on Pro terms) is deliberately
-// narrower: a small, fixed working group per service rather than an
-// account-wide team, which is the Agency plan's whole point.
-export function maxMembersPerProject(planId: string | null | undefined): number {
-  if (planId === 'agency' || planId === 'internal') return Number.MAX_SAFE_INTEGER
-  if (planId === 'pro' || planId === 'trial') return 3
-  return 0 // lite and no-plan accounts can't use team features at all
+// Whether this plan can use team features (invite people, create/manage
+// groups — see src/lib/team/access.ts) at all — anyone with room for more
+// than just themselves.
+export function canUseTeamFeature(planId: string | null | undefined): boolean {
+  return maxTeamSeats(planId) > 1
 }
 
 // Display-only conversion for the /en/pricing page — actual billing is

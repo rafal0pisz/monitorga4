@@ -55,12 +55,11 @@ function MemberChip({ email, active, disabled, onClick }: { email: string; activ
 }
 
 export default function GroupManager({
-  groups, allProjects, allMembers, perProjectCap,
+  groups, allProjects, allMembers,
 }: {
   groups: GroupRow[]
   allProjects: GroupProjectOption[]
   allMembers: GroupMemberOption[]
-  perProjectCap: number
 }) {
   const router = useRouter()
   const [name, setName] = useState('')
@@ -71,7 +70,6 @@ export default function GroupManager({
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [projectFilter, setProjectFilter] = useState('')
 
-  const unlimited = perProjectCap >= Number.MAX_SAFE_INTEGER
   const nameById = new Map(groups.map(g => [g.id, g.name]))
 
   async function handleCreate() {
@@ -212,7 +210,7 @@ export default function GroupManager({
                 <div style={{ padding: '4px 20px 20px', background: 'var(--color-background-tertiary)', display: 'flex', flexDirection: 'column', gap: 18 }}>
                   <div>
                     <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, margin: '10px 0 8px' }}>
-                      Team access {!unlimited && `(up to ${perProjectCap} people)`}
+                      Team access
                     </p>
                     {allMembers.length === 0 ? (
                       <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>No team members yet.</p>
@@ -221,13 +219,12 @@ export default function GroupManager({
                         {allMembers.map(m => {
                           const key = `m_${g.id}_${m.id}`
                           const hasAccess = g.memberIds.includes(m.id)
-                          const full = !unlimited && !hasAccess && g.memberIds.length >= perProjectCap
                           return (
                             <MemberChip
                               key={m.id}
                               email={m.accepted ? m.email : `${m.email} (pending)`}
                               active={hasAccess}
-                              disabled={busyKey === key || full}
+                              disabled={busyKey === key}
                               onClick={() => handleToggleMember(g.id, m.id, !hasAccess)}
                             />
                           )

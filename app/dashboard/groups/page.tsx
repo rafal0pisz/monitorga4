@@ -1,5 +1,5 @@
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId, canUseTeamFeature, maxMembersPerProject } from '@/lib/billing/plans'
+import { effectivePlanId, canUseTeamFeature } from '@/lib/billing/plans'
 import GroupManager, { type GroupRow, type GroupProjectOption, type GroupMemberOption } from '@/components/team/GroupManager'
 import Link from 'next/link'
 
@@ -19,7 +19,6 @@ export default async function GroupsPage() {
   const { data: profile } = await admin.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
   const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
   const canUse = canUseTeamFeature(effective)
-  const perProjectCap = maxMembersPerProject(effective)
 
   return (
     <div style={{ maxWidth: 680 }}>
@@ -38,13 +37,13 @@ export default async function GroupsPage() {
           </Link>
         </div>
       ) : (
-        <GroupsOwnerView ownerId={user.id} perProjectCap={perProjectCap} />
+        <GroupsOwnerView ownerId={user.id} />
       )}
     </div>
   )
 }
 
-async function GroupsOwnerView({ ownerId, perProjectCap }: { ownerId: string; perProjectCap: number }) {
+async function GroupsOwnerView({ ownerId }: { ownerId: string }) {
   const admin = createAdminClient()
   const [{ data: groupRows }, { data: projectRows }, { data: memberRows }] = await Promise.all([
     admin.from('project_groups').select('id, name').eq('owner_id', ownerId).order('name'),
@@ -79,5 +78,5 @@ async function GroupsOwnerView({ ownerId, perProjectCap }: { ownerId: string; pe
   const allProjects: GroupProjectOption[] = (projectRows ?? []).map((p: any) => ({ id: p.id, name: p.name, groupId: p.group_id }))
   const allMembers: GroupMemberOption[] = (memberRows ?? []).map((m: any) => ({ id: m.id, email: m.email, accepted: !!m.accepted_at }))
 
-  return <GroupManager groups={groups} allProjects={allProjects} allMembers={allMembers} perProjectCap={perProjectCap} />
+  return <GroupManager groups={groups} allProjects={allProjects} allMembers={allMembers} />
 }

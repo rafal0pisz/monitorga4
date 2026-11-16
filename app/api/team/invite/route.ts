@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId, canUseTeamFeature, maxMembersPerProject } from '@/lib/billing/plans'
-import { MAX_TEAM_SEATS } from '@/lib/team/access'
+import { effectivePlanId, canUseTeamFeature, maxTeamSeats } from '@/lib/billing/plans'
 import { sendEmail } from '@/lib/email/resend'
 import { renderTeamInviteEmail } from '@/lib/email/teamInvite'
 
@@ -43,26 +42,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Team members are available on the Pro and Agency plans.' }, { status: 403 })
   }
 
-  // Verified up front — a bad groupId, or one already at this plan's
-  // per-group member cap, must fail the whole invite rather than silently
-  // create an unscoped team_members row the caller thinks is group-scoped.
+  // Verified up front — a bad groupId must fail the whole invite rather
+  // than silently create an unscoped team_members row the caller thinks
+  // is group-scoped. Granting a group costs nothing against the seat
+  // limit below — only inviting a NEW person does — so there's no
+  // additional per-group cap to check here (see maxTeamSeats() in
+  // src/lib/billing/plans.ts).
   if (groupIds.length > 0) {
     const { data: ownedGroups, error: ownedGroupsErr } = await admin
       .from('project_groups').select('id').eq('owner_id', user.id).in('id', groupIds)
     if (ownedGroupsErr) return NextResponse.json({ error: 'Could not check your groups — please try again.' }, { status: 500 })
     if ((ownedGroups ?? []).length !== groupIds.length) {
       return NextResponse.json({ error: 'One of those groups was not found' }, { status: 404 })
-    }
-
-    const cap = maxMembersPerProject(effective)
-    const { data: grantCounts, error: grantedErr } = await admin
-      .from('group_team_members').select('group_id').in('group_id', groupIds)
-    if (grantedErr) return NextResponse.json({ error: 'Could not check those groups\' team access — please try again.' }, { status: 500 })
-    const countByGroup = new Map<string, number>()
-    for (const g of grantCounts ?? []) countByGroup.set(g.group_id, (countByGroup.get(g.group_id) ?? 0) + 1)
-    const fullGroupId = groupIds.find(id => (countByGroup.get(id) ?? 0) >= cap)
-    if (fullGroupId) {
-      return NextResponse.json({ error: `Your plan allows up to ${cap} people per group. One of the selected groups is already full — remove someone from it first.` }, { status: 409 })
     }
   }
 
@@ -73,11 +64,10 @@ export async function POST(request: NextRequest) {
   }
   // Seats = the owner themselves + every invited row (pending or accepted) —
   // a pending invite counts against the limit too, so it can't be used to
-  // queue up more invites than seats actually allow. Shared account-wide
-  // ceiling for every plan that can use team features at all — the
-  // per-project cap above is the tighter, plan-specific constraint for Pro.
-  if (1 + (existing?.length ?? 0) >= MAX_TEAM_SEATS) {
-    return NextResponse.json({ error: `Your plan includes up to ${MAX_TEAM_SEATS} seats (including you). Remove someone first to invite a new person.` }, { status: 409 })
+  // queue up more invites than seats actually allow.
+  const seats = maxTeamSeats(effective)
+  if (1 + (existing?.length ?? 0) >= seats) {
+    return NextResponse.json({ error: `Your plan includes up to ${seats} seats (including you). Remove someone first to invite a new person.` }, { status: 409 })
   }
 
   // Catch the dead-end invite before it's ever sent — accept-time already
