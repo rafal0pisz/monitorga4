@@ -58,11 +58,15 @@ export async function getAccessibleOwnerIds(userId: string): Promise<string[]> {
 // above. An accepted team_members row alone no longer implies visibility
 // into every one of the owner's projects — it only grants a seat and an
 // identity. WHICH of the owner's projects a member can actually see is
-// tracked separately in project_team_members (migration 043), granted
-// per-project by the owner from that project's Settings page or the Team
-// page. getAccessibleOwnerIds/getTeamContext above are still exactly right
-// for account-wide capabilities that aren't about one specific project
-// (seat counting, "can this person create a new project under the owner's
+// tracked two ways: a direct grant on one project (project_team_members,
+// migration 043), or a grant on a GROUP of projects (group_team_members,
+// migration 044) — a project belongs to at most one group
+// (projects.group_id), and granting a group covers every project in it,
+// including ones added to the group later. Both are additive. Granted
+// from either that project's/group's own management UI or the Team page.
+// getAccessibleOwnerIds/getTeamContext above are still exactly right for
+// account-wide capabilities that aren't about specific projects (seat
+// counting, "can this person create a new project under the owner's
 // account" — see app/dashboard/new/page.tsx) — only project VISIBILITY and
 // per-project AUTHORIZATION route through these instead now.
 
@@ -86,16 +90,31 @@ export async function getGrantedProjectIds(userId: string): Promise<string[]> {
     return []
   }
   if (!membership || membership.length === 0) return []
+  const teamMemberIds = membership.map((m: { id: string }) => m.id)
 
-  const { data: grants, error: grantsErr } = await admin
-    .from('project_team_members')
-    .select('project_id')
-    .in('team_member_id', membership.map((m: { id: string }) => m.id))
-  if (grantsErr) {
-    console.error('[team] Project grant lookup failed — denying shared project access:', grantsErr.message)
+  const [{ data: directGrants, error: directErr }, { data: groupGrants, error: groupErr }] = await Promise.all([
+    admin.from('project_team_members').select('project_id').in('team_member_id', teamMemberIds),
+    admin.from('group_team_members').select('group_id').in('team_member_id', teamMemberIds),
+  ])
+  if (directErr || groupErr) {
+    console.error('[team] Project/group grant lookup failed — denying shared project access:', (directErr ?? groupErr)!.message)
     return []
   }
-  return (grants ?? []).map((g: { project_id: string }) => g.project_id)
+
+  const projectIds = new Set<string>((directGrants ?? []).map((g: { project_id: string }) => g.project_id))
+
+  const groupIds = (groupGrants ?? []).map((g: { group_id: string }) => g.group_id)
+  if (groupIds.length > 0) {
+    const { data: groupedProjects, error: groupedProjectsErr } = await admin
+      .from('projects').select('id').in('group_id', groupIds)
+    if (groupedProjectsErr) {
+      console.error('[team] Grouped-project lookup failed — denying group-based access:', groupedProjectsErr.message)
+    } else {
+      for (const p of groupedProjects ?? []) projectIds.add((p as { id: string }).id)
+    }
+  }
+
+  return [...projectIds]
 }
 
 // Whether userId may access one SPECIFIC, already-known project — the

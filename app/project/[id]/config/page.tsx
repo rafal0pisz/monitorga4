@@ -36,6 +36,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     { data: sectionsRaw },
     { data: ownerProfile },
     teamAccessRaw,
+    { data: groupRow },
   ] = await Promise.all([
     supabase.from('checks_catalog').select('*').order('level').order('check_key'),
     supabase.from('checks_config').select('*').eq('project_id', id),
@@ -48,6 +49,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     // looking at a project they're already granted doesn't need (and
     // shouldn't get) the full list of who else is on the account's team.
     isOwner ? supabase.rpc('get_project_team_access', { p_project_id: id }) : Promise.resolve({ data: [] }),
+    project.group_id && isOwner ? supabase.from('project_groups').select('name').eq('id', project.group_id).single() : Promise.resolve({ data: null }),
   ])
   const ownerEffectivePlan = effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
   const maxAlertEmails = alertEmailLimit(ownerEffectivePlan)
@@ -73,7 +75,12 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
       <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 24px', fontFamily: 'monospace' }}>{project.ga4_property_id}</p>
 
       {isOwner && (
-        <ProjectTeamAccess projectId={id} members={parseRpc(teamAccessRaw.data) as ProjectTeamMemberRow[]} perProjectCap={perProjectCap} />
+        <ProjectTeamAccess
+          projectId={id}
+          members={parseRpc(teamAccessRaw.data) as ProjectTeamMemberRow[]}
+          perProjectCap={perProjectCap}
+          groupName={groupRow?.name ?? null}
+        />
       )}
 
       <ProjectConfigForm

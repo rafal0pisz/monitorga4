@@ -27,6 +27,7 @@ const DEFAULT_TOOLS: ToolLink[] = [
   { href: '/dashboard',         icon: '⊞', label: 'All projects' },
   { href: '/dashboard/billing', icon: '◈', label: 'Billing' },
   { href: '/dashboard/team',    icon: '◎', label: 'Team' },
+  { href: '/dashboard/groups',  icon: '▣', label: 'Groups' },
   { href: '/dashboard/help',    icon: '?', label: 'Help' },
 ]
 

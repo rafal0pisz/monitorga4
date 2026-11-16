@@ -16,7 +16,7 @@ export interface ProjectTeamMemberRow {
 // place to grant access when you're already looking at the service in
 // question, alongside the account-wide view on the Team page
 // (src/components/team/TeamManager.tsx).
-export default function ProjectTeamAccess({ projectId, members, perProjectCap }: { projectId: string; members: ProjectTeamMemberRow[]; perProjectCap: number }) {
+export default function ProjectTeamAccess({ projectId, members, perProjectCap, groupName }: { projectId: string; members: ProjectTeamMemberRow[]; perProjectCap: number; groupName: string | null }) {
   const router = useRouter()
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [email, setEmail] = useState('')
@@ -68,6 +68,12 @@ export default function ProjectTeamAccess({ projectId, members, perProjectCap }:
   return (
     <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: '16px 20px', marginBottom: 20 }}>
       <p style={{ fontSize: 13, fontWeight: 500, color: '#111827', margin: '0 0 4px' }}>Team access</p>
+      {groupName && (
+        <p style={{ fontSize: 12, color: '#475a66', background: '#eef4f6', borderRadius: 8, padding: '8px 12px', margin: '0 0 12px' }}>
+          This service is part of <strong>{groupName}</strong> — anyone granted that group already sees it. The checkboxes below grant access to this ONE service only, on top of the group.{' '}
+          <a href="/dashboard/groups" style={{ color: '#16a34a' }}>Manage the group →</a>
+        </p>
+      )}
       <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>
         Only the people checked below can see this service — nobody else on your team sees it just by being on your team.
         {!unlimited && ` Your plan allows up to ${perProjectCap} people per service (${accessCount}/${perProjectCap} used here).`}
