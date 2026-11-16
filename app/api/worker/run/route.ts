@@ -84,12 +84,21 @@ const WEIGHTS: Record<string, number> = {
 // Events/Parameters, patrz /api/ga4/checks i /api/ga4/events) reagują na
 // Period osobno, nigdy nie nadpisując tej historii.
 //
-// -2 dni, nie -1 (wczoraj): to jest automatyczny, bezobsługowy przebieg —
-// nie ma tu użytkownika, który mógłby zaznaczyć "Exclude yesterday" tak
-// jak w live UI, gdy dane za wczoraj są jeszcze niekompletne/przetwarzane
-// przez GA4. Domyślne pomijanie wczoraj tutaj jest więc na stałe, nie
-// opcjonalne — codzienny automatyczny run zawsze sprawdza dane sprzed
-// 2 dni, o które GA4 zdążyło się już w pełni "domknąć".
+// -2 dni, nie -1 (wczoraj), domyślnie: to jest automatyczny, bezobsługowy
+// przebieg — nie ma tu użytkownika, który mógłby zaznaczyć "Exclude
+// yesterday" tak jak w live UI, gdy dane za wczoraj są jeszcze
+// niekompletne/przetwarzane przez GA4. Domyślne pomijanie wczoraj tutaj
+// jest więc na stałe dla crona, nie opcjonalne — codzienny automatyczny
+// run zawsze sprawdza dane sprzed 2 dni, o które GA4 zdążyło się już w
+// pełni "domknąć".
+//
+// Manualny "Run now" jest jedynym wyjątkiem: skoro ktoś faktycznie klika
+// ten przycisk, ma też przed oczami stan checkboxa "Exclude yesterday" na
+// tej samej stronie — więc lagDays dla tego jednego wywołania może zejść
+// do 1 dnia (tak jak live UI przy odznaczonym "Exclude yesterday"), żeby
+// zapisany wynik faktycznie odzwierciedlał to, co użytkownik właśnie
+// widział na ekranie. Patrz POST handler niżej (`dataLagDays`). Cron nigdy
+// nie przekazuje tego parametru, więc jego -2 dni pozostaje bez zmian.
 //
 // `new Date()` tutaj to zawsze UTC (środowisko Vercel), a harmonogram
 // crona w vercel.json też jest zawsze w UTC — niezależnie od tego, co
@@ -104,12 +113,12 @@ const WEIGHTS: Record<string, number> = {
 // handlerze GET niżej po pełne szczegóły (i czemu to nie jest już prosty
 // gate na dokładną godzinę).
 // ============================================================
-function getDailyRanges() {
+function getDailyRanges(lagDays = 2) {
   const fmt = (d: Date) => d.toISOString().split('T')[0]
   const today = new Date()
 
-  const checkedDate = new Date(today); checkedDate.setDate(today.getDate() - 2)
-  const lastWeek     = new Date(today); lastWeek.setDate(today.getDate() - 9)
+  const checkedDate = new Date(today); checkedDate.setDate(today.getDate() - lagDays)
+  const lastWeek     = new Date(today); lastWeek.setDate(today.getDate() - (lagDays + 7))
 
   return {
     current: { startDate: fmt(checkedDate), endDate: fmt(checkedDate), name: 'current' },
@@ -315,8 +324,13 @@ async function checkParameters(
 // which is what let WORKER_BATCH_SIZE go up without changing the cron
 // schedule or Vercel plan. See CHECKS_PER_PROJECT_CONCURRENCY for why
 // this is capped lower than cross-project concurrency.
-async function runAllChecks(project: Project, report: Ga4ReportFn, ecomEvents: string[] = [], customEventChecks: {event_name: string; check_type: string}[] = []): Promise<CheckResult[]> {
-  const ranges = getDailyRanges()
+async function runAllChecks(
+  project: Project,
+  report: Ga4ReportFn,
+  ecomEvents: string[] = [],
+  customEventChecks: {event_name: string; check_type: string}[] = [],
+  ranges: { current: { startDate: string; endDate: string }; prev: { startDate: string; endDate: string } } = getDailyRanges(),
+): Promise<CheckResult[]> {
 
   // ── 1. EXPECTED EVENTS ──────────────────────────────────
   const checkExpectedEvents = async (): Promise<CheckResult[]> => {
@@ -899,8 +913,13 @@ async function processProject(
   runDate: string,
   prevDate: string,
   isAutoRunPass: boolean,
-  checkedDate: string
+  ranges: { current: { startDate: string; endDate: string }; prev: { startDate: string; endDate: string } }
 ): Promise<ProjectRunOutcome | null> {
+  // The GA4 date this run's data is actually about — ranges.current is the
+  // single source of truth (see getDailyRanges()/runWorker's dataLagDays),
+  // so every check this function runs and everything it stores/emails
+  // stays in sync with exactly the same date, never recomputed separately.
+  const checkedDate = ranges.current.startDate
   // Token z profiles (DB-backed access token + refresh_token), rozwiązywany
   // per-projekt na podstawie jego właściciela — każdy projekt może
   // należeć do innego konta Google z dostępem do innych property, więc
@@ -1020,8 +1039,8 @@ async function processProject(
     }
 
     const [results, paramResults] = await Promise.all([
-      runAllChecks(project, report, ecomEvents, customEventChecks),
-      checkParameters(project, report, paramChecks, getDailyRanges()),
+      runAllChecks(project, report, ecomEvents, customEventChecks, ranges),
+      checkParameters(project, report, paramChecks, ranges),
     ])
     const allResults = [...results, ...paramResults]
 
@@ -1544,6 +1563,13 @@ export async function POST(request: NextRequest) {
   }
   const body = await request.json().catch(() => ({}))
   const projectId: string | undefined = body.project_id
+  // Mirrors the live UI's own anchorOffset math (buildRanges() in
+  // app/api/ga4/checks/route.ts: anchorOffset 1 = "Exclude yesterday"
+  // checked = end 2 days back, 0 = unchecked = end 1 day back) — so a
+  // manual "Run now" stores exactly the data date the user was looking at
+  // on screen when they clicked it. Defaults to true (lag 2, today's
+  // existing behavior) for any caller that doesn't send it, cron included.
+  const excludeYesterday = body.exclude_yesterday !== false
 
   // A signed-in user's manual "Run now" must own the project it targets —
   // otherwise any logged-in account could force a run (and its side effects:
@@ -1590,7 +1616,7 @@ export async function POST(request: NextRequest) {
     const { error: markError } = await admin.from('projects').update({ last_manual_run_at: new Date().toISOString() }).eq('id', projectId)
     if (markError) console.error('[worker] Could not record last_manual_run_at (non-fatal, cooldown just won\'t apply this time):', markError.message)
 
-    return runWorker([projectId], false)
+    return runWorker([projectId], false, excludeYesterday ? 2 : 1)
   }
 
   // Cron-authenticated POST with no project_id — the emergency "run
@@ -1621,14 +1647,17 @@ export async function POST(request: NextRequest) {
 // processProject's own behavior (e.g. the reconnect-notice email) — it does
 // NOT drive the owner digest anymore, that's handled entirely by the
 // caller via sendDailyDigestIfDue once it knows today's work is complete.
-async function runWorker(projectIds: string[], isAutoRunPass: boolean) {
+async function runWorker(projectIds: string[], isAutoRunPass: boolean, dataLagDays = 2) {
   const supabase = createAdminClient()
   const runDate = new Date().toISOString().split('T')[0]
-  // The actual GA4 date every check in this run covers — always 2 days
-  // before the run, not "today"/"yesterday" (see getDailyRanges()). Passed
-  // through to the alert emails so they state which day's data they
-  // reflect instead of implying it's yesterday's traffic.
-  const checkedDate = getDailyRanges().current.startDate
+  // The actual GA4 date(s) every check in this run covers — 2 days before
+  // the run by default (see getDailyRanges()), or 1 day for a manual
+  // "Run now" fired with "Exclude yesterday" unchecked (see the POST
+  // handler below). Shared across every project in this call so the
+  // stored data_date, the checks actually queried, and the alert emails
+  // all agree on the same date (ranges.current.startDate, resolved inside
+  // processProject itself).
+  const ranges = getDailyRanges(dataLagDays)
 
   const { data: projectsRaw } = projectIds.length
     ? await supabase.from('projects').select('*').eq('status', 'active').in('id', projectIds)
@@ -1671,7 +1700,7 @@ async function runWorker(projectIds: string[], isAutoRunPass: boolean) {
   const outcomes = await runWithConcurrency(
     projects,
     WORKER_CONCURRENCY,
-    project => processProject(supabase, project, runDate, prevDate, isAutoRunPass, checkedDate)
+    project => processProject(supabase, project, runDate, prevDate, isAutoRunPass, ranges)
   )
 
   for (const outcome of outcomes) {

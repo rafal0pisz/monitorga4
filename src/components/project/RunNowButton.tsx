@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
-export default function RunNowButton({ projectId }: { projectId: string }) {
+export default function RunNowButton({ projectId, excludeYesterday = true }: { projectId: string; excludeYesterday?: boolean }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useTrackedError('run_now_button')
   const router = useRouter()
@@ -12,7 +12,7 @@ export default function RunNowButton({ projectId }: { projectId: string }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/worker/run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-manual-trigger': '1' }, body: JSON.stringify({ project_id: projectId }) })
+      const res = await fetch('/api/worker/run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-manual-trigger': '1' }, body: JSON.stringify({ project_id: projectId, exclude_yesterday: excludeYesterday }) })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'Could not start the run — please try again.')

@@ -164,7 +164,7 @@ export default async function ProjectPage({
               Settings
             </Link>
             <Suspense fallback={<div style={{ width: 84, height: 26 }} />}>
-              <RunNowButton projectId={id} />
+              <RunNowButton projectId={id} excludeYesterday={anchorOffset === 1} />
             </Suspense>
           </div>
         </div>
