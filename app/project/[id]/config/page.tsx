@@ -6,7 +6,7 @@ import ProjectConfigForm from '@/components/project/ProjectConfigForm'
 import ProjectTeamAccess, { type ProjectTeamMemberRow } from '@/components/project/ProjectTeamAccess'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import { canAccessProject } from '@/lib/team/access'
-import { effectivePlanId, alertEmailLimit } from '@/lib/billing/plans'
+import { effectivePlanId, alertEmailLimit, maxMembersPerProject } from '@/lib/billing/plans'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -49,7 +49,9 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     // shouldn't get) the full list of who else is on the account's team.
     isOwner ? supabase.rpc('get_project_team_access', { p_project_id: id }) : Promise.resolve({ data: [] }),
   ])
-  const maxAlertEmails = alertEmailLimit(effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at))
+  const ownerEffectivePlan = effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
+  const maxAlertEmails = alertEmailLimit(ownerEffectivePlan)
+  const perProjectCap = maxMembersPerProject(ownerEffectivePlan)
 
   // RPC returns jsonb arrays — parse if needed
   const parseRpc = (raw: any) => {
@@ -71,7 +73,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
       <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 24px', fontFamily: 'monospace' }}>{project.ga4_property_id}</p>
 
       {isOwner && (
-        <ProjectTeamAccess projectId={id} members={parseRpc(teamAccessRaw.data) as ProjectTeamMemberRow[]} />
+        <ProjectTeamAccess projectId={id} members={parseRpc(teamAccessRaw.data) as ProjectTeamMemberRow[]} perProjectCap={perProjectCap} />
       )}
 
       <ProjectConfigForm

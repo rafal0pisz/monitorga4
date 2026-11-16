@@ -19,11 +19,12 @@ export interface TeamProjectOption {
 }
 
 export default function TeamManager({
-  members, allProjects, maxSeats, appUrl,
+  members, allProjects, maxSeats, perProjectCap, appUrl,
 }: {
   members: TeamMemberRow[]
   allProjects: TeamProjectOption[]
   maxSeats: number
+  perProjectCap: number
   appUrl: string
 }) {
   const router = useRouter()
@@ -37,6 +38,14 @@ export default function TeamManager({
 
   const seatsUsed = 1 + members.length
   const atLimit = seatsUsed >= maxSeats
+
+  // How many members currently have each project, across everyone — not
+  // just the row being expanded — so a checkbox for someone who DOESN'T
+  // already have a project can be disabled once that project is full,
+  // without needing a round trip just to find out.
+  const countByProject = new Map<string, number>()
+  for (const m of members) for (const pid of m.projectIds) countByProject.set(pid, (countByProject.get(pid) ?? 0) + 1)
+  const unlimitedPerProject = perProjectCap >= maxSeats
 
   async function handleInvite() {
     setError(null); setNotice(null)
@@ -121,6 +130,7 @@ export default function TeamManager({
         )}
         <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '12px 0 0', lineHeight: 1.5 }}>
           Inviting someone here doesn&apos;t give them access to anything yet. To give someone access to a service: expand their row below and turn it on for the services they should see, or open that service&apos;s Settings page and add them there directly.
+          {!unlimitedPerProject && ` Your plan allows up to ${perProjectCap} people per service.`}
         </p>
         {notice && <p style={{ fontSize: 12.5, color: '#92400e', marginTop: 10 }}>{notice}</p>}
         {error && <p style={{ fontSize: 12.5, color: '#dc2626', marginTop: 10 }}>{error}</p>}
@@ -179,15 +189,22 @@ export default function TeamManager({
                       {allProjects.map(p => {
                         const key = `${m.id}_${p.id}`
                         const hasAccess = m.projectIds.includes(p.id)
+                        const projectCount = countByProject.get(p.id) ?? 0
+                        const projectFull = !unlimitedPerProject && !hasAccess && projectCount >= perProjectCap
                         return (
-                          <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--color-text-primary)', cursor: togglingKey === key ? 'wait' : 'pointer' }}>
+                          <label
+                            key={p.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: projectFull ? 'var(--color-text-secondary)' : 'var(--color-text-primary)', cursor: togglingKey === key || projectFull ? 'not-allowed' : 'pointer' }}
+                            title={projectFull ? `This service already has ${perProjectCap} people — the most your plan allows` : undefined}
+                          >
                             <input
                               type="checkbox"
                               checked={hasAccess}
-                              disabled={togglingKey === key}
+                              disabled={togglingKey === key || projectFull}
                               onChange={e => handleToggleAccess(m.id, p.id, e.target.checked)}
                             />
                             {p.name}
+                            {!unlimitedPerProject && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>({projectCount}/{perProjectCap})</span>}
                           </label>
                         )
                       })}

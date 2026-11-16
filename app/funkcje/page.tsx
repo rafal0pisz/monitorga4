@@ -376,10 +376,11 @@ export default async function FunkcjePage() {
             <div className="fx-feature-grid">
               <div className="fx-feature-text">
                 <div className="fx-feature-num">07</div>
-                <h2>Współpraca zespołowa (Agency)</h2>
-                <p>Zaproś zespół do wspólnej pracy nad kontem — bez współdzielenia haseł i bez zakładania osobnych kont Google na każdą osobę.</p>
+                <h2>Współpraca zespołowa (Pro i Agency)</h2>
+                <p>Zaproś zespół do wspólnej pracy nad kontem — bez współdzielenia haseł i bez zakładania osobnych kont Google na każdą osobę. Każda osoba widzi tylko te usługi, do których ją dodasz, nie cały zbiór kont.</p>
                 <ul className="fx-feature-list">
-                  <li>Do 5 osób w zespole na planie Agency</li>
+                  <li>Plan Pro: do 3 osób per usługa</li>
+                  <li>Plan Agency: do 5 osób na koncie, przypisywanych dowolnie do usług</li>
                   <li>Zaproszenie mailem, akceptacja własnym logowaniem Google</li>
                   <li>Dane GA4 widoczne dopiero po realnym, zweryfikowanym dostępie do usługi w Google — samo zaproszenie w AlertGA4 to nie wszystko</li>
                   <li>Własne projekty i członkostwo w cudzym zespole działają niezależnie od siebie</li>

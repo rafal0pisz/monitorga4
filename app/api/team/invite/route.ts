@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId } from '@/lib/billing/plans'
+import { effectivePlanId, canUseTeamFeature, maxMembersPerProject } from '@/lib/billing/plans'
 import { MAX_TEAM_SEATS } from '@/lib/team/access'
 import { sendEmail } from '@/lib/email/resend'
 import { renderTeamInviteEmail } from '@/lib/email/teamInvite'
@@ -30,22 +30,30 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient()
 
-  // Verified up front — a bad projectId must fail the whole invite rather
-  // than silently create an unscoped team_members row the caller thinks is
-  // project-scoped.
-  if (projectId) {
-    const { data: project } = await admin.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).single()
-    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-  }
-
   const { data: profile, error: profileErr } = await admin.from('profiles')
     .select('plan_id, trial_ends_at').eq('id', user.id).single()
   if (profileErr) {
     return NextResponse.json({ error: 'Could not check your plan — please try again.' }, { status: 500 })
   }
   const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-  if (effective !== 'agency' && effective !== 'trial') {
-    return NextResponse.json({ error: 'Team members are available on the Agency plan.' }, { status: 403 })
+  if (!canUseTeamFeature(effective)) {
+    return NextResponse.json({ error: 'Team members are available on the Pro and Agency plans.' }, { status: 403 })
+  }
+
+  // Verified up front — a bad projectId, or one already at this plan's
+  // per-project member cap, must fail the whole invite rather than silently
+  // create an unscoped team_members row the caller thinks is project-scoped.
+  if (projectId) {
+    const { data: project } = await admin.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).single()
+    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+
+    const cap = maxMembersPerProject(effective)
+    const { count: grantedCount, error: grantedErr } = await admin
+      .from('project_team_members').select('id', { count: 'exact', head: true }).eq('project_id', projectId)
+    if (grantedErr) return NextResponse.json({ error: 'Could not check this project\'s team access — please try again.' }, { status: 500 })
+    if ((grantedCount ?? 0) >= cap) {
+      return NextResponse.json({ error: `Your plan allows up to ${cap} people on one service. Remove someone from it first to add a new person.` }, { status: 409 })
+    }
   }
 
   const { data: existing, error: existingErr } = await admin.from('team_members')
@@ -55,7 +63,9 @@ export async function POST(request: NextRequest) {
   }
   // Seats = the owner themselves + every invited row (pending or accepted) —
   // a pending invite counts against the limit too, so it can't be used to
-  // queue up more invites than seats actually allow.
+  // queue up more invites than seats actually allow. Shared account-wide
+  // ceiling for every plan that can use team features at all — the
+  // per-project cap above is the tighter, plan-specific constraint for Pro.
   if (1 + (existing?.length ?? 0) >= MAX_TEAM_SEATS) {
     return NextResponse.json({ error: `Your plan includes up to ${MAX_TEAM_SEATS} seats (including you). Remove someone first to invite a new person.` }, { status: 409 })
   }

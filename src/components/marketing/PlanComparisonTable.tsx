@@ -16,11 +16,13 @@ export interface Row {
 // consultation (Agency only) are the other real differences.
 export const ROWS: Row[] = [
   { label: 'Monitorowane usługi GA4', lite: 'do 3', pro: 'do 15', agency: 'do 100' },
-  // Lite/Pro have no team-invite feature at all (app/api/team/invite/route.ts
-  // only allows 'agency'/'trial') — 1 seat isn't a marketing number, it's
-  // literally the only account that can ever access those plans' projects.
-  // Agency's 5 mirrors MAX_TEAM_SEATS in src/lib/team/access.ts exactly.
-  { label: 'Użytkownicy', lite: '1', pro: '1', agency: '5' },
+  // Lite has no team-invite feature at all (app/api/team/invite/route.ts
+  // only allows 'pro'/'agency'/'trial') — 1 seat isn't a marketing number,
+  // it's literally the only account that can ever access that plan's
+  // projects. Pro's 3 and Agency's 5 mirror maxMembersPerProject() /
+  // MAX_TEAM_SEATS in src/lib/billing/plans.ts and src/lib/team/access.ts
+  // exactly — Pro's is per service, Agency's is account-wide.
+  { label: 'Użytkownicy', lite: '1', pro: 'do 3 na usługę', agency: '5 na koncie' },
   { label: 'Codzienny automatyczny monitoring', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Niestandardowe zdarzenia (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
   { label: 'Zdarzenia e-commerce (na usługę)', lite: '5', pro: 'bez limitu', agency: 'bez limitu' },
@@ -41,7 +43,7 @@ export const ROWS: Row[] = [
 // silently drift in meaning, only in wording.
 export const ROWS_EN: Row[] = [
   { label: 'Monitored GA4 properties', lite: 'up to 3', pro: 'up to 15', agency: 'up to 100' },
-  { label: 'Users', lite: '1', pro: '1', agency: '5' },
+  { label: 'Users', lite: '1', pro: 'up to 3 per service', agency: '5 account-wide' },
   { label: 'Daily automatic monitoring', lite: '✓', pro: '✓', agency: '✓' },
   { label: 'Custom events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },
   { label: 'E-commerce events (per property)', lite: '5', pro: 'unlimited', agency: 'unlimited' },

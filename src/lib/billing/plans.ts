@@ -121,6 +121,26 @@ export function alertEmailLimitMessage(limit: number): string {
     : `Your plan allows up to ${limit} ${addrWord} per project. Upgrade to add more.`
 }
 
+// Whether this plan can use team features (invite people, grant per-project
+// access — see src/lib/team/access.ts) at all. Trial runs on Pro-plan terms
+// everywhere else in this file, so it gets Pro's team access too.
+export function canUseTeamFeature(planId: string | null | undefined): boolean {
+  return planId === 'agency' || planId === 'pro' || planId === 'trial'
+}
+
+// How many distinct team members may be granted access to any ONE project.
+// Agency's ceiling is really just its account-wide seat count (team.ts'
+// MAX_TEAM_SEATS) — once the whole account is capped at 5 people total, no
+// single project can ever exceed that anyway, so no extra per-project
+// number is enforced there. Pro (and trial, on Pro terms) is deliberately
+// narrower: a small, fixed working group per service rather than an
+// account-wide team, which is the Agency plan's whole point.
+export function maxMembersPerProject(planId: string | null | undefined): number {
+  if (planId === 'agency' || planId === 'internal') return Number.MAX_SAFE_INTEGER
+  if (planId === 'pro' || planId === 'trial') return 3
+  return 0 // lite and no-plan accounts can't use team features at all
+}
+
 // Display-only conversion for the /en/pricing page — actual billing is
 // always in PLN via Stripe (see stripePriceId above), so this never feeds
 // into checkout. A fixed rate (not a live FX rate) so the EN page can't

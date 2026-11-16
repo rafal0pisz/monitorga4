@@ -1,5 +1,5 @@
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId } from '@/lib/billing/plans'
+import { effectivePlanId, canUseTeamFeature, maxMembersPerProject } from '@/lib/billing/plans'
 import { getTeamContext, MAX_TEAM_SEATS } from '@/lib/team/access'
 import TeamManager, { type TeamMemberRow } from '@/components/team/TeamManager'
 import LeaveTeamButton from '@/components/team/LeaveTeamButton'
@@ -24,7 +24,8 @@ export default async function TeamPage() {
     getTeamContext(user.id),
   ])
   const effective = effectivePlanId(profile?.plan_id, profile?.trial_ends_at)
-  const isOwner = effective === 'agency' || effective === 'trial'
+  const isOwner = canUseTeamFeature(effective)
+  const perProjectCap = maxMembersPerProject(effective)
 
   return (
     <div style={{ maxWidth: 620 }}>
@@ -38,7 +39,7 @@ export default async function TeamPage() {
       {/* Your own team — independent of any team you're also a member of. */}
       {isOwner && (
         <div style={{ marginBottom: teamContext.isMember ? 32 : 0 }}>
-          <TeamOwnerView ownerId={user.id} />
+          <TeamOwnerView ownerId={user.id} perProjectCap={perProjectCap} />
         </div>
       )}
 
@@ -51,7 +52,7 @@ export default async function TeamPage() {
       {!isOwner && !teamContext.isMember && (
         <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
-            Team members are available on the Agency plan — invite up to {MAX_TEAM_SEATS - 1} people to share access to your monitored GA4 properties.
+            Team members are available on the Pro plan (up to 3 people per service) and the Agency plan (up to {MAX_TEAM_SEATS - 1} people account-wide).
           </p>
           <Link href="/cennik" style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', fontSize: 13 }}>
             View pricing →
@@ -62,13 +63,17 @@ export default async function TeamPage() {
   )
 }
 
-async function TeamOwnerView({ ownerId }: { ownerId: string }) {
+async function TeamOwnerView({ ownerId, perProjectCap }: { ownerId: string; perProjectCap: number }) {
   const admin = createAdminClient()
-  const [{ data: members }, { data: projects }, { data: grants }] = await Promise.all([
+  const [{ data: members }, { data: projects }] = await Promise.all([
     admin.from('team_members').select('id, email, accepted_at, invited_at, invite_token').eq('owner_id', ownerId).order('invited_at'),
     admin.from('projects').select('id, name').eq('owner_id', ownerId).order('name'),
-    admin.from('project_team_members').select('project_id, team_member_id'),
   ])
+
+  const memberIds = (members ?? []).map((m: any) => m.id as string)
+  const { data: grants } = memberIds.length > 0
+    ? await admin.from('project_team_members').select('project_id, team_member_id').in('team_member_id', memberIds)
+    : { data: [] as { project_id: string; team_member_id: string }[] }
 
   const grantsByMember = new Map<string, string[]>()
   for (const g of grants ?? []) {
@@ -86,6 +91,7 @@ async function TeamOwnerView({ ownerId }: { ownerId: string }) {
       members={memberRows}
       allProjects={(projects ?? []) as { id: string; name: string }[]}
       maxSeats={MAX_TEAM_SEATS}
+      perProjectCap={perProjectCap}
       appUrl={APP_URL}
     />
   )

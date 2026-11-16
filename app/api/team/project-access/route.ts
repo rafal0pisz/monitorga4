@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
+import { effectivePlanId, maxMembersPerProject } from '@/lib/billing/plans'
 
 // Owner-only: grants or revokes one team member's access to one specific
 // project. Called from the project's own Settings page ("Team access"
@@ -32,6 +33,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (grant) {
+    const { data: already } = await admin
+      .from('project_team_members').select('id').eq('project_id', projectId).eq('team_member_id', teamMemberId).maybeSingle()
+    if (!already) {
+      const { data: profile } = await admin.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
+      const cap = maxMembersPerProject(effectivePlanId(profile?.plan_id, profile?.trial_ends_at))
+      const { count: grantedCount, error: grantedErr } = await admin
+        .from('project_team_members').select('id', { count: 'exact', head: true }).eq('project_id', projectId)
+      if (grantedErr) return NextResponse.json({ error: 'Could not check this project\'s team access — please try again.' }, { status: 500 })
+      if ((grantedCount ?? 0) >= cap) {
+        return NextResponse.json({ error: `Your plan allows up to ${cap} people on one service. Remove someone from it first to add a new person.` }, { status: 409 })
+      }
+    }
     const { error } = await admin
       .from('project_team_members')
       .upsert({ project_id: projectId, team_member_id: teamMemberId }, { onConflict: 'project_id,team_member_id' })
