@@ -53,3 +53,57 @@ export async function getTeamContext(userId: string): Promise<TeamContext> {
 export async function getAccessibleOwnerIds(userId: string): Promise<string[]> {
   return (await getTeamContext(userId)).accessibleOwnerIds
 }
+
+// Project-level sharing, layered on top of account-wide team membership
+// above. An accepted team_members row alone no longer implies visibility
+// into every one of the owner's projects — it only grants a seat and an
+// identity. WHICH of the owner's projects a member can actually see is
+// tracked separately in project_team_members (migration 043), granted
+// per-project by the owner from that project's Settings page or the Team
+// page. getAccessibleOwnerIds/getTeamContext above are still exactly right
+// for account-wide capabilities that aren't about one specific project
+// (seat counting, "can this person create a new project under the owner's
+// account" — see app/dashboard/new/page.tsx) — only project VISIBILITY and
+// per-project AUTHORIZATION route through these instead now.
+
+// Every project id a user may see via a team they're an accepted member of
+// (their own projects aren't included — callers that need "all accessible
+// project ids" combine this with their own project query directly, since
+// that's usually a different underlying table/view).
+export async function getGrantedProjectIds(userId: string): Promise<string[]> {
+  const admin = createAdminClient()
+  const { data: membership, error: memberErr } = await admin
+    .from('team_members')
+    .select('id')
+    .eq('member_id', userId)
+    .not('accepted_at', 'is', null)
+
+  // Fail CLOSED, same reasoning as getTeamContext above — a transient
+  // lookup error must only ever narrow access for this one request, never
+  // widen it into "every project this membership could ever reach".
+  if (memberErr) {
+    console.error('[team] Membership lookup failed — denying shared project access:', memberErr.message)
+    return []
+  }
+  if (!membership || membership.length === 0) return []
+
+  const { data: grants, error: grantsErr } = await admin
+    .from('project_team_members')
+    .select('project_id')
+    .in('team_member_id', membership.map((m: { id: string }) => m.id))
+  if (grantsErr) {
+    console.error('[team] Project grant lookup failed — denying shared project access:', grantsErr.message)
+    return []
+  }
+  return (grants ?? []).map((g: { project_id: string }) => g.project_id)
+}
+
+// Whether userId may access one SPECIFIC, already-known project — the
+// project's own owner always can; an accepted team member can only if that
+// exact project has been explicitly granted to them. Drop-in replacement
+// for the old `(await getAccessibleOwnerIds(userId)).includes(project.owner_id)`
+// idiom used throughout the app wherever a project row is already in hand.
+export async function canAccessProject(userId: string, project: { id: string; owner_id: string }): Promise<boolean> {
+  if (project.owner_id === userId) return true
+  return (await getGrantedProjectIds(userId)).includes(project.id)
+}

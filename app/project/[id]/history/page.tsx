@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import NoGa4Access from '@/components/project/NoGa4Access'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty } from '@/lib/ga4/memberAccess'
 import { checkLabel, checkCategory, CATEGORY_LABEL, CATEGORY_ORDER, type Category } from '@/lib/ga4/checkLabels'
 
@@ -33,7 +33,7 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
 
   const { data: project } = await supabase.from('projects').select('id, name, owner_id, ga4_property_id').eq('id', id).single()
   if (!project) notFound()
-  if (!bypass && !(await getAccessibleOwnerIds(authData!.user!.id)).includes(project.owner_id)) return <AccountMismatch />
+  if (!bypass && !(await canAccessProject(authData!.user!.id, project))) return <AccountMismatch />
   if (!bypass && project.owner_id !== authData!.user!.id && !(await memberHasAccessToProperty(authData!.user!.id, project.ga4_property_id))) {
     return <NoGa4Access projectId={id} memberEmail={authData!.user!.email ?? undefined} />
   }

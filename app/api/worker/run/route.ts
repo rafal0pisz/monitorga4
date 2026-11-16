@@ -11,7 +11,7 @@ import { renderReconnectNoticeEmail } from '@/lib/email/reconnectNotice'
 import { parseEmailList } from '@/lib/email/shared'
 import { ownerHasActiveAccess, TRIAL_EXPIRED_MESSAGE } from '@/lib/billing/access'
 import { hasActiveAccess } from '@/lib/billing/plans'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 import { isCronRequest } from '@/lib/worker/cronAuth'
 import { AUTO_RUN_MARKER_KEY, currentWarsawDate } from '@/lib/worker/schedule'
@@ -1553,7 +1553,7 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     const admin = createAdminClient()
     const { data: project } = await admin.from('projects').select('owner_id, ga4_property_id, last_manual_run_at').eq('id', projectId).single()
-    if (!user || !project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
+    if (!user || !project || !(await canAccessProject(user.id, { id: projectId, owner_id: project.owner_id }))) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
     // The PROJECT'S owner's plan/trial gates this, not the clicking user's

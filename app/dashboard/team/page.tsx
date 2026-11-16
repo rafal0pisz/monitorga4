@@ -30,7 +30,9 @@ export default async function TeamPage() {
     <div style={{ maxWidth: 620 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Team</h1>
-        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>Share access to your monitored GA4 properties with your team.</p>
+        <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
+          Invite people to your account, then choose exactly which services each one can see — nobody on your team sees a service unless you&apos;ve explicitly added them to it.
+        </p>
       </div>
 
       {/* Your own team — independent of any team you're also a member of. */}
@@ -62,11 +64,31 @@ export default async function TeamPage() {
 
 async function TeamOwnerView({ ownerId }: { ownerId: string }) {
   const admin = createAdminClient()
-  const { data } = await admin.from('team_members')
-    .select('id, email, accepted_at, invited_at, invite_token')
-    .eq('owner_id', ownerId).order('invited_at')
+  const [{ data: members }, { data: projects }, { data: grants }] = await Promise.all([
+    admin.from('team_members').select('id, email, accepted_at, invited_at, invite_token').eq('owner_id', ownerId).order('invited_at'),
+    admin.from('projects').select('id, name').eq('owner_id', ownerId).order('name'),
+    admin.from('project_team_members').select('project_id, team_member_id'),
+  ])
 
-  return <TeamManager members={(data ?? []) as TeamMemberRow[]} maxSeats={MAX_TEAM_SEATS} appUrl={APP_URL} />
+  const grantsByMember = new Map<string, string[]>()
+  for (const g of grants ?? []) {
+    if (!grantsByMember.has(g.team_member_id)) grantsByMember.set(g.team_member_id, [])
+    grantsByMember.get(g.team_member_id)!.push(g.project_id)
+  }
+
+  const memberRows: TeamMemberRow[] = (members ?? []).map((m: any) => ({
+    ...(m as any),
+    projectIds: grantsByMember.get(m.id) ?? [],
+  }))
+
+  return (
+    <TeamManager
+      members={memberRows}
+      allProjects={(projects ?? []) as { id: string; name: string }[]}
+      maxSeats={MAX_TEAM_SEATS}
+      appUrl={APP_URL}
+    />
+  )
 }
 
 async function MemberView({ ownerId }: { ownerId: string }) {
@@ -77,7 +99,7 @@ async function MemberView({ ownerId }: { ownerId: string }) {
     <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
       <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 10px' }}>Team membership</p>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
-        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team — you can see and manage their monitored projects (once they&apos;ve granted your Google account access to each one in GA4), shown separately from any projects of your own on your dashboard.
+        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team. You&apos;ll only see the specific projects they&apos;ve granted you access to (and, for each one, once they&apos;ve also granted your Google account its own GA4 access) — not every project on their account.
       </p>
       <LeaveTeamButton />
     </div>

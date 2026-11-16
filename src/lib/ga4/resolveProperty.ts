@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
 type Resolved = { propertyId: string } | { error: NextResponse }
@@ -40,7 +40,7 @@ export async function resolvePropertyId(searchParams: URLSearchParams): Promise<
 
     // 404, not 403 — don't confirm to the caller that a project id they
     // don't own exists at all.
-    if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
+    if (!project || !(await canAccessProject(user.id, { id: projectId, owner_id: project.owner_id }))) {
       return { error: NextResponse.json({ error: 'Not found' }, { status: 404 }) }
     }
 

@@ -11,7 +11,7 @@ import PDFExportButton from '@/components/project/PDFExportButton'
 import ScoreTrendChart from '@/components/project/ScoreTrendChart'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import NoGa4Access from '@/components/project/NoGa4Access'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty } from '@/lib/ga4/memberAccess'
 import { scoreColor } from '@/types'
 
@@ -113,7 +113,7 @@ export default async function ProjectPage({
 
   const { data: project } = await admin.from('projects').select('*').eq('id', id).single()
   if (!project) return notFound()
-  if (!bypass && !(await getAccessibleOwnerIds(authData!.user!.id)).includes(project.owner_id)) return <AccountMismatch />
+  if (!bypass && !(await canAccessProject(authData!.user!.id, project))) return <AccountMismatch />
   // Team membership alone only grants AlertGA4-side visibility — seeing
   // this project's actual data requires the viewer's own Google account to
   // have been separately granted access to the property itself.

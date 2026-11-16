@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
-import { getTeamContext } from '@/lib/team/access'
+import { getTeamContext, getGrantedProjectIds } from '@/lib/team/access'
 import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import StartTrialButton from '@/components/billing/StartTrialButton'
@@ -119,10 +119,20 @@ export default async function DashboardPage() {
   // been added to) are two independent contexts — having one never affects
   // the other. See src/lib/team/access.ts.
   const teamContext = !bypass && user ? await getTeamContext(user.id) : null
-  let query = supabase.from('dashboard_projects').select('*').order('name')
-  if (!bypass && user) query = query.in('owner_id', teamContext!.accessibleOwnerIds)
-  const { data: projects, error: projectsError } = await query
-  const allList = (projects ?? []) as DashboardProject[]
+
+  // Own projects and projects explicitly granted via an accepted team
+  // membership are two separate queries now — being on someone's team no
+  // longer implies visibility into every one of their projects, only the
+  // ones they've specifically granted. See src/lib/team/access.ts.
+  const grantedProjectIds = !bypass && user && teamContext?.isMember ? await getGrantedProjectIds(user.id) : []
+  const ownQuery = !bypass && user
+    ? supabase.from('dashboard_projects').select('*').eq('owner_id', user.id).order('name')
+    : supabase.from('dashboard_projects').select('*').order('name')
+  const grantedQuery = grantedProjectIds.length > 0
+    ? supabase.from('dashboard_projects').select('*').in('id', grantedProjectIds).order('name')
+    : Promise.resolve({ data: [] as any[], error: null })
+  const [{ data: ownProjects, error: projectsError }, { data: grantedProjects }] = await Promise.all([ownQuery, grantedQuery])
+  const allList = [...((ownProjects ?? []) as DashboardProject[]), ...((grantedProjects ?? []) as DashboardProject[])]
   const ownList = !bypass && user ? allList.filter(p => p.owner_id === user.id) : allList
   const teamList = !bypass && user ? allList.filter(p => p.owner_id !== user.id) : []
 

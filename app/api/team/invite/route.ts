@@ -16,6 +16,11 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}))
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  // Optional: set when inviting from a specific project's Settings page
+  // ("Team access" → invite someone new) rather than the general Team page
+  // — the new member is granted this one project immediately, instead of
+  // starting with access to nothing until the owner grants one separately.
+  const projectId = typeof body.projectId === 'string' ? body.projectId : null
   if (!email || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
@@ -24,6 +29,14 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createAdminClient()
+
+  // Verified up front — a bad projectId must fail the whole invite rather
+  // than silently create an unscoped team_members row the caller thinks is
+  // project-scoped.
+  if (projectId) {
+    const { data: project } = await admin.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).single()
+    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  }
 
   const { data: profile, error: profileErr } = await admin.from('profiles')
     .select('plan_id, trial_ends_at').eq('id', user.id).single()
@@ -65,12 +78,22 @@ export async function POST(request: NextRequest) {
 
   const { data: invite, error: insertErr } = await admin.from('team_members')
     .insert({ owner_id: user.id, email })
-    .select('invite_token').single()
+    .select('id, invite_token').single()
   if (insertErr) {
     if (insertErr.code === '23505') {
       return NextResponse.json({ error: 'That email is already invited or on your team.' }, { status: 409 })
     }
     return NextResponse.json({ error: 'Could not create the invite — please try again.' }, { status: 500 })
+  }
+
+  if (projectId) {
+    const { error: grantErr } = await admin
+      .from('project_team_members')
+      .insert({ project_id: projectId, team_member_id: invite.id })
+    // Non-fatal: the invite itself succeeded and is visible/fixable from
+    // the Team page either way — worth logging, not worth failing the
+    // whole invite over a second insert.
+    if (grantErr) console.error('[team] Could not grant invited member the originating project:', grantErr.message)
   }
 
   const sent = await sendEmail({ to: email, ...renderTeamInviteEmail(user.email, invite.invite_token) })

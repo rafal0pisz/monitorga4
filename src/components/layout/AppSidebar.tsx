@@ -4,7 +4,7 @@ import MobileTopBar from './MobileTopBar'
 import LogoutButton from '@/components/ui/LogoutButton'
 import BrandWordmark from '@/components/ui/BrandWordmark'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
-import { getTeamContext } from '@/lib/team/access'
+import { getTeamContext, getGrantedProjectIds } from '@/lib/team/access'
 import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 
 const MOBILE_TOPBAR_HEIGHT = 52
@@ -25,21 +25,33 @@ export default async function AppSidebar() {
   // YOUR OWN profile/limit, never a team you're also on.
   const teamContext = !bypass && user ? await getTeamContext(user.id) : null
 
-  let projectsQuery = supabase
-    .from('dashboard_projects')
-    .select('id, name, last_score, status, owner_id, ga4_property_id')
-    .order('name')
-  if (!bypass && user) projectsQuery = projectsQuery.in('owner_id', teamContext!.accessibleOwnerIds)
+  // Own projects and projects explicitly granted via an accepted team
+  // membership (src/lib/team/access.ts) are two separate queries now —
+  // being on someone's team no longer implies visibility into every one of
+  // their projects, only the ones they've specifically granted. Combining
+  // them here (rather than one query filtered by owner_id) is what stops a
+  // team member from seeing every other client's project name.
+  const grantedProjectIds = !bypass && user && teamContext?.isMember ? await getGrantedProjectIds(user.id) : []
 
-  // Independent queries — same owner_id, no data dependency between them —
-  // so they run as one round trip instead of two sequential ones.
-  const [{ data: projects }, { data: profile, error: profileErr }, memberPropertyIds] = await Promise.all([
-    projectsQuery,
+  const projectCols = 'id, name, last_score, status, owner_id, ga4_property_id'
+  const ownProjectsQuery = !bypass && user
+    ? supabase.from('dashboard_projects').select(projectCols).eq('owner_id', user.id).order('name')
+    : supabase.from('dashboard_projects').select(projectCols).order('name')
+  const grantedProjectsQuery = grantedProjectIds.length > 0
+    ? supabase.from('dashboard_projects').select(projectCols).in('id', grantedProjectIds).order('name')
+    : Promise.resolve({ data: [] as any[], error: null })
+
+  // Independent queries — no data dependency between them — so they run as
+  // one round trip instead of several sequential ones.
+  const [{ data: ownProjects }, { data: grantedProjects }, { data: profile, error: profileErr }, memberPropertyIds] = await Promise.all([
+    ownProjectsQuery,
+    grantedProjectsQuery,
     !bypass && user
       ? supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
       : Promise.resolve({ data: null, error: null }),
     !bypass && user && teamContext?.isMember ? getMemberAccessiblePropertyIds(user.id) : Promise.resolve(null),
   ])
+  const projects = [...(ownProjects ?? []), ...(grantedProjects ?? [])]
 
   // Same rule as the dashboard — team membership alone doesn't unlock a
   // project's actual data, only Google's own, separately granted access

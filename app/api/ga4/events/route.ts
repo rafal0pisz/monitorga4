@@ -3,7 +3,7 @@ import { getGa4Token } from '@/lib/ga4/token'
 import { ga4Report } from '@/lib/ga4/report'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 import { isGa4ReconnectError, GA4_RECONNECT_MESSAGE } from '@/lib/ga4/errors'
 
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     .eq('id', projectId)
     .single()
 
-  if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
+  if (!project || !(await canAccessProject(user.id, { id: projectId, owner_id: project.owner_id }))) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

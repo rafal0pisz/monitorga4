@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { ownerHasActiveAccess, trialExpiredPayload } from '@/lib/billing/access'
-import { getAccessibleOwnerIds } from '@/lib/team/access'
+import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty, NO_GA4_ACCESS_MESSAGE } from '@/lib/ga4/memberAccess'
 
 // Read-only view over the worker's own daily parameter-coverage results
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     .eq('id', projectId)
     .single()
 
-  if (!project || !(await getAccessibleOwnerIds(user.id)).includes(project.owner_id)) {
+  if (!project || !(await canAccessProject(user.id, { id: projectId, owner_id: project.owner_id }))) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
