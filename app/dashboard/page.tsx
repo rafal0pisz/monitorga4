@@ -95,15 +95,43 @@ function ProjectRow({ p, locked, isLast }: { p: DashboardProject; locked: boolea
   )
 }
 
-function ProjectListCard({ title, action, projects, lockedIds }: { title: string; action?: React.ReactNode; projects: DashboardProject[]; lockedIds: Set<string> }) {
+// Each client's services nested under its group — a flat 50-row list reads
+// as noise once an account has more than a couple of clients.
+function GroupSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px 6px', background: 'var(--color-background-tertiary)' }}>
+      <span style={{ fontSize: 11, opacity: 0.6 }}>▣</span>
+      <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3 }}>{children}</span>
+    </div>
+  )
+}
+
+function groupDashboardProjects(projects: DashboardProject[], groupNameById: Map<string, string>): { groupName: string; projects: DashboardProject[] }[] {
+  const byGroup = new Map<string, DashboardProject[]>()
+  for (const p of projects) {
+    const key = p.group_id ? (groupNameById.get(p.group_id) ?? 'Ungrouped') : 'Ungrouped'
+    if (!byGroup.has(key)) byGroup.set(key, [])
+    byGroup.get(key)!.push(p)
+  }
+  return [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([groupName, projects]) => ({ groupName, projects }))
+}
+
+function ProjectListCard({ title, action, projects, lockedIds, groupNameById }: { title: string; action?: React.ReactNode; projects: DashboardProject[]; lockedIds: Set<string>; groupNameById: Map<string, string> }) {
+  const grouped = groupDashboardProjects(projects, groupNameById)
+  const showGroupLabels = grouped.length > 1
   return (
     <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ padding: '12px 20px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>{title}</span>
         {action}
       </div>
-      {projects.map((p, i) => (
-        <ProjectRow key={p.id} p={p} locked={lockedIds.has(p.id)} isLast={i === projects.length - 1} />
+      {grouped.map(({ groupName, projects }) => (
+        <div key={groupName}>
+          {showGroupLabels && <GroupSectionLabel>{groupName.replace(/^GROUP - /, '')}</GroupSectionLabel>}
+          {projects.map((p, i) => (
+            <ProjectRow key={p.id} p={p} locked={lockedIds.has(p.id)} isLast={i === projects.length - 1} />
+          ))}
+        </div>
       ))}
     </div>
   )
@@ -135,6 +163,15 @@ export default async function DashboardPage() {
   const allList = [...((ownProjects ?? []) as DashboardProject[]), ...((grantedProjects ?? []) as DashboardProject[])]
   const ownList = !bypass && user ? allList.filter(p => p.owner_id === user.id) : allList
   const teamList = !bypass && user ? allList.filter(p => p.owner_id !== user.id) : []
+
+  // Group names for whichever groups these projects belong to — not scoped
+  // to one owner_id, since a team member's granted projects belong to
+  // groups on the TEAM OWNER's account, not their own.
+  const groupIds = [...new Set(allList.map(p => p.group_id).filter((id): id is string => !!id))]
+  const { data: groupRows } = groupIds.length > 0
+    ? await supabase.from('project_groups').select('id, name').in('id', groupIds)
+    : { data: [] as { id: string; name: string }[] }
+  const groupNameById = new Map<string, string>((groupRows ?? []).map((g: { id: string; name: string }) => [g.id, g.name]))
 
   // Team membership only grants AlertGA4-side visibility — a shared
   // project shows up in the Team list, but its actual data (score, config
@@ -282,6 +319,7 @@ export default async function DashboardPage() {
                 action={<Link href="/dashboard/new" style={{ fontSize: 12, color: '#16a34a', textDecoration: 'none', fontWeight: 500 }}>+ New project</Link>}
                 projects={ownList}
                 lockedIds={new Set()}
+                groupNameById={groupNameById}
               />
             </div>
           )}
@@ -301,6 +339,7 @@ export default async function DashboardPage() {
                 title={teamOwnerEmail ? `${teamOwnerEmail}'s team` : 'Team projects'}
                 projects={teamList}
                 lockedIds={lockedTeamIds}
+                groupNameById={groupNameById}
               />
             </>
           )}

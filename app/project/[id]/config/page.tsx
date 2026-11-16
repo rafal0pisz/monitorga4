@@ -3,10 +3,9 @@ import { redirect, notFound } from 'next/navigation'
 import type { Project, ChecksCatalog, ChecksConfig, CustomEventCheck, EcommerceConfig, ParameterCheck } from '@/types'
 import Link from 'next/link'
 import ProjectConfigForm from '@/components/project/ProjectConfigForm'
-import ProjectTeamAccess, { type ProjectTeamMemberRow } from '@/components/project/ProjectTeamAccess'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import { canAccessProject } from '@/lib/team/access'
-import { effectivePlanId, alertEmailLimit, maxMembersPerProject } from '@/lib/billing/plans'
+import { effectivePlanId, alertEmailLimit } from '@/lib/billing/plans'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,7 +34,6 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     { data: parameterChecksRaw },
     { data: sectionsRaw },
     { data: ownerProfile },
-    teamAccessRaw,
     { data: groupRow },
   ] = await Promise.all([
     supabase.from('checks_catalog').select('*').order('level').order('check_key'),
@@ -45,15 +43,11 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
     supabase.rpc('get_parameter_checks', { p_project_id: id }),
     supabase.rpc('get_project_sections', { p_project_id: id }),
     supabase.from('profiles').select('plan_id, trial_ends_at').eq('id', project.owner_id).single(),
-    // Only the owner manages who can see this service — a team member
-    // looking at a project they're already granted doesn't need (and
-    // shouldn't get) the full list of who else is on the account's team.
-    isOwner ? supabase.rpc('get_project_team_access', { p_project_id: id }) : Promise.resolve({ data: [] }),
-    project.group_id && isOwner ? supabase.from('project_groups').select('name').eq('id', project.group_id).single() : Promise.resolve({ data: null }),
+    // Access is managed entirely per-GROUP now (see /dashboard/groups) —
+    // this page just needs the group's name to say where to go.
+    project.group_id ? supabase.from('project_groups').select('name').eq('id', project.group_id).single() : Promise.resolve({ data: null }),
   ])
-  const ownerEffectivePlan = effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at)
-  const maxAlertEmails = alertEmailLimit(ownerEffectivePlan)
-  const perProjectCap = maxMembersPerProject(ownerEffectivePlan)
+  const maxAlertEmails = alertEmailLimit(effectivePlanId(ownerProfile?.plan_id, ownerProfile?.trial_ends_at))
 
   // RPC returns jsonb arrays — parse if needed
   const parseRpc = (raw: any) => {
@@ -74,13 +68,11 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
       <h1 style={{ fontSize: 20, fontWeight: 500, margin: '0 0 4px', color: '#111827' }}>Project settings</h1>
       <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 24px', fontFamily: 'monospace' }}>{project.ga4_property_id}</p>
 
-      {isOwner && (
-        <ProjectTeamAccess
-          projectId={id}
-          members={parseRpc(teamAccessRaw.data) as ProjectTeamMemberRow[]}
-          perProjectCap={perProjectCap}
-          groupName={groupRow?.name ?? null}
-        />
+      {isOwner && groupRow?.name && (
+        <div style={{ background: '#eef4f6', border: '1px solid #dbe7ea', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 12.5, color: '#475a66', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <span>This service is part of <strong>{groupRow.name}</strong> — team access is managed there, not per service.</span>
+          <Link href="/dashboard/groups" style={{ color: '#16a34a', fontWeight: 500, whiteSpace: 'nowrap' }}>Manage in Groups →</Link>
+        </div>
       )}
 
       <ProjectConfigForm

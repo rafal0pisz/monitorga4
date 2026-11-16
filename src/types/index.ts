@@ -128,6 +128,7 @@ export interface DashboardProject {
   custom_events_count: number
   ecommerce_events_count: number
   parameter_checks_count: number
+  group_id: string | null
 }
 
 export interface ScoreHistory {

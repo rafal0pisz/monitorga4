@@ -2,9 +2,9 @@ import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
 import { effectivePlanId, canUseTeamFeature, maxMembersPerProject } from '@/lib/billing/plans'
 import { getTeamContext, MAX_TEAM_SEATS } from '@/lib/team/access'
 import TeamManager, { type TeamMemberRow } from '@/components/team/TeamManager'
+import Link from 'next/link'
 import LeaveTeamButton from '@/components/team/LeaveTeamButton'
 import { APP_URL } from '@/lib/email/shared'
-import Link from 'next/link'
 
 export default async function TeamPage() {
   const user = await getAuthUser()
@@ -32,7 +32,7 @@ export default async function TeamPage() {
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>Team</h1>
         <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>
-          Invite people to your account, then choose exactly which services each one can see — nobody on your team sees a service unless you&apos;ve explicitly added them to it.
+          Invite people to your account, then choose exactly which <Link href="/dashboard/groups" style={{ color: '#16a34a' }}>groups</Link> each one can see — nobody on your team sees a service unless it&apos;s in a group they&apos;ve been added to.
         </p>
       </div>
 
@@ -65,31 +65,31 @@ export default async function TeamPage() {
 
 async function TeamOwnerView({ ownerId, perProjectCap }: { ownerId: string; perProjectCap: number }) {
   const admin = createAdminClient()
-  const [{ data: members }, { data: projects }] = await Promise.all([
+  const [{ data: members }, { data: groups }] = await Promise.all([
     admin.from('team_members').select('id, email, accepted_at, invited_at, invite_token').eq('owner_id', ownerId).order('invited_at'),
-    admin.from('projects').select('id, name').eq('owner_id', ownerId).order('name'),
+    admin.from('project_groups').select('id, name').eq('owner_id', ownerId).order('name'),
   ])
 
   const memberIds = (members ?? []).map((m: any) => m.id as string)
   const { data: grants } = memberIds.length > 0
-    ? await admin.from('project_team_members').select('project_id, team_member_id').in('team_member_id', memberIds)
-    : { data: [] as { project_id: string; team_member_id: string }[] }
+    ? await admin.from('group_team_members').select('group_id, team_member_id').in('team_member_id', memberIds)
+    : { data: [] as { group_id: string; team_member_id: string }[] }
 
   const grantsByMember = new Map<string, string[]>()
   for (const g of grants ?? []) {
     if (!grantsByMember.has(g.team_member_id)) grantsByMember.set(g.team_member_id, [])
-    grantsByMember.get(g.team_member_id)!.push(g.project_id)
+    grantsByMember.get(g.team_member_id)!.push(g.group_id)
   }
 
   const memberRows: TeamMemberRow[] = (members ?? []).map((m: any) => ({
     ...(m as any),
-    projectIds: grantsByMember.get(m.id) ?? [],
+    groupIds: grantsByMember.get(m.id) ?? [],
   }))
 
   return (
     <TeamManager
       members={memberRows}
-      allProjects={(projects ?? []) as { id: string; name: string }[]}
+      allGroups={(groups ?? []) as { id: string; name: string }[]}
       maxSeats={MAX_TEAM_SEATS}
       perProjectCap={perProjectCap}
       appUrl={APP_URL}
@@ -105,7 +105,7 @@ async function MemberView({ ownerId }: { ownerId: string }) {
     <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
       <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: '0 0 10px' }}>Team membership</p>
       <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
-        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team. You&apos;ll only see the specific projects they&apos;ve granted you access to (and, for each one, once they&apos;ve also granted your Google account its own GA4 access) — not every project on their account.
+        You&apos;re part of <b style={{ color: 'var(--color-text-primary)' }}>{ownerUser?.user?.email ?? 'an AlertGA4'}</b>&apos;s team. You&apos;ll only see the services in the groups they&apos;ve added you to (and, for each one, once they&apos;ve also granted your Google account its own GA4 access) — not every project on their account.
       </p>
       <LeaveTeamButton />
     </div>

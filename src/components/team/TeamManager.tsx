@@ -10,19 +10,61 @@ export interface TeamMemberRow {
   accepted_at: string | null
   invited_at: string
   invite_token: string
-  projectIds: string[]
+  groupIds: string[]
 }
 
-export interface TeamProjectOption {
+export interface TeamGroupOption {
   id: string
   name: string
 }
 
+function Avatar({ email }: { email: string }) {
+  return (
+    <div style={{
+      width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+      background: 'linear-gradient(135deg, #a78bfa, #7c3aed)', color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 13, fontWeight: 700, textTransform: 'uppercase',
+    }}>
+      {email.charAt(0)}
+    </div>
+  )
+}
+
+function StatusPill({ accepted }: { accepted: boolean }) {
+  return accepted ? (
+    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: '#dcfce7', color: '#166534' }}>Active</span>
+  ) : (
+    <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: '#fef3c7', color: '#92400e' }}>Pending</span>
+  )
+}
+
+// Group access toggles as filled/outline chips rather than native checkbox
+// rows — scans faster at a glance than a checklist, and matches the pill/
+// badge language used elsewhere (status chips, coverage labels).
+function GroupChip({ name, active, disabled, onClick }: { name: string; active: boolean; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button" onClick={onClick} disabled={disabled}
+      style={{
+        fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 999, cursor: disabled ? 'not-allowed' : 'pointer',
+        border: active ? '1px solid #16a34a' : '1px solid var(--color-border-tertiary)',
+        background: active ? '#16a34a' : 'var(--color-background-primary)',
+        color: active ? '#fff' : 'var(--color-text-secondary)',
+        opacity: disabled && !active ? 0.5 : 1,
+        transition: 'all 0.12s ease',
+      }}
+    >
+      {active && '✓ '}{name}
+    </button>
+  )
+}
+
 export default function TeamManager({
-  members, allProjects, maxSeats, perProjectCap, appUrl,
+  members, allGroups, maxSeats, perProjectCap, appUrl,
 }: {
   members: TeamMemberRow[]
-  allProjects: TeamProjectOption[]
+  allGroups: TeamGroupOption[]
   maxSeats: number
   perProjectCap: number
   appUrl: string
@@ -38,14 +80,13 @@ export default function TeamManager({
 
   const seatsUsed = 1 + members.length
   const atLimit = seatsUsed >= maxSeats
+  const unlimitedPerGroup = perProjectCap >= maxSeats
 
-  // How many members currently have each project, across everyone — not
-  // just the row being expanded — so a checkbox for someone who DOESN'T
-  // already have a project can be disabled once that project is full,
-  // without needing a round trip just to find out.
-  const countByProject = new Map<string, number>()
-  for (const m of members) for (const pid of m.projectIds) countByProject.set(pid, (countByProject.get(pid) ?? 0) + 1)
-  const unlimitedPerProject = perProjectCap >= maxSeats
+  // How many members currently have each group, across everyone — so a
+  // chip for someone who DOESN'T already have a group can be disabled
+  // once that group is full, without a round trip to find out.
+  const countByGroup = new Map<string, number>()
+  for (const m of members) for (const gid of m.groupIds) countByGroup.set(gid, (countByGroup.get(gid) ?? 0) + 1)
 
   async function handleInvite() {
     setError(null); setNotice(null)
@@ -86,14 +127,14 @@ export default function TeamManager({
     }
   }
 
-  async function handleToggleAccess(teamMemberId: string, projectId: string, grant: boolean) {
-    const key = `${teamMemberId}_${projectId}`
+  async function handleToggleAccess(teamMemberId: string, groupId: string, grant: boolean) {
+    const key = `${teamMemberId}_${groupId}`
     setTogglingKey(key)
     setError(null)
     try {
-      const res = await fetch('/api/team/project-access', {
+      const res = await fetch('/api/team/group-access', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamMemberId, projectId, grant }),
+        body: JSON.stringify({ teamMemberId, groupId, grant }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not update access.')
@@ -110,7 +151,7 @@ export default function TeamManager({
       <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
           <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', margin: 0 }}>Invite a team member</p>
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{seatsUsed} / {maxSeats} seats used</span>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', background: 'var(--color-background-tertiary)', padding: '3px 10px', borderRadius: 999 }}>{seatsUsed} / {maxSeats} seats</span>
         </div>
         {atLimit ? (
           <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: 0 }}>You&apos;ve used all {maxSeats} seats included in your plan. Remove someone to invite a new person.</p>
@@ -129,8 +170,7 @@ export default function TeamManager({
           </div>
         )}
         <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '12px 0 0', lineHeight: 1.5 }}>
-          Inviting someone here doesn&apos;t give them access to anything yet. To give someone access to a service: expand their row below and turn it on for the services they should see, or open that service&apos;s Settings page and add them there directly.
-          {!unlimitedPerProject && ` Your plan allows up to ${perProjectCap} people per service.`}
+          Inviting someone here doesn&apos;t give them access to anything yet. Expand their row below and tap a group to grant it — they&apos;ll see every service in that group, including ones added to it later.
         </p>
         {notice && <p style={{ fontSize: 12.5, color: '#92400e', marginTop: 10 }}>{notice}</p>}
         {error && <p style={{ fontSize: 12.5, color: '#dc2626', marginTop: 10 }}>{error}</p>}
@@ -143,31 +183,33 @@ export default function TeamManager({
           const isExpanded = expandedId === m.id
           return (
             <div key={m.id} style={{ borderBottom: i < members.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 20px', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 13, color: 'var(--color-text-primary)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</p>
-                  {m.accepted_at ? (
-                    <span style={{ fontSize: 11, color: '#16a34a' }}>Active</span>
-                  ) : (
-                    <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                      Pending —{' '}
-                      <a
-                        href="#"
-                        onClick={e => { e.preventDefault(); navigator.clipboard?.writeText(`${appUrl}/invite/${m.invite_token}`) }}
-                        style={{ color: '#16a34a', textDecoration: 'underline' }}
-                      >
-                        copy invite link
-                      </a>
-                    </span>
-                  )}
-                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginLeft: 8 }}>
-                    {m.projectIds.length === 0 ? 'No services yet' : `${m.projectIds.length} ${m.projectIds.length === 1 ? 'service' : 'services'}`}
-                  </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', flexWrap: 'wrap' }}>
+                <Avatar email={m.email} />
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</span>
+                    <StatusPill accepted={!!m.accepted_at} />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+                    {!m.accepted_at && (
+                      <>
+                        <a
+                          href="#"
+                          onClick={e => { e.preventDefault(); navigator.clipboard?.writeText(`${appUrl}/invite/${m.invite_token}`) }}
+                          style={{ color: '#16a34a', textDecoration: 'underline' }}
+                        >
+                          copy invite link
+                        </a>
+                        {' · '}
+                      </>
+                    )}
+                    {m.groupIds.length === 0 ? 'No groups yet' : `${m.groupIds.length} ${m.groupIds.length === 1 ? 'group' : 'groups'}`}
+                  </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
                   <button
                     type="button" onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                    style={{ background: 'transparent', border: 'none', fontSize: 12, color: '#7c3aed', cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: 'none', fontSize: 12, color: '#7c3aed', cursor: 'pointer', fontWeight: 500 }}
                   >
                     {isExpanded ? 'Hide access ▴' : 'Manage access ▾'}
                   </button>
@@ -181,35 +223,28 @@ export default function TeamManager({
               </div>
 
               {isExpanded && (
-                <div style={{ padding: '4px 20px 16px', background: 'var(--color-background-tertiary)' }}>
-                  {allProjects.length === 0 ? (
-                    <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>You don&apos;t have any services yet.</p>
+                <div style={{ padding: '4px 20px 16px 62px', background: 'var(--color-background-tertiary)' }}>
+                  {allGroups.length === 0 ? (
+                    <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '8px 0 0' }}>No groups yet — create one on the Groups page.</p>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
-                      {allProjects.map(p => {
-                        const key = `${m.id}_${p.id}`
-                        const hasAccess = m.projectIds.includes(p.id)
-                        const projectCount = countByProject.get(p.id) ?? 0
-                        const projectFull = !unlimitedPerProject && !hasAccess && projectCount >= perProjectCap
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                      {allGroups.map(g => {
+                        const key = `${m.id}_${g.id}`
+                        const hasAccess = m.groupIds.includes(g.id)
+                        const groupFull = !unlimitedPerGroup && !hasAccess && (countByGroup.get(g.id) ?? 0) >= perProjectCap
                         return (
-                          <label
-                            key={p.id}
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: projectFull ? 'var(--color-text-secondary)' : 'var(--color-text-primary)', cursor: togglingKey === key || projectFull ? 'not-allowed' : 'pointer' }}
-                            title={projectFull ? `This service already has ${perProjectCap} people — the most your plan allows` : undefined}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={hasAccess}
-                              disabled={togglingKey === key || projectFull}
-                              onChange={e => handleToggleAccess(m.id, p.id, e.target.checked)}
-                            />
-                            {p.name}
-                            {!unlimitedPerProject && <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>({projectCount}/{perProjectCap})</span>}
-                          </label>
+                          <GroupChip
+                            key={g.id}
+                            name={g.name}
+                            active={hasAccess}
+                            disabled={togglingKey === key || groupFull}
+                            onClick={() => handleToggleAccess(m.id, g.id, !hasAccess)}
+                          />
                         )
                       })}
                     </div>
                   )}
+                  {!unlimitedPerGroup && <p style={{ fontSize: 11, color: 'var(--color-text-secondary)', margin: '10px 0 0' }}>Your plan allows up to {perProjectCap} people per group.</p>}
                 </div>
               )}
             </div>

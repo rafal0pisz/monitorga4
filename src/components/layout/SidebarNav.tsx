@@ -14,6 +14,24 @@ interface Project {
   // team you're a member of. Only present when AppSidebar actually fetched
   // team-aware data — absent (e.g. demo mode) means "treat as your own".
   isOwn?: boolean
+  // Every project belongs to exactly one group (migration 045) — absent
+  // only in demo mode / before AppSidebar resolves it.
+  groupName?: string
+}
+
+// Projects, nested by group — a flat 50-project list reads as noise once an
+// account has more than a couple of clients; this makes "which client is
+// this" visible without opening each project.
+function groupProjects(projects: Project[]): { groupName: string; projects: Project[] }[] {
+  const byGroup = new Map<string, Project[]>()
+  for (const p of projects) {
+    const key = p.groupName ?? 'Ungrouped'
+    if (!byGroup.has(key)) byGroup.set(key, [])
+    byGroup.get(key)!.push(p)
+  }
+  return [...byGroup.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([groupName, projects]) => ({ groupName, projects }))
 }
 
 function scoreDotColor(score: number | null): string {
@@ -68,6 +86,16 @@ function ProjectGroupLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Lighter-weight than ProjectGroupLabel (that one marks "Your projects" /
+// "Team" / "Tools" — this marks a client group nested one level inside).
+function ClientGroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--color-text-tertiary)', padding: '6px 16px 2px', margin: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+      <span style={{ opacity: 0.6 }}>▣</span>{children}
+    </p>
+  )
+}
+
 export default function SidebarNav({
   projects, projectHrefBase = '/project', tools = DEFAULT_TOOLS,
 }: {
@@ -84,6 +112,13 @@ export default function SidebarNav({
   const teamProjects = projects.filter(p => p.isOwn === false)
   const ownProjects = projects.filter(p => p.isOwn !== false)
   const hasTeamProjects = teamProjects.length > 0
+  const groupedOwnProjects = groupProjects(ownProjects)
+  const groupedTeamProjects = groupProjects(teamProjects)
+  // Skip the group sub-headers entirely when everything's in one group (the
+  // common case for a small account) — no point labeling "GROUP - Default"
+  // over and over when there's nothing to distinguish it from.
+  const showOwnGroupLabels = groupedOwnProjects.length > 1
+  const showTeamGroupLabels = groupedTeamProjects.length > 1
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -91,8 +126,13 @@ export default function SidebarNav({
         <div style={{ padding: '14px 0 8px' }}>
           <ProjectGroupLabel>{hasTeamProjects ? 'Your projects' : 'Projects'}</ProjectGroupLabel>
           <div style={{ overflowY: 'auto', maxHeight: hasTeamProjects ? 180 : 360 }}>
-            {ownProjects.map(p => (
-              <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
+            {groupedOwnProjects.map(({ groupName, projects }) => (
+              <div key={groupName}>
+                {showOwnGroupLabels && <ClientGroupLabel>{groupName.replace(/^GROUP - /, '')}</ClientGroupLabel>}
+                {projects.map(p => (
+                  <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
+                ))}
+              </div>
             ))}
             {ownProjects.length === 0 && (
               <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', padding: '6px 16px', margin: 0 }}>
@@ -106,8 +146,13 @@ export default function SidebarNav({
           <div style={{ padding: '4px 0 8px' }}>
             <ProjectGroupLabel>Team</ProjectGroupLabel>
             <div style={{ overflowY: 'auto', maxHeight: 180 }}>
-              {teamProjects.map(p => (
-                <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
+              {groupedTeamProjects.map(({ groupName, projects }) => (
+                <div key={groupName}>
+                  {showTeamGroupLabels && <ClientGroupLabel>{groupName.replace(/^GROUP - /, '')}</ClientGroupLabel>}
+                  {projects.map(p => (
+                    <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
+                  ))}
+                </div>
               ))}
             </div>
           </div>

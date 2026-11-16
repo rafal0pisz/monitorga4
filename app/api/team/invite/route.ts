@@ -16,11 +16,12 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}))
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-  // Optional: set when inviting from a specific project's Settings page
-  // ("Team access" → invite someone new) rather than the general Team page
-  // — the new member is granted this one project immediately, instead of
-  // starting with access to nothing until the owner grants one separately.
-  const projectId = typeof body.projectId === 'string' ? body.projectId : null
+  // Optional: set when inviting from a specific group's management UI
+  // rather than the general Team page — the new member is granted this
+  // one group immediately, instead of starting with access to nothing
+  // until the owner grants one separately. Access is group-only now (see
+  // src/lib/team/access.ts) — there's no per-project equivalent anymore.
+  const groupId = typeof body.groupId === 'string' ? body.groupId : null
   if (!email || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 })
   }
@@ -40,19 +41,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Team members are available on the Pro and Agency plans.' }, { status: 403 })
   }
 
-  // Verified up front — a bad projectId, or one already at this plan's
-  // per-project member cap, must fail the whole invite rather than silently
-  // create an unscoped team_members row the caller thinks is project-scoped.
-  if (projectId) {
-    const { data: project } = await admin.from('projects').select('id').eq('id', projectId).eq('owner_id', user.id).single()
-    if (!project) return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+  // Verified up front — a bad groupId, or one already at this plan's
+  // per-group member cap, must fail the whole invite rather than silently
+  // create an unscoped team_members row the caller thinks is group-scoped.
+  if (groupId) {
+    const { data: group } = await admin.from('project_groups').select('id').eq('id', groupId).eq('owner_id', user.id).single()
+    if (!group) return NextResponse.json({ error: 'Group not found' }, { status: 404 })
 
     const cap = maxMembersPerProject(effective)
     const { count: grantedCount, error: grantedErr } = await admin
-      .from('project_team_members').select('id', { count: 'exact', head: true }).eq('project_id', projectId)
-    if (grantedErr) return NextResponse.json({ error: 'Could not check this project\'s team access — please try again.' }, { status: 500 })
+      .from('group_team_members').select('id', { count: 'exact', head: true }).eq('group_id', groupId)
+    if (grantedErr) return NextResponse.json({ error: 'Could not check this group\'s team access — please try again.' }, { status: 500 })
     if ((grantedCount ?? 0) >= cap) {
-      return NextResponse.json({ error: `Your plan allows up to ${cap} people on one service. Remove someone from it first to add a new person.` }, { status: 409 })
+      return NextResponse.json({ error: `Your plan allows up to ${cap} people per group. Remove someone from it first to add a new person.` }, { status: 409 })
     }
   }
 
@@ -96,14 +97,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not create the invite — please try again.' }, { status: 500 })
   }
 
-  if (projectId) {
+  if (groupId) {
     const { error: grantErr } = await admin
-      .from('project_team_members')
-      .insert({ project_id: projectId, team_member_id: invite.id })
+      .from('group_team_members')
+      .insert({ group_id: groupId, team_member_id: invite.id })
     // Non-fatal: the invite itself succeeded and is visible/fixable from
     // the Team page either way — worth logging, not worth failing the
     // whole invite over a second insert.
-    if (grantErr) console.error('[team] Could not grant invited member the originating project:', grantErr.message)
+    if (grantErr) console.error('[team] Could not grant invited member the originating group:', grantErr.message)
   }
 
   const sent = await sendEmail({ to: email, ...renderTeamInviteEmail(user.email, invite.invite_token) })

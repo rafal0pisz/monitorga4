@@ -33,7 +33,7 @@ export default async function AppSidebar() {
   // team member from seeing every other client's project name.
   const grantedProjectIds = !bypass && user && teamContext?.isMember ? await getGrantedProjectIds(user.id) : []
 
-  const projectCols = 'id, name, last_score, status, owner_id, ga4_property_id'
+  const projectCols = 'id, name, last_score, status, owner_id, ga4_property_id, group_id'
   const ownProjectsQuery = !bypass && user
     ? supabase.from('dashboard_projects').select(projectCols).eq('owner_id', user.id).order('name')
     : supabase.from('dashboard_projects').select(projectCols).order('name')
@@ -53,6 +53,15 @@ export default async function AppSidebar() {
   ])
   const projects = [...(ownProjects ?? []), ...(grantedProjects ?? [])]
 
+  // Group names for whichever groups these projects actually belong to —
+  // not scoped to one owner_id, since a team member's granted projects
+  // belong to groups on the TEAM OWNER's account, not their own.
+  const groupIds = [...new Set(projects.map((p: any) => p.group_id).filter(Boolean))]
+  const { data: groupRows } = groupIds.length > 0
+    ? await supabase.from('project_groups').select('id, name').in('id', groupIds)
+    : { data: [] as { id: string; name: string }[] }
+  const groupNameById = new Map((groupRows ?? []).map((g: any) => [g.id, g.name as string]))
+
   // Same rule as the dashboard — team membership alone doesn't unlock a
   // project's actual data, only Google's own, separately granted access
   // does. See src/lib/ga4/memberAccess.ts. isOwn drives the "Your
@@ -61,6 +70,7 @@ export default async function AppSidebar() {
     ...p,
     isOwn: p.owner_id === user?.id,
     locked: !!memberPropertyIds && p.owner_id !== user?.id && !memberPropertyIds.has(p.ga4_property_id),
+    groupName: p.group_id ? groupNameById.get(p.group_id) : undefined,
   }))
   const ownProjectCount = sidebarProjects.filter((p: any) => p.owner_id === user?.id).length
 

@@ -23,6 +23,36 @@ export interface GroupMemberOption {
   accepted: boolean
 }
 
+function GroupIcon() {
+  return (
+    <div style={{
+      width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+      background: 'linear-gradient(135deg, #818cf8, #6366f1)', color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
+    }}>
+      ▣
+    </div>
+  )
+}
+
+function MemberChip({ email, active, disabled, onClick }: { email: string; active: boolean; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button" onClick={onClick} disabled={disabled}
+      style={{
+        fontSize: 12, fontWeight: 600, padding: '6px 14px', borderRadius: 999, cursor: disabled ? 'not-allowed' : 'pointer',
+        border: active ? '1px solid #16a34a' : '1px solid var(--color-border-tertiary)',
+        background: active ? '#16a34a' : 'var(--color-background-primary)',
+        color: active ? '#fff' : 'var(--color-text-secondary)',
+        opacity: disabled && !active ? 0.5 : 1,
+        transition: 'all 0.12s ease',
+      }}
+    >
+      {active && '✓ '}{email}
+    </button>
+  )
+}
+
 export default function GroupManager({
   groups, allProjects, allMembers, perProjectCap,
 }: {
@@ -38,9 +68,9 @@ export default function GroupManager({
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [projectFilter, setProjectFilter] = useState('')
 
   const unlimited = perProjectCap >= Number.MAX_SAFE_INTEGER
-  const groupByProjectId = new Map(allProjects.map(p => [p.id, p.groupId]))
   const nameById = new Map(groups.map(g => [g.id, g.name]))
 
   async function handleCreate() {
@@ -136,29 +166,35 @@ export default function GroupManager({
           </button>
         </div>
         <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '10px 0 0', lineHeight: 1.5 }}>
-          Saved as &quot;GROUP - {name.trim() || '…'}&quot;. Grant a group access once and every service you put in it — now or later — is covered automatically, so adding a new service for an existing client doesn&apos;t mean re-granting access by hand.
+          Saved as &quot;GROUP - {name.trim() || '…'}&quot;. Grant a group access once and every service you put in it — now or later — is covered automatically.
         </p>
         {error && <p style={{ fontSize: 12.5, color: '#dc2626', marginTop: 10 }}>{error}</p>}
       </div>
 
-      <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {groups.length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', padding: '20px 24px', margin: 0 }}>No groups yet — create one above, e.g. one per client.</p>
-        ) : groups.map((g, i) => {
+          <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '20px 24px' }}>
+            <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0 }}>No groups yet — create one above, e.g. one per client.</p>
+          </div>
+        ) : groups.map(g => {
           const isExpanded = expandedId === g.id
+          const filteredProjects = projectFilter.trim()
+            ? allProjects.filter(p => p.name.toLowerCase().includes(projectFilter.trim().toLowerCase()))
+            : allProjects
           return (
-            <div key={g.id} style={{ borderBottom: i < groups.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 20px', flexWrap: 'wrap' }}>
-                <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 13, color: 'var(--color-text-primary)', margin: '0 0 2px', fontWeight: 500 }}>{g.name}</p>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
+            <div key={g.id} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', flexWrap: 'wrap' }}>
+                <GroupIcon />
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 2px' }}>{g.name}</p>
+                  <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>
                     {g.projectIds.length} {g.projectIds.length === 1 ? 'service' : 'services'} · {g.memberIds.length} {g.memberIds.length === 1 ? 'person' : 'people'} with access
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
                   <button
                     type="button" onClick={() => setExpandedId(isExpanded ? null : g.id)}
-                    style={{ background: 'transparent', border: 'none', fontSize: 12, color: '#7c3aed', cursor: 'pointer' }}
+                    style={{ background: isExpanded ? '#f3f0ff' : 'var(--color-background-tertiary)', border: 'none', fontSize: 12, fontWeight: 600, color: '#7c3aed', cursor: 'pointer', padding: '6px 14px', borderRadius: 999 }}
                   >
                     {isExpanded ? 'Hide ▴' : 'Manage ▾'}
                   </button>
@@ -166,13 +202,13 @@ export default function GroupManager({
                     type="button" onClick={() => handleDelete(g.id)} disabled={deletingId === g.id}
                     style={{ background: 'transparent', border: 'none', fontSize: 12, color: '#dc2626', textDecoration: 'underline', cursor: 'pointer' }}
                   >
-                    {deletingId === g.id ? 'Deleting…' : 'Delete group'}
+                    {deletingId === g.id ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
               </div>
 
               {isExpanded && (
-                <div style={{ padding: '4px 20px 18px', background: 'var(--color-background-tertiary)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ padding: '4px 20px 20px', background: 'var(--color-background-tertiary)', display: 'flex', flexDirection: 'column', gap: 18 }}>
                   <div>
                     <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, margin: '10px 0 8px' }}>
                       Team access {!unlimited && `(up to ${perProjectCap} people)`}
@@ -180,19 +216,19 @@ export default function GroupManager({
                     {allMembers.length === 0 ? (
                       <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>No team members yet.</p>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {allMembers.map(m => {
                           const key = `m_${g.id}_${m.id}`
                           const hasAccess = g.memberIds.includes(m.id)
                           const full = !unlimited && !hasAccess && g.memberIds.length >= perProjectCap
                           return (
-                            <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: full ? 'var(--color-text-secondary)' : 'var(--color-text-primary)', cursor: busyKey === key || full ? 'not-allowed' : 'pointer' }}>
-                              <input
-                                type="checkbox" checked={hasAccess} disabled={busyKey === key || full}
-                                onChange={e => handleToggleMember(g.id, m.id, e.target.checked)}
-                              />
-                              {m.email} {!m.accepted && <span style={{ color: 'var(--color-text-secondary)' }}>(pending)</span>}
-                            </label>
+                            <MemberChip
+                              key={m.id}
+                              email={m.accepted ? m.email : `${m.email} (pending)`}
+                              active={hasAccess}
+                              disabled={busyKey === key || full}
+                              onClick={() => handleToggleMember(g.id, m.id, !hasAccess)}
+                            />
                           )
                         })}
                       </div>
@@ -200,25 +236,42 @@ export default function GroupManager({
                   </div>
 
                   <div>
-                    <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, margin: '0 0 8px' }}>Services in this group</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, margin: '0 0 8px', flexWrap: 'wrap' }}>
+                      <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, margin: 0 }}>Services in this group</p>
+                      {allProjects.length > 8 && (
+                        <input
+                          type="text" value={projectFilter} onChange={e => setProjectFilter(e.target.value)} placeholder="Filter services…"
+                          style={{ fontSize: 12, padding: '5px 10px', borderRadius: 7, border: '1px solid var(--color-border-tertiary)', background: 'var(--color-background-primary)', width: 180 }}
+                        />
+                      )}
+                    </div>
                     {allProjects.length === 0 ? (
                       <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>You don&apos;t have any services yet.</p>
+                    ) : filteredProjects.length === 0 ? (
+                      <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: 0 }}>No services match &quot;{projectFilter}&quot;.</p>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 260, overflowY: 'auto' }}>
-                        {allProjects.map(p => {
+                      <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 10, maxHeight: 280, overflowY: 'auto' }}>
+                        {filteredProjects.map((p, i) => {
                           const key = `p_${g.id}_${p.id}`
                           const inThisGroup = p.groupId === g.id
                           const inOtherGroup = p.groupId && p.groupId !== g.id
                           return (
-                            <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--color-text-primary)', cursor: busyKey === key ? 'wait' : 'pointer' }}>
+                            <label
+                              key={p.id}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', fontSize: 12.5, color: 'var(--color-text-primary)',
+                                cursor: busyKey === key ? 'wait' : 'pointer',
+                                borderBottom: i < filteredProjects.length - 1 ? '0.5px solid var(--color-border-tertiary)' : 'none',
+                              }}
+                            >
                               <input
                                 type="checkbox" checked={inThisGroup} disabled={busyKey === key}
                                 onChange={e => handleToggleProject(g.id, p.id, e.target.checked)}
                               />
-                              {p.name}
+                              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                               {inOtherGroup && (
-                                <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>
-                                  (currently in {nameById.get(p.groupId!) ?? 'another group'} — checking this moves it)
+                                <span style={{ fontSize: 10.5, fontWeight: 600, color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                  in {nameById.get(p.groupId!) ?? 'another group'}
                                 </span>
                               )}
                             </label>
