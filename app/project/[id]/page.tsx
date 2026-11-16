@@ -15,7 +15,7 @@ import { canAccessProject } from '@/lib/team/access'
 import { memberHasAccessToProperty } from '@/lib/ga4/memberAccess'
 import { scoreColor } from '@/types'
 
-type RunRow = { id: string; run_date: string; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
+type RunRow = { id: string; run_date: string; data_date: string | null; score_total: number | null; status: string; sampled: boolean | null; sampling_ratio: number | null }
 
 // Above this many declared parameter checks, one live GA4 request per card
 // (ParameterCoveragePanel) risks GA4's per-property concurrent-requests
@@ -122,7 +122,7 @@ export default async function ProjectPage({
   }
 
   const { data: runsRaw } = await admin
-    .from('dqs_runs').select('id, run_date, score_total, status, sampled, sampling_ratio')
+    .from('dqs_runs').select('id, run_date, data_date, score_total, status, sampled, sampling_ratio')
     .eq('project_id', id).order('run_date', { ascending: false }).limit(30)
   const runs = (runsRaw ?? []) as RunRow[]
   const latestRun = runs[0] ?? null

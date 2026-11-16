@@ -5,6 +5,12 @@ import { scoreColor } from '@/types'
 
 interface RunPoint {
   run_date: string
+  // The date the underlying GA4 data is actually from (worker checks data
+  // 2 days behind the run, see app/api/worker/run/route.ts) — this is what
+  // the chart plots points by, so a data problem shows up under the day
+  // it's actually from, not the day the cron happened to execute. Falls
+  // back to run_date for callers that don't have it yet (demo data).
+  data_date?: string | null
   score_total: number | null
 }
 
@@ -30,7 +36,7 @@ export default function ScoreTrendChart({ runs, alertThreshold }: { runs: RunPoi
   const data = filtered
     .slice()
     .reverse() // oldest → newest
-    .map(r => ({ date: r.run_date, score: Math.round(r.score_total!) }))
+    .map(r => ({ date: r.data_date ?? r.run_date, score: Math.round(r.score_total!) }))
 
   const latestScore = data[data.length - 1].score
   const prevScore = data[data.length - 2].score

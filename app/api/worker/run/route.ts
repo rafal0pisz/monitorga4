@@ -917,6 +917,7 @@ async function processProject(
     await supabase.from('dqs_runs').upsert({
       project_id: project.id,
       run_date: runDate,
+      data_date: checkedDate,
       status: 'failed',
       score_total: null,
       error_message: errorMessage,
@@ -964,6 +965,11 @@ async function processProject(
   const { data: run } = await supabase.from('dqs_runs').upsert({
     project_id: project.id,
     run_date: runDate,
+    // The GA4 date this run's data is actually about (always 2 days behind
+    // run_date, see getDailyRanges() above) — kept separate from run_date
+    // so the score trend chart and check history can be labelled by the
+    // date the data problem is from, not the day the cron happened to fire.
+    data_date: checkedDate,
     status: 'running',
     score_total: null,
     error_message: null,

@@ -40,14 +40,19 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
 
   const { data: runs } = await supabase
     .from('dqs_runs')
-    .select('id, run_date')
+    .select('id, run_date, data_date')
     .eq('project_id', id)
     .eq('status', 'completed')
     .order('run_date', { ascending: false })
     .limit(HISTORY_RUNS)
 
-  const runList = (runs ?? []) as { id: string; run_date: string }[]
-  const runDateById = new Map<string, string>(runList.map(r => [r.id, r.run_date]))
+  // Grouped/labelled by data_date (the GA4 date the run's data is actually
+  // about, 2 days behind run_date — see app/api/worker/run/route.ts) so a
+  // Warn/Fail check shows up under the day the bad data is from, not the
+  // day the cron happened to execute. Falls back to run_date for any
+  // pre-migration-048 row that somehow has no data_date.
+  const runList = (runs ?? []) as { id: string; run_date: string; data_date: string | null }[]
+  const dataDateById = new Map<string, string>(runList.map(r => [r.id, r.data_date ?? r.run_date]))
   const runIds = runList.map(r => r.id)
 
   // Every check the daily run computes carries its own status, already
@@ -65,7 +70,7 @@ export default async function ProjectHistoryPage({ params }: { params: Promise<{
 
   const entries: HistoryEntry[] = []
   for (const row of results ?? []) {
-    const date = runDateById.get(row.run_id)
+    const date = dataDateById.get(row.run_id)
     if (!date || (row.status !== 'warn' && row.status !== 'fail')) continue
     entries.push({
       date,

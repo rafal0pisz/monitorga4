@@ -72,6 +72,11 @@ export interface DqsRun {
   id: string
   project_id: string
   run_date: string
+  // The GA4 date this run's data is actually about — 2 days behind
+  // run_date (see getDailyRanges() in app/api/worker/run/route.ts).
+  // Nullable only for rows from before migration 048 that somehow
+  // bypassed its backfill.
+  data_date: string | null
   score_total: number | null
   status: RunStatus
   error_message: string | null
