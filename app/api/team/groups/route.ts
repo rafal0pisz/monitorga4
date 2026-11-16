@@ -1,37 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthUser, createAdminClient } from '@/lib/supabase/server'
-import { effectivePlanId, canUseTeamFeature } from '@/lib/billing/plans'
+import { getAccessibleOwnerIds } from '@/lib/team/access'
 
 const GROUP_PREFIX = 'GROUP - '
 
-// Owner-only: create/rename/delete a project group. A group's whole point
-// is to grant team access once and have it cover every project placed in
-// it (now or later, see src/lib/team/access.ts) — eligibility mirrors
-// team invites exactly (Pro/Agency/trial).
+// Create/rename/delete a project group. Creating one is NOT gated by plan
+// — grouping is an organizational feature everyone gets (every new
+// project is placed in a group, even on Lite — see
+// supabase/migrations/045_default_groups.sql), separate from whether the
+// account can actually GRANT TEAM ACCESS to a group, which stays
+// Pro/Agency/trial-only (enforced in /api/team/group-access instead).
 export async function POST(request: NextRequest) {
   const user = await getAuthUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
   const rawName = typeof body.name === 'string' ? body.name.trim() : ''
+  // Optional: lets a team member create a group under the account they're
+  // creating a project for (the team owner's), same as create_project's
+  // own p_owner_id — not just their own account.
+  const ownerId = typeof body.ownerId === 'string' ? body.ownerId : user.id
   if (!rawName) return NextResponse.json({ error: 'Enter a group name' }, { status: 400 })
+  if (!(await getAccessibleOwnerIds(user.id)).includes(ownerId)) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  }
   // Consistent naming convention regardless of what the owner typed —
   // "Bettersteps" and "GROUP - Bettersteps" both end up as the latter, so
   // groups are never ambiguous with plain project names in any list.
   const name = rawName.toLowerCase().startsWith(GROUP_PREFIX.toLowerCase()) ? rawName : `${GROUP_PREFIX}${rawName}`
 
   const admin = createAdminClient()
-  const { data: profile, error: profileErr } = await admin.from('profiles').select('plan_id, trial_ends_at').eq('id', user.id).single()
-  if (profileErr) return NextResponse.json({ error: 'Could not check your plan — please try again.' }, { status: 500 })
-  if (!canUseTeamFeature(effectivePlanId(profile?.plan_id, profile?.trial_ends_at))) {
-    return NextResponse.json({ error: 'Groups are available on the Pro and Agency plans.' }, { status: 403 })
-  }
-
   const { data: group, error: insertErr } = await admin.from('project_groups')
-    .insert({ owner_id: user.id, name })
+    .insert({ owner_id: ownerId, name })
     .select('id, name').single()
   if (insertErr) {
-    if (insertErr.code === '23505') return NextResponse.json({ error: 'You already have a group with that name.' }, { status: 409 })
+    if (insertErr.code === '23505') return NextResponse.json({ error: 'That account already has a group with that name.' }, { status: 409 })
     return NextResponse.json({ error: 'Could not create the group — please try again.' }, { status: 500 })
   }
 

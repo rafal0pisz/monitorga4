@@ -119,6 +119,39 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
   })
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
+  // Group — every project belongs to one (see supabase/migrations/044_
+  // project_groups.sql, 045_default_groups.sql). Picked up front here so a
+  // new service never needs a separate trip to /dashboard/groups just to
+  // get organized — defaults to "GROUP - Default" (auto-created if this
+  // account has no groups yet at all) so there's always a sensible choice
+  // pre-selected, not a dead end.
+  const NEW_GROUP_VALUE = '__new__'
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([])
+  const [groupsLoading, setGroupsLoading] = useState(true)
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
+  const [newGroupName, setNewGroupName] = useState('')
+
+  useEffect(() => {
+    async function loadGroups() {
+      setGroupsLoading(true)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase.rpc('list_project_groups', { p_owner_id: ownerId ?? user.id })
+        const list: { id: string; name: string }[] = Array.isArray(data) ? data : (typeof data === 'string' ? JSON.parse(data) : [])
+        setGroups(list)
+        const def = list.find(g => g.name === 'GROUP - Default')
+        setSelectedGroupId(def ? def.id : (list[0]?.id ?? NEW_GROUP_VALUE))
+      } catch {
+        setSelectedGroupId(NEW_GROUP_VALUE)
+      } finally {
+        setGroupsLoading(false)
+      }
+    }
+    loadGroups()
+  }, [ownerId])
+
   const [alertEmails, setAlertEmails] = useState<string[]>([])
   const [newAlertEmail, setNewAlertEmail] = useState('')
   const [alertEmailError, setAlertEmailError] = useState<string | null>(null)
@@ -348,6 +381,22 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
       if (!user) throw new Error('You must be signed in to create a project.')
       const propertyName = form.name || selectedProperty?.displayName || `Property ${effectivePropertyId}`
 
+      // Resolve the chosen group before creating the project — "+ Create
+      // new group" means create it now (under the same account the
+      // project itself is going into) and use the new id. Falls through
+      // to create_project's own server-side default-group fallback
+      // (migration 045) if this is somehow still empty.
+      let groupId = selectedGroupId
+      if (groupId === NEW_GROUP_VALUE) {
+        const res = await fetch('/api/team/groups', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newGroupName.trim() || 'Default', ownerId: ownerId ?? user.id }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error ?? 'Could not create the group.')
+        groupId = data.group.id
+      }
+
       // Goes through the create_project RPC (not a raw insert) so the
       // caller's plan project-limit is enforced server-side, not just in
       // the UI — see plan_project_limit()/create_project() in
@@ -359,6 +408,7 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
         p_own_domain: form.own_domain || null,
         p_expected_events: customEvents.map(e => e.event_name),
         p_alert_threshold: parseInt(form.alert_threshold),
+        p_group_id: groupId || null,
         p_alert_email: alertEmails.length > 0 ? alertEmails.join(', ') : null,
       })
       if (projErr) {
@@ -717,6 +767,31 @@ export default function NewProjectForm({ ownerId, maxAlertEmails = 2 }: { ownerI
       )}
 
       {/* ── STEP 5 — ALERTS ──────────────────────────────────────────────── */}
+      {step === 5 && (
+        <Section title="Group">
+          <Field label="Which group does this service belong to?" hint="Grant a group access once and every service in it — including ones added later — is covered automatically, so you don't need to re-grant access each time you add a new service for the same client.">
+            {groupsLoading ? (
+              <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)' }}>Loading…</p>
+            ) : (
+              <>
+                <select value={selectedGroupId} onChange={e => setSelectedGroupId(e.target.value)} style={inp}>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  <option value={NEW_GROUP_VALUE}>+ Create new group</option>
+                </select>
+                {selectedGroupId === NEW_GROUP_VALUE && (
+                  <input
+                    value={newGroupName}
+                    onChange={e => setNewGroupName(e.target.value)}
+                    placeholder={groups.length === 0 ? 'Default' : 'e.g. Bettersteps'}
+                    style={{ ...inp, marginTop: 8 }}
+                  />
+                )}
+              </>
+            )}
+          </Field>
+        </Section>
+      )}
+
       {step === 5 && (
         <Section title="Alerts">
           <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: '0 0 14px' }}>
