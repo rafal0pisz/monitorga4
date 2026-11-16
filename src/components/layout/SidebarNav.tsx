@@ -123,11 +123,11 @@ export default function SidebarNav({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {/* Projects — capped at ~60% of the nav area and scrolled as ONE
+        {/* Projects — capped at ~55% of the nav area and scrolled as ONE
             unit (own + team together), so Tools below is reachable with at
             most one scroll instead of needing to first scroll past a
             separately-scrolling project list. */}
-        <div style={{ flex: '0 0 60%', minHeight: 0, overflowY: 'auto' }}>
+        <div style={{ flex: '0 0 55%', minHeight: 0, overflowY: 'auto' }}>
           <div style={{ padding: '14px 0 8px' }}>
             <ProjectGroupLabel>{hasTeamProjects ? 'Your projects' : 'Projects'}</ProjectGroupLabel>
             {groupedOwnProjects.map(({ groupName, projects }) => (
@@ -162,10 +162,10 @@ export default function SidebarNav({
 
         <div style={{ height: '0.5px', background: 'var(--color-border-tertiary)', margin: '4px 16px', flexShrink: 0 }} />
 
-        {/* Tools — reserved ~40% of the nav area regardless of how long the
+        {/* Tools — reserved ~45% of the nav area regardless of how long the
             project list above is, so it stays on screen (or at most one
             short scroll away) instead of being pushed below the fold. */}
-        <div style={{ flex: '0 0 40%', minHeight: 0, overflowY: 'auto' }}>
+        <div style={{ flex: '0 0 45%', minHeight: 0, overflowY: 'auto' }}>
           <div style={{ padding: '8px 0' }}>
             <ProjectGroupLabel>Tools</ProjectGroupLabel>
             {tools.map(item => {
