@@ -235,8 +235,11 @@ export default async function AppSidebar() {
           </div>
         )}
 
-        {/* Nav */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Nav — SidebarNav itself splits this into a scrollable projects
+            region and a scrollable Tools region (see there), so this
+            wrapper must NOT scroll on its own — scrolling at both levels is
+            what used to require two separate scrolls to reach Tools. */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <SidebarNav projects={sidebarProjects} />
         </div>
 

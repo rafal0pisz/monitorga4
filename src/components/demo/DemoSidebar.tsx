@@ -130,8 +130,9 @@ export default function DemoSidebar() {
           </p>
         </div>
 
-        {/* Nav */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        {/* Nav — SidebarNav manages its own 60/40 projects/Tools split and
+            scrolling (see there); this wrapper must not also scroll. */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <SidebarNav
             projects={projects}
             projectHrefBase="/demo/project"

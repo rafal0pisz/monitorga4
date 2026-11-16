@@ -122,11 +122,14 @@ export default function SidebarNav({
   const showTeamGroupLabels = groupedTeamProjects.length > 1
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-        {/* Projects */}
-        <div style={{ padding: '14px 0 8px' }}>
-          <ProjectGroupLabel>{hasTeamProjects ? 'Your projects' : 'Projects'}</ProjectGroupLabel>
-          <div style={{ overflowY: 'auto', maxHeight: hasTeamProjects ? 180 : 360 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {/* Projects — capped at ~60% of the nav area and scrolled as ONE
+            unit (own + team together), so Tools below is reachable with at
+            most one scroll instead of needing to first scroll past a
+            separately-scrolling project list. */}
+        <div style={{ flex: '0 0 60%', minHeight: 0, overflowY: 'auto' }}>
+          <div style={{ padding: '14px 0 8px' }}>
+            <ProjectGroupLabel>{hasTeamProjects ? 'Your projects' : 'Projects'}</ProjectGroupLabel>
             {groupedOwnProjects.map(({ groupName, projects }) => (
               <div key={groupName}>
                 {showOwnGroupLabels && <ClientGroupLabel>{formatGroupName(groupName)}</ClientGroupLabel>}
@@ -141,12 +144,10 @@ export default function SidebarNav({
               </p>
             )}
           </div>
-        </div>
 
-        {hasTeamProjects && (
-          <div style={{ padding: '4px 0 8px' }}>
-            <ProjectGroupLabel>Team</ProjectGroupLabel>
-            <div style={{ overflowY: 'auto', maxHeight: 180 }}>
+          {hasTeamProjects && (
+            <div style={{ padding: '4px 0 8px' }}>
+              <ProjectGroupLabel>Team</ProjectGroupLabel>
               {groupedTeamProjects.map(({ groupName, projects }) => (
                 <div key={groupName}>
                   {showTeamGroupLabels && <ClientGroupLabel>{formatGroupName(groupName)}</ClientGroupLabel>}
@@ -156,31 +157,35 @@ export default function SidebarNav({
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        <div style={{ height: '0.5px', background: 'var(--color-border-tertiary)', margin: '4px 16px', flexShrink: 0 }} />
+
+        {/* Tools — reserved ~40% of the nav area regardless of how long the
+            project list above is, so it stays on screen (or at most one
+            short scroll away) instead of being pushed below the fold. */}
+        <div style={{ flex: '0 0 40%', minHeight: 0, overflowY: 'auto' }}>
+          <div style={{ padding: '8px 0' }}>
+            <ProjectGroupLabel>Tools</ProjectGroupLabel>
+            {tools.map(item => {
+              const active = pathname === item.href
+              return (
+                <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 9, padding: '7px 16px',
+                    borderLeft: active ? '2px solid #16a34a' : '2px solid transparent',
+                    background: active ? 'var(--color-background-primary)' : 'transparent',
+                  }}>
+                    <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', width: 7, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+                    <span style={{ fontSize: 13, color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontWeight: active ? 500 : 400 }}>
+                      {item.label}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
-        )}
-
-        <div style={{ height: '0.5px', background: 'var(--color-border-tertiary)', margin: '4px 16px' }} />
-
-        {/* Tools */}
-        <div style={{ padding: '8px 0' }}>
-          <ProjectGroupLabel>Tools</ProjectGroupLabel>
-          {tools.map(item => {
-            const active = pathname === item.href
-            return (
-              <Link key={item.href} href={item.href} style={{ textDecoration: 'none', display: 'block' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 9, padding: '7px 16px',
-                  borderLeft: active ? '2px solid #16a34a' : '2px solid transparent',
-                  background: active ? 'var(--color-background-primary)' : 'transparent',
-                }}>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', width: 7, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
-                  <span style={{ fontSize: 13, color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontWeight: active ? 500 : 400 }}>
-                    {item.label}
-                  </span>
-                </div>
-              </Link>
-            )
-          })}
         </div>
     </div>
   )
