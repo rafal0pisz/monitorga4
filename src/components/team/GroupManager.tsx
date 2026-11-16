@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
+import { formatGroupName } from '@/lib/team/groupDisplay'
 
 export interface GroupRow {
   id: string
@@ -166,7 +167,7 @@ export default function GroupManager({
           </button>
         </div>
         <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '10px 0 0', lineHeight: 1.5 }}>
-          Saved as &quot;GROUP - {name.trim() || '…'}&quot;. Grant a group access once and every service you put in it — now or later — is covered automatically.
+          Saved as &quot;Group {name.trim() || '…'}&quot;. Grant a group access once and every service you put in it — now or later — is covered automatically.
         </p>
         {error && <p style={{ fontSize: 12.5, color: '#dc2626', marginTop: 10 }}>{error}</p>}
       </div>
@@ -186,7 +187,7 @@ export default function GroupManager({
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', flexWrap: 'wrap' }}>
                 <GroupIcon />
                 <div style={{ flex: 1, minWidth: 160 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 2px' }}>{g.name}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)', margin: '0 0 2px' }}>{formatGroupName(g.name)}</p>
                   <span style={{ fontSize: 11.5, color: 'var(--color-text-secondary)' }}>
                     {g.projectIds.length} {g.projectIds.length === 1 ? 'service' : 'services'} · {g.memberIds.length} {g.memberIds.length === 1 ? 'person' : 'people'} with access
                   </span>
@@ -271,7 +272,7 @@ export default function GroupManager({
                               <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
                               {inOtherGroup && (
                                 <span style={{ fontSize: 10.5, fontWeight: 600, color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                  in {nameById.get(p.groupId!) ?? 'another group'}
+                                  in {nameById.get(p.groupId!) ? formatGroupName(nameById.get(p.groupId!)!) : 'another group'}
                                 </span>
                               )}
                             </label>

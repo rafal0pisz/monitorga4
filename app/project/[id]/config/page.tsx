@@ -5,6 +5,7 @@ import Link from 'next/link'
 import ProjectConfigForm from '@/components/project/ProjectConfigForm'
 import AccountMismatch from '@/components/project/AccountMismatch'
 import { canAccessProject } from '@/lib/team/access'
+import { formatGroupName } from '@/lib/team/groupDisplay'
 import { effectivePlanId, alertEmailLimit } from '@/lib/billing/plans'
 
 export default async function ProjectConfigPage({ params }: { params: Promise<{ id: string }> }) {
@@ -70,7 +71,7 @@ export default async function ProjectConfigPage({ params }: { params: Promise<{ 
 
       {isOwner && groupRow?.name && (
         <div style={{ background: '#eef4f6', border: '1px solid #dbe7ea', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 12.5, color: '#475a66', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <span>This service is part of <strong>{groupRow.name}</strong> — team access is managed there, not per service.</span>
+          <span>This service is part of <strong>{formatGroupName(groupRow.name)}</strong> — team access is managed there, not per service.</span>
           <Link href="/dashboard/groups" style={{ color: '#16a34a', fontWeight: 500, whiteSpace: 'nowrap' }}>Manage in Groups →</Link>
         </div>
       )}

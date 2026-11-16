@@ -4,6 +4,7 @@ import type { DashboardProject } from '@/types'
 import { getScoreGrade, SCORE_GRADE_STYLE as G } from '@/types'
 import { planLimit, planName, effectivePlanId } from '@/lib/billing/plans'
 import { getTeamContext, getGrantedProjectIds } from '@/lib/team/access'
+import { formatGroupName } from '@/lib/team/groupDisplay'
 import { getMemberAccessiblePropertyIds } from '@/lib/ga4/memberAccess'
 import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 import StartTrialButton from '@/components/billing/StartTrialButton'
@@ -127,7 +128,7 @@ function ProjectListCard({ title, action, projects, lockedIds, groupNameById }: 
       </div>
       {grouped.map(({ groupName, projects }) => (
         <div key={groupName}>
-          {showGroupLabels && <GroupSectionLabel>{groupName.replace(/^GROUP - /, '')}</GroupSectionLabel>}
+          {showGroupLabels && <GroupSectionLabel>{formatGroupName(groupName)}</GroupSectionLabel>}
           {projects.map((p, i) => (
             <ProjectRow key={p.id} p={p} locked={lockedIds.has(p.id)} isLast={i === projects.length - 1} />
           ))}

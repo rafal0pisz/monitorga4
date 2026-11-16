@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { scoreColor } from '@/types'
+import { formatGroupName } from '@/lib/team/groupDisplay'
 
 interface Project {
   id: string
@@ -128,7 +129,7 @@ export default function SidebarNav({
           <div style={{ overflowY: 'auto', maxHeight: hasTeamProjects ? 180 : 360 }}>
             {groupedOwnProjects.map(({ groupName, projects }) => (
               <div key={groupName}>
-                {showOwnGroupLabels && <ClientGroupLabel>{groupName.replace(/^GROUP - /, '')}</ClientGroupLabel>}
+                {showOwnGroupLabels && <ClientGroupLabel>{formatGroupName(groupName)}</ClientGroupLabel>}
                 {projects.map(p => (
                   <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
                 ))}
@@ -148,7 +149,7 @@ export default function SidebarNav({
             <div style={{ overflowY: 'auto', maxHeight: 180 }}>
               {groupedTeamProjects.map(({ groupName, projects }) => (
                 <div key={groupName}>
-                  {showTeamGroupLabels && <ClientGroupLabel>{groupName.replace(/^GROUP - /, '')}</ClientGroupLabel>}
+                  {showTeamGroupLabels && <ClientGroupLabel>{formatGroupName(groupName)}</ClientGroupLabel>}
                   {projects.map(p => (
                     <ProjectRow key={p.id} p={p} active={isActive(`${projectHrefBase}/${p.id}`)} projectHrefBase={projectHrefBase} />
                   ))}

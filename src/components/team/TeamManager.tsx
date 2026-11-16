@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTrackedError } from '@/lib/analytics/useTrackedError'
+import { formatGroupName } from '@/lib/team/groupDisplay'
 
 export interface TeamMemberRow {
   id: string
@@ -77,6 +78,7 @@ export default function TeamManager({
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [togglingKey, setTogglingKey] = useState<string | null>(null)
+  const [inviteGroupIds, setInviteGroupIds] = useState<Set<string>>(new Set())
 
   const seatsUsed = 1 + members.length
   const atLimit = seatsUsed >= maxSeats
@@ -95,11 +97,12 @@ export default function TeamManager({
     try {
       const res = await fetch('/api/team/invite', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), groupIds: [...inviteGroupIds] }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not send the invite.')
       setEmail('')
+      setInviteGroupIds(new Set())
       if (data.warning) setNotice(data.warning)
       router.refresh()
     } catch (err: any) {
@@ -156,21 +159,52 @@ export default function TeamManager({
         {atLimit ? (
           <p style={{ fontSize: 12.5, color: 'var(--color-text-secondary)', margin: 0 }}>You&apos;ve used all {maxSeats} seats included in your plan. Remove someone to invite a new person.</p>
         ) : (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="teammate@company.com"
-              style={{ flex: 1, minWidth: 200, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-tertiary)' }}
-            />
-            <button
-              type="button" onClick={handleInvite} disabled={inviting}
-              style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '8px 16px', borderRadius: 8, border: 'none', fontSize: 13, cursor: inviting ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
-            >
-              {inviting ? 'Sending…' : 'Send invite'}
-            </button>
-          </div>
+          <>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="teammate@company.com"
+                style={{ flex: 1, minWidth: 200, fontSize: 13, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border-tertiary)' }}
+              />
+              <button
+                type="button" onClick={handleInvite} disabled={inviting}
+                style={{ background: '#16a34a', color: '#fff', fontWeight: 500, padding: '8px 16px', borderRadius: 8, border: 'none', fontSize: 13, cursor: inviting ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {inviting ? 'Sending…' : 'Send invite'}
+              </button>
+            </div>
+
+            {allGroups.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: 0.3, margin: '0 0 8px' }}>
+                  Give access to (optional)
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {allGroups.map(g => {
+                    const active = inviteGroupIds.has(g.id)
+                    const full = !unlimitedPerGroup && !active && (countByGroup.get(g.id) ?? 0) >= perProjectCap
+                    return (
+                      <GroupChip
+                        key={g.id}
+                        name={formatGroupName(g.name)}
+                        active={active}
+                        disabled={full}
+                        onClick={() => setInviteGroupIds(prev => {
+                          const next = new Set(prev)
+                          if (next.has(g.id)) next.delete(g.id); else next.add(g.id)
+                          return next
+                        })}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
         <p style={{ fontSize: 12, color: 'var(--color-text-secondary)', margin: '12px 0 0', lineHeight: 1.5 }}>
-          Inviting someone here doesn&apos;t give them access to anything yet. Expand their row below and tap a group to grant it — they&apos;ll see every service in that group, including ones added to it later.
+          {allGroups.length > 0
+            ? 'Pick which groups this person should see above, or skip it and grant access later — expand their row below any time to change it.'
+            : 'Inviting someone here doesn’t give them access to anything yet — create a group on the Groups page, then expand their row below to grant it.'}
         </p>
         {notice && <p style={{ fontSize: 12.5, color: '#92400e', marginTop: 10 }}>{notice}</p>}
         {error && <p style={{ fontSize: 12.5, color: '#dc2626', marginTop: 10 }}>{error}</p>}
@@ -235,7 +269,7 @@ export default function TeamManager({
                         return (
                           <GroupChip
                             key={g.id}
-                            name={g.name}
+                            name={formatGroupName(g.name)}
                             active={hasAccess}
                             disabled={togglingKey === key || groupFull}
                             onClick={() => handleToggleAccess(m.id, g.id, !hasAccess)}
